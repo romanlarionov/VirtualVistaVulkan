@@ -7,6 +7,56 @@
 #include "Renderer.h"
 #include "Utils.h"
 
+template <typename T> class VkDeleter
+	{
+	public:
+		VkDeleter() : VkDeleter([](T _) {})
+		{
+		}
+
+		VkDeleter(std::function<void(T, VkAllocationCallbacks*)> deletef)
+		{
+			this->deleter = [=](T obj) { deletef(obj, nullptr); };
+		}
+
+		VkDeleter(const VkDeleter<VkInstance>& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
+		{
+			this->deleter = [&instance, deletef](T obj) { deletef(instance, obj, nullptr); };
+		}
+
+		VkDeleter(const VkDeleter<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef)
+		{
+			this->deleter = [&device, deletef](T obj) { deletef(device, obj, nullptr); };
+		}
+
+		~VkDeleter()
+		{
+			cleanup();
+		}
+
+		T* operator &()
+		{
+			cleanup();
+			return &object;
+		}
+
+		operator T() const
+		{
+			return object;
+		}
+
+	private:
+		T object{ VK_NULL_HANDLE };
+		std::function<void(T)> deleter;
+
+		void cleanup() {
+			if (object != VK_NULL_HANDLE) {
+				deleter(object);
+			}
+			object = VK_NULL_HANDLE;
+		}
+	};
+
 namespace vv
 {
 	class VulkanRenderer : public Renderer
@@ -20,23 +70,24 @@ namespace vv
 		bool shouldStop();
 
 	private:
-		Window *window_;
-		VDeleter<VkInstance> instance_ {vkDestroyInstance};
-
-#ifdef NDEBUG
-		const bool enable_validation_layers_ = false;
-#else
+#ifdef _DEBUG
 		const bool enable_validation_layers_ = true;
+#else
+		const bool enable_validation_layers_ = false;
 #endif
 
+		Window *window_;
+		VkDeleter<VkInstance> instance_ {vkDestroyInstance};
 		const std::vector<const char*> validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 
 		void initWindow();
 		void createVulkanInstance();
-		void createVulkanPhysicalDevice();
-		bool checkGLFWExtensionSupport(uint32_t glfw_extension_count, const char** glfw_extensions);
-		bool checkValidationLayerSupport();
+		void setupDebugCallback();
 
+		std::vector<const char*> getRequiredExtensions();
+		void createVulkanPhysicalDevice();
+		bool checkExtensionSupport();
+		bool checkValidationLayerSupport();
 	};
 }
 
