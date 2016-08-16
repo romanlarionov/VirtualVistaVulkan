@@ -25,7 +25,10 @@ namespace vv
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // todo: replace later (for tutorial purposes only)
-		window_ = glfwCreateWindow(Settings::inst()->getWidth(), Settings::inst()->getHeight(), Settings::inst()->getName().c_str(), nullptr, nullptr); // todo: replace hardcoded values
+		window_ = glfwCreateWindow(Settings::inst()->getWindowWidth(),
+								   Settings::inst()->getWindowHeight(),
+								   Settings::inst()->getApplicationName().c_str(),
+								   nullptr, nullptr);
 	}
 
 	void GLFWWindow::run()

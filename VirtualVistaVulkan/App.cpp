@@ -17,7 +17,7 @@ namespace vv
 
 	void App::init()
 	{
-		if (Settings::inst()->getRenderer() == VULKAN)
+		if (Settings::inst()->getRendererType() == VULKAN)
 			renderer_ = new VulkanRenderer;
 
 		try {

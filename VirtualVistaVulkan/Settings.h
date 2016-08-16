@@ -14,21 +14,23 @@ namespace vv
 		static Settings* inst();
 	    void setDefault();
 
-		int getWidth();
-		int getHeight();
-		std::string getName();
-		RENDERER_TYPE getRenderer();
-		WINDOW_TYPE getWindow();
+		int getWindowWidth();
+		int getWindowHeight();
+		std::string getApplicationName();
+		std::string getEngineName();
+		RENDERER_TYPE getRendererType();
+		WINDOW_TYPE getWindowType();
 
 	private:
 		static Settings* instance_;
 
-		bool default;
-		int window_width;
-		int window_height;
-		std::string application_name;
-		RENDERER_TYPE renderer_type;
-		WINDOW_TYPE window_type;
+		bool default_;
+		int window_width_;
+		int window_height_;
+		std::string application_name_;
+		std::string engine_name_;
+		RENDERER_TYPE renderer_type_;
+		WINDOW_TYPE window_type_;
 
         Settings();
 		Settings(const Settings& s);

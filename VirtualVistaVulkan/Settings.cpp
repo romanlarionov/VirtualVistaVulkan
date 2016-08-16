@@ -7,38 +7,44 @@ namespace vv
 
 	void Settings::setDefault()
 	{
-		default = true;
-		window_width = 640;
-		window_height = 480;
-		application_name = "VirtualVistaVulkan";
+		default_ = true;
+		window_width_ = 640;
+		window_height_ = 480;
+		application_name_ = "VirtualVistaVulkan";
+		engine_name_ = "VirtualVista";
 
-		renderer_type = VULKAN;
-		window_type = GLFW;
+		renderer_type_ = VULKAN;
+		window_type_ = GLFW;
 	}
 
-	int Settings::getWidth()
+	int Settings::getWindowWidth()
 	{
-		return window_width;
+		return window_width_;
 	}
 
-	int Settings::getHeight()
+	int Settings::getWindowHeight()
 	{
-		return window_height;
+		return window_height_;
 	}
 
-	std::string Settings::getName()
+	std::string Settings::getApplicationName()
 	{
-		return application_name;
+		return application_name_;
 	}
 
-	RENDERER_TYPE Settings::getRenderer()
+	std::string Settings::getEngineName()
 	{
-		return renderer_type;
+		return engine_name_;
 	}
 
-	WINDOW_TYPE Settings::getWindow()
+	RENDERER_TYPE Settings::getRendererType()
 	{
-		return window_type;
+		return renderer_type_;
+	}
+
+	WINDOW_TYPE Settings::getWindowType()
+	{
+		return window_type_;
 	}
 
 	Settings* Settings::inst()
