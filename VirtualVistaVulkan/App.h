@@ -4,19 +4,20 @@
 
 #include "Renderer.h"
 
-// todo: consider making this singleton
 namespace vv
 {
 	class App
 	{
 	public:
-		App();
+		App(int argc, char **argv);
 		~App();
 
-		void init();
 		void mainLoop();
 
 	private:
+		int argc_;
+		char **argv_;
+
 		Renderer *renderer_;
 
 	};

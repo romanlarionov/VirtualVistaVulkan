@@ -1,31 +1,35 @@
 
 #include <stdexcept>
 
-#include "App.h";
+#include "App.h"
 #include "VulkanRenderer.h"
 #include "Settings.h"
 
 namespace vv
 {
-	App::App()
+	App::App(int argc, char **argv)
 	{
+		argc_ = argc;
+		argv_ = argv;
+
+		try
+		{
+			if (Settings::inst()->getRendererType() == VULKAN)
+				renderer_ = new VulkanRenderer;
+
+			renderer_->init();
+		}
+		catch (const std::runtime_error& e)
+		{
+			throw e;
+		}
 	}
+
 
 	App::~App()
 	{
 	}
 
-	void App::init()
-	{
-		if (Settings::inst()->getRendererType() == VULKAN)
-			renderer_ = new VulkanRenderer;
-
-		try {
-			renderer_->init();
-		} catch (const std::runtime_error& e) {
-			throw e;
-		}
-	}
 
 	void App::mainLoop()
 	{

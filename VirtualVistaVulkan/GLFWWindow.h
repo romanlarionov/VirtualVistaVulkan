@@ -2,27 +2,23 @@
 #ifndef VIRTUALVISTA_GLFWWINDOW_H
 #define VIRTUALVISTA_GLFWWINDOW_H
 
-// todo: check if this is the best place to put this
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "Window.h"
-
 namespace vv 
 {
-    class GLFWWindow : public Window 
+    class GLFWWindow
     {
     public:
         GLFWWindow();
         ~GLFWWindow();
 
-		void init();
 		void run();
 		bool shouldClose();
+		GLFWwindow* getHandle();
 
-    private:
+	private:
 		GLFWwindow *window_; // glfw typedef
-
     };
 }
 

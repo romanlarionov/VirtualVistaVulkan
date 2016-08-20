@@ -5,6 +5,7 @@ namespace vv
 {
 	Settings* Settings::instance_ = nullptr;
 
+	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	void Settings::setDefault()
 	{
 		default_ = true;
@@ -15,6 +16,10 @@ namespace vv
 
 		renderer_type_ = VULKAN;
 		window_type_ = GLFW;
+
+		graphics_required_ = true;
+		compute_required_ = false;
+		on_screen_rendering_required_ = true;
 	}
 
 	int Settings::getWindowWidth()
@@ -47,9 +52,26 @@ namespace vv
 		return window_type_;
 	}
 
+	bool Settings::isGraphicsRequired()
+	{
+		return graphics_required_;
+	}
+
+	bool Settings::isComputeRequired()
+	{
+		return compute_required_;
+	}
+
+	bool Settings::isOnScreenRenderingRequired()
+	{
+		return on_screen_rendering_required_;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////// Private
 	Settings* Settings::inst()
 	{
-		if (!instance_) {
+		if (!instance_)
+		{
 			instance_ = new Settings;
 			instance_->setDefault();
 		}

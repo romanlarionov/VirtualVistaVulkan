@@ -8,6 +8,7 @@
 
 namespace vv 
 {
+	// todo: offload default settings to file. Read at application start.
     class Settings 
     {
     public:
@@ -20,6 +21,9 @@ namespace vv
 		std::string getEngineName();
 		RENDERER_TYPE getRendererType();
 		WINDOW_TYPE getWindowType();
+		bool isGraphicsRequired();
+		bool isComputeRequired();
+		bool isOnScreenRenderingRequired();
 
 	private:
 		static Settings* instance_;
@@ -29,8 +33,15 @@ namespace vv
 		int window_height_;
 		std::string application_name_;
 		std::string engine_name_;
-		RENDERER_TYPE renderer_type_;
+
 		WINDOW_TYPE window_type_;
+
+		// Graphics Settings
+		RENDERER_TYPE renderer_type_;
+
+		bool graphics_required_;
+		bool compute_required_;
+		bool on_screen_rendering_required_;
 
         Settings();
 		Settings(const Settings& s);

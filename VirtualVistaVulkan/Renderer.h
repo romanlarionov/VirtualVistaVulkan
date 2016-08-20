@@ -2,7 +2,7 @@
 #ifndef VIRTUALVISTA_RENDERER_H
 #define VIRTUALVISTA_RENDERER_H
 
-#include "Window.h"
+#include "GLFWWindow.h"
 
 namespace vv 
 {
@@ -15,8 +15,7 @@ namespace vv
 		virtual void init() {};
 		virtual void run() {};
 		virtual bool shouldStop() { return false; };
-		virtual void initWindow() {};
-		virtual Window* getWindow() { return nullptr; };
+		virtual GLFWWindow* getWindow() { return nullptr; };
     };
 }
 
