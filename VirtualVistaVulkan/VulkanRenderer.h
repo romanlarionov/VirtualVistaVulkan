@@ -46,9 +46,9 @@ namespace vv
 		std::vector<VkImage> swap_chain_images_;
 		std::vector<VkImageView> swap_chain_image_views_;
 
-
-		//Shader shader_;
-		VkShaderModule shader_module_;
+		Shader *shader_;
+		VkPipeline pipeline_;
+		VkPipelineLayout pipeline_layout_;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };

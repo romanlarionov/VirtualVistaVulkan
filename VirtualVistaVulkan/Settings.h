@@ -13,7 +13,7 @@ namespace vv
     {
     public:
         static Settings* inst();
-	setDefault();
+		void setDefault();
 
 	int getWindowWidth();
 	int getWindowHeight();
