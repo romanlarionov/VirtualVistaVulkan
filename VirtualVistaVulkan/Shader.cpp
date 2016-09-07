@@ -16,11 +16,11 @@ namespace vv
 
 	Shader::~Shader()
 	{
-		if (vert_module_ != VK_NULL_HANDLE)
-			vkDestroyShaderModule(device_, vert_module_, nullptr);
+		if (vert_module != VK_NULL_HANDLE)
+			vkDestroyShaderModule(device_, vert_module, nullptr);
 
-		if (frag_module_ != VK_NULL_HANDLE)
-			vkDestroyShaderModule(device_, frag_module_, nullptr);
+		if (frag_module != VK_NULL_HANDLE)
+			vkDestroyShaderModule(device_, frag_module, nullptr);
 	}
 
 
@@ -32,8 +32,8 @@ namespace vv
 		vert_binary_data_ = loadSpirVBinary(vert_path_);
 		frag_binary_data_ = loadSpirVBinary(frag_path_);
 
-		createShaderModule(vert_binary_data_, vert_module_);
-		createShaderModule(frag_binary_data_, frag_module_);
+		createShaderModule(vert_binary_data_, vert_module);
+		createShaderModule(frag_binary_data_, frag_module);
 	}
 
 	
@@ -49,16 +49,13 @@ namespace vv
 		file.seekg(0);
 		file.read(buffer.data(), file_size);
 
-		// todo: remove
-		std::cout << buffer.data() << std::endl;
-
 		VV_ASSERT(!buffer.empty(), "Vulkan Error: Spir-V file empty: " + file_name);
 		file.close();
 		return buffer;
 	}
 
 
-	void Shader::createShaderModule(const std::vector<char> byte_code, VkShaderModule module)
+	void Shader::createShaderModule(const std::vector<char> byte_code, VkShaderModule &module)
 	{
 		VkShaderModuleCreateInfo shader_module_create_info = {};
 		shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -68,6 +65,4 @@ namespace vv
 
 		VV_CHECK_SUCCESS(vkCreateShaderModule(device_, &shader_module_create_info, nullptr, &module));
 	}
-
-
 }

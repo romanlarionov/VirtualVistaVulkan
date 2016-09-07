@@ -13,8 +13,8 @@ namespace vv
 	class Shader : public Resource
 	{
 	public:
-		VkShaderModule vert_module_ = VK_NULL_HANDLE;
-		VkShaderModule frag_module_ = VK_NULL_HANDLE;
+		VkShaderModule vert_module = VK_NULL_HANDLE;
+		VkShaderModule frag_module = VK_NULL_HANDLE;
 
 		Shader();
 		~Shader();
@@ -31,7 +31,7 @@ namespace vv
 		std::vector<char> frag_binary_data_;
 
 		std::vector<char> loadSpirVBinary(std::string file_name);
-		void createShaderModule(const std::vector<char> byte_code, VkShaderModule module);
+		void createShaderModule(const std::vector<char> byte_code, VkShaderModule &module);
 	};
 }
 

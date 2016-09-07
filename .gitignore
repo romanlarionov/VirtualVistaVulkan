@@ -5,4 +5,7 @@ x64/*
 VirtualVistaVulkan/x64*
 .vs/*
 
-*.VC.db
+*.VC.*
+*.user
+*.vcxproj
+*.filters

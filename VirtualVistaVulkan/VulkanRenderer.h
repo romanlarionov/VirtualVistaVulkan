@@ -18,11 +18,6 @@ namespace vv
 		~VulkanRenderer();
 
 		/*
-		 * Starts initializing graphics computation components once core Vulkan components are ready.
-		 */
-		void createGraphicsPipeline();
-
-		/*
 		 * Render pass function. Executed in engine main loop.
 		 */
 		void run();
@@ -48,7 +43,10 @@ namespace vv
 
 		Shader *shader_;
 		VkPipeline pipeline_;
+
+		// uniform data for shaders
 		VkPipelineLayout pipeline_layout_;
+		VkRenderPass render_pass_;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
@@ -89,9 +87,14 @@ namespace vv
 		void createVulkanImages();
 
 		/*
-		 *
+		 * Starts initializing graphics computation components and their settings (anti-aliasing, rasterizer, etc) once core Vulkan components are ready.
 		 */
-		void createVulkanShaderModule();
+		void createGraphicsPipeline();
+
+		/*
+		 * Starts creating the framebuffers for display.
+		 */
+		void createRenderPass();
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.
