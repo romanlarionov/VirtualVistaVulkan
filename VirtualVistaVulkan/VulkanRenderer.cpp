@@ -46,12 +46,12 @@ namespace vv
 				createVulkanSurface();
 
 			setupDebugCallback();
-			createVulkanPhysicalDevices();
-			createVulkanLogicalDevices();
+			createVulkanDevices();
 
 			if (Settings::inst()->isOnScreenRenderingRequired())
 				createVulkanSwapChain();
 
+			createVulkanImages();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -66,10 +66,27 @@ namespace vv
 		// todo: some of these might be null
 		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
 
-		vkDestroySwapchainKHR(logical_device_, swap_chain_, nullptr);
-		vkDestroyDevice(logical_device_, nullptr);
+		// todo: remove from here!!!
+		//vkDestroyShaderModule(physical_devices_[0].logical_device, shader_module_, nullptr);
+
+		for (int i = 0; i < swap_chain_image_views_.size(); ++i)
+			vkDestroyImageView(physical_devices_[0]->logical_device, swap_chain_image_views_[i], nullptr);
+
+		vkDestroySwapchainKHR(physical_devices_[0]->logical_device, swap_chain_, nullptr);
 		vkDestroySurfaceKHR(instance_, surface_, nullptr);
 		vkDestroyInstance(instance_, nullptr);
+	}
+
+
+	void VulkanRenderer::createGraphicsPipeline()
+	{
+
+	}
+
+
+	void VulkanRenderer::createVulkanShaderModule()
+	{
+		
 	}
 
 
@@ -97,8 +114,7 @@ namespace vv
 
 	void VulkanRenderer::createVulkanInstance()
 	{
-		if (enable_validation_layers_ && !checkValidationLayerSupport())
-			throw std::runtime_error("Validation layers requested are not available on this system.");
+		VV_ASSERT(checkValidationLayerSupport(), "Validation layers requested are not available on this system.");
 
 		// Instance Creation
 		std::string application_name = Settings::inst()->getApplicationName();
@@ -114,8 +130,7 @@ namespace vv
 		app_info.apiVersion = VK_API_VERSION_1_0;
 
 		// Ensure required extensions are found.
-		if (!checkInstanceExtensionSupport())
-			throw std::runtime_error("Extensions requested, but are not available on this system.");
+		VV_ASSERT(checkInstanceExtensionSupport(), "Extensions requested, but are not available on this system.");
 
 		VkInstanceCreateInfo instance_create_info = {};
 		instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -125,22 +140,21 @@ namespace vv
 		instance_create_info.enabledExtensionCount = required_extensions.size();
 		instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
-		if (enable_validation_layers_)
-		{
+#ifdef _DEBUG
 			instance_create_info.enabledLayerCount = used_validation_layers_.size();
 			instance_create_info.ppEnabledLayerNames = used_validation_layers_.data();
-		}
-		else
+#else
 			instance_create_info.enabledLayerCount = 0;
+#endif
 
-		VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_), "vkCreateInstance failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
 	}
 
 
 	void VulkanRenderer::createVulkanSurface()
 	{
 	    // todo: figure out if this really needs it's own function.
-		VV_CHECK_SUCCESS(glfwCreateWindowSurface(instance_, window_->getHandle(), nullptr, &surface_), "glfwCreateWindowSurface failed. VulkanRenderer.cpp");	
+		VV_CHECK_SUCCESS(glfwCreateWindowSurface(instance_, window_->getHandle(), nullptr, &surface_));
 	}
 
 
@@ -168,9 +182,9 @@ namespace vv
 		std::vector<const char*> required_extensions = getRequiredExtensions();
 
 		uint32_t extension_count = 0;
-		VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr), "vkEnumerateInstanceExtensionProperties failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr));
 		std::vector<VkExtensionProperties> available_extensions(extension_count);
-		VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions.data()), "vkEnumerateInstanceExtensionProperties failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions.data()));
 
 		// Compare found extensions with requested ones.
 		for (const auto& extension : required_extensions)
@@ -193,9 +207,9 @@ namespace vv
 	bool VulkanRenderer::checkValidationLayerSupport()
 	{
 		uint32_t layer_count = 0;
-		VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, nullptr), "vkEnumerateInstanceLayerProperties failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
 		std::vector<VkLayerProperties> available_layers(layer_count);
-		VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()), "vkEnumerateInstanceLayerProperties failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()));
 
 		// Compare found layers with requested ones.
 		for (const char* layer : used_validation_layers_)
@@ -260,7 +274,7 @@ namespace vv
 	void VulkanRenderer::setupDebugCallback()
 	{
 		// Only execute if debugging to save in runtime execution processing.
-		if (!enable_validation_layers_) return;
+#ifdef _DEBUG
 
 		VkDebugReportCallbackCreateInfoEXT debug_callback_create_info = {};
 		debug_callback_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
@@ -272,18 +286,18 @@ namespace vv
 			VK_DEBUG_REPORT_DEBUG_BIT_EXT |
 			VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT;
 
-		VV_CHECK_SUCCESS(createDebugReportCallbackEXT(instance_, &debug_callback_create_info, nullptr, &debug_callback_), "createDebugReportCallbackEXT failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(createDebugReportCallbackEXT(instance_, &debug_callback_create_info, nullptr, &debug_callback_));
+#endif
 	}
 
 
-	void VulkanRenderer::createVulkanPhysicalDevices()
+	void VulkanRenderer::createVulkanDevices()
 	{
 	    // todo: implement ranking system to choose most optimal gpu or order them in increasing order of relevance.
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
 
-		if (physical_device_count == 0)
-			throw std::runtime_error("Vulkan Error: no gpu with Vulkan support found");
+		VV_ASSERT(physical_device_count != 0, "Vulkan Error: no gpu with Vulkan support found");
 
 		std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, physical_devices.data());
@@ -291,58 +305,18 @@ namespace vv
 		// Find any physical devices that might be suitable for on screen rendering.
 		for (auto device : physical_devices)
 		{
-			VulkanPhysicalDeviceHandle vulkan_physical_device_handle(device);
+			VulkanDevice *vulkan_device = new VulkanDevice(device);
 			VulkanSurfaceDetailsHandle surface_details_handle = {};
-			if (vulkan_physical_device_handle.isSuitable(surface_, surface_details_handle))
+			if (vulkan_device->isSuitable(surface_, surface_details_handle))
 			{
-				physical_devices_.push_back(vulkan_physical_device_handle);
+				vulkan_device->createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT);
+				physical_devices_.push_back(vulkan_device);
 				surface_settings_ = surface_details_handle;
 				break; // todo: remove. for now only adding one device.
 			}
 		}
 
-		if (physical_devices_.empty())
-			throw std::runtime_error("Vulkan Error: no gpu with Vulkan support found");
-	}
-
-
-	void VulkanRenderer::createVulkanLogicalDevices()
-	{
-		// todo: generalize such that any type and number of queues can be created for this logical device 
-		// currently only making a single logical device with a single graphics queue family.
-		VkDeviceQueueCreateInfo device_queue_create_info = {};
-		device_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		device_queue_create_info.queueFamilyIndex = physical_devices_[0].graphics_family_index;
-		device_queue_create_info.queueCount = 1;
-
-		float queue_priority = 1.0f;
-		device_queue_create_info.pQueuePriorities = &queue_priority;
-
-		VkDeviceCreateInfo device_create_info;
-		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		device_create_info.flags = 0;
-		device_create_info.pQueueCreateInfos = &device_queue_create_info;
-		device_create_info.queueCreateInfoCount = 1;
-		device_create_info.pEnabledFeatures = &physical_devices_[0].physical_device_features;
-
-		// device extensions and layers
-		device_create_info.enabledExtensionCount = physical_devices_[0].used_device_extensions.size();
-		device_create_info.ppEnabledExtensionNames = physical_devices_[0].used_device_extensions.data();
-	
-		if (enable_validation_layers_)
-		{
-			// todo: currently using the same layers for the device that I do for the instance level. might
-			// need to diverge here (but it's my understanding that device layers are becoming depricated).
-			device_create_info.enabledLayerCount = used_validation_layers_.size();
-			device_create_info.ppEnabledLayerNames = used_validation_layers_.data();
-		}
-		else
-			device_create_info.enabledLayerCount = 0;
-
-		VV_CHECK_SUCCESS(vkCreateDevice(physical_devices_[0].physical_device, &device_create_info, nullptr, &logical_device_), "vkCreateDevice failed. VulkanRenderer.cpp");
-
-		// sets up graphics queue handle.
-		vkGetDeviceQueue(logical_device_, physical_devices_[0].graphics_family_index, 0, &graphics_queue_);
+		VV_ASSERT(!physical_devices_.empty(), "Vulkan Error: no gpu with Vulkan support found");
 	}
 
 
@@ -388,11 +362,13 @@ namespace vv
 		extent.height = std::max(surface_settings_.surface_capabilities.minImageExtent.height, std::min(surface_settings_.surface_capabilities.maxImageExtent.height, (uint32_t)Settings::inst()->getWindowHeight()));
 		return extent;
 	}
-		
+
+
 	// todo: this could be altered to allow for on-the-fly graphics configuration without a need for a hard restart.
 	// for now, I'm setting the swap chain to be initialized with whatever the default settings are on renderer initialization.
 	void VulkanRenderer::createVulkanSwapChain()
 	{
+		VV_ASSERT(physical_devices_[0]->logical_device, "Logical device not present");
 		VulkanSurfaceDetailsHandle details = surface_settings_;
 		VkSurfaceFormatKHR chosen_format = chooseSwapSurfaceFormat();
 		VkPresentModeKHR chosen_present_mode = chooseSwapSurfacePresentMode();
@@ -406,7 +382,7 @@ namespace vv
 
 		VkSwapchainCreateInfoKHR swap_chain_create_info = {};
 		swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swap_chain_create_info.flags = VK_NULL_HANDLE;
+		swap_chain_create_info.flags = 0;
 		swap_chain_create_info.surface = surface_;
 		swap_chain_create_info.minImageCount = image_count;
 		swap_chain_create_info.imageFormat = chosen_format.format;
@@ -415,9 +391,9 @@ namespace vv
 		swap_chain_create_info.imageArrayLayers = 1; // todo: make dynamic. 2 would be for VR support
 		swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT <- to do post processing
 
-		if (physical_devices_[0].graphics_family_index != physical_devices_[0].display_family_index)
+		if (physical_devices_[0]->graphics_family_index != physical_devices_[0]->display_family_index)
 		{
-			uint32_t queue[] = { (uint32_t)physical_devices_[0].graphics_family_index, (uint32_t)(physical_devices_[0].display_family_index) };
+			uint32_t queue[] = { (uint32_t)physical_devices_[0]->graphics_family_index, (uint32_t)(physical_devices_[0]->display_family_index) };
 			swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			swap_chain_create_info.queueFamilyIndexCount = 2; // display and graphics use two different queues
 			swap_chain_create_info.pQueueFamilyIndices = queue;
@@ -435,11 +411,44 @@ namespace vv
 		swap_chain_create_info.clipped = VK_TRUE;
 		swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-		VV_CHECK_SUCCESS(vkCreateSwapchainKHR(logical_device_, &swap_chain_create_info, nullptr, &swap_chain_), "vkCreateSwapchainKHR failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkCreateSwapchainKHR(physical_devices_[0]->logical_device, &swap_chain_create_info, nullptr, &swap_chain_));
+	}
+
+
+	void VulkanRenderer::createVulkanImages()
+	{
+		// This is effectively creating a queue of frames to be displayed. 
+		// todo: support VR by having multiple lists containing images/image views for each eye.
 
 		uint32_t swap_chain_image_count = 0;
-		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(logical_device_, swap_chain_, &swap_chain_image_count, nullptr), "vkGetSwapchainImagesKHR failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(physical_devices_[0]->logical_device, swap_chain_, &swap_chain_image_count, nullptr));
 		swap_chain_images_.resize(swap_chain_image_count);
-		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(logical_device_, swap_chain_, &swap_chain_image_count, swap_chain_images_.data()), "vkGetSwapchainImagesKHR failed. VulkanRenderer.cpp");
+		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(physical_devices_[0]->logical_device, swap_chain_, &swap_chain_image_count, swap_chain_images_.data()));
+
+		swap_chain_image_views_.resize(swap_chain_image_count);
+		for (int i = 0; i < swap_chain_image_count; ++i)
+		{
+			VkImageViewCreateInfo image_view_create_info = {};
+			image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			image_view_create_info.flags = VK_NULL_HANDLE;
+			image_view_create_info.image = swap_chain_images_[i];
+			image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			image_view_create_info.format = swap_chain_format_;
+
+			image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			image_view_create_info.subresourceRange.baseMipLevel = 0;
+			image_view_create_info.subresourceRange.levelCount = 1;
+			image_view_create_info.subresourceRange.baseArrayLayer = 0;
+			image_view_create_info.subresourceRange.layerCount = 1;
+
+			VkImageView image_view = {};
+			VV_CHECK_SUCCESS(vkCreateImageView(physical_devices_[0]->logical_device, &image_view_create_info, nullptr, &image_view));
+			swap_chain_image_views_.push_back(image_view);
+		}
 	}
 }

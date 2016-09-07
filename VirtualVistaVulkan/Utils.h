@@ -9,12 +9,32 @@
 #ifndef VIRTUALVISTA_UTILS_H
 #define VIRTUALVISTA_UTILS_H
 
-#define VV_CHECK_SUCCESS(success, message) { \
-        if (success != VK_SUCCESS) \
-        { \
-			throw std::runtime_error(message); \
-        } \
+#define VV_SAFE_DELETE(p) { \
+		if (!p) {} \
+		else { delete p; p = NULL; } \
+	}
+
+#ifdef _DEBUG
+
+#define VV_CHECK_SUCCESS(success) { \
+        if (success == VK_SUCCESS) { } \
+		else throw std::runtime_error(__FUNCTION__  + std::to_string(__LINE__) + __FILE__); \
     }
+
+#define VV_ASSERT(condition, message) \
+		if (condition) { } \
+		else \
+		{ \
+			throw std::runtime_error(#message + std::to_string(__LINE__) + __FILE__ ); \
+		}
+
+
+#else
+
+#define VV_CHECK_SUCCESS(success) {}
+#define VV_ASSERT(condition, message) {}
+
+#endif
 
 namespace vv
 {

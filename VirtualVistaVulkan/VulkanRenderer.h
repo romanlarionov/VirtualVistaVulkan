@@ -4,8 +4,9 @@
 
 #include <vector>
 
+#include "Shader.h"
 #include "Renderer.h"
-#include "VulkanRendererHelper.h"
+#include "VulkanDevice.h"
 #include "Utils.h"
 
 namespace vv
@@ -15,6 +16,11 @@ namespace vv
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();
+
+		/*
+		 * Starts initializing graphics computation components once core Vulkan components are ready.
+		 */
+		void createGraphicsPipeline();
 
 		/*
 		 * Render pass function. Executed in engine main loop.
@@ -27,26 +33,22 @@ namespace vv
 		bool shouldStop();
 
 	private:
-#ifdef _DEBUG
-		const bool enable_validation_layers_ = true;
-#else
-		const bool enable_validation_layers_ = false;
-#endif
-
 		GLFWWindow *window_ = nullptr;
 		VkInstance instance_;
 		VkDebugReportCallbackEXT debug_callback_;
+		std::vector<VulkanDevice*> physical_devices_;
 
 		VkSurfaceKHR surface_;
 		VulkanSurfaceDetailsHandle surface_settings_;
-		VkSwapchainKHR swap_chain_;
+		VkSwapchainKHR swap_chain_ = VK_NULL_HANDLE;
 		VkExtent2D swap_chain_extent_;
 		VkFormat swap_chain_format_;
 		std::vector<VkImage> swap_chain_images_;
+		std::vector<VkImageView> swap_chain_image_views_;
 
-		std::vector<VulkanPhysicalDeviceHandle> physical_devices_;
-		VkDevice logical_device_;
-		VkQueue graphics_queue_;
+
+		//Shader shader_;
+		VkShaderModule shader_module_;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
@@ -72,19 +74,24 @@ namespace vv
 		void setupDebugCallback();
 
 		/*
-		 * Creates physical devices handles for any gpus found with Vulkan support.
+		 * Creates device handles for any gpus found with Vulkan support.
 	 	 */
-		void createVulkanPhysicalDevices();
-
-		/*
-		 * Creates a logical abstraction for Vulkan device which can be used to submit commands to.
-		 */
-		void createVulkanLogicalDevices();
+		void createVulkanDevices();
 
 		/*
 		 * Creates the abstraction for the Vulkan swap chain.
 		 */
 		void createVulkanSwapChain();
+
+		/*
+		 * Creates image views that explain to vulkan what the list of images for the swap chain are meant to be.
+		 */
+		void createVulkanImages();
+
+		/*
+		 *
+		 */
+		void createVulkanShaderModule();
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.

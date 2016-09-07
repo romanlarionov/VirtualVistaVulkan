@@ -7,6 +7,7 @@
 
 namespace vv
 {
+	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	App::App(int argc, char **argv)
 	{
 		argc_ = argc;
@@ -18,6 +19,7 @@ namespace vv
 				renderer_ = new VulkanRenderer;
 
 			renderer_->init();
+
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -39,4 +41,8 @@ namespace vv
 			renderer_->run();
 		}
 	}
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////// Private
+
 }

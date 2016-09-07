@@ -12,40 +12,40 @@ namespace vv
     class Settings 
     {
     public:
-		static Settings* inst();
-	    void setDefault();
+        static Settings* inst();
+	setDefault();
 
-		int getWindowWidth();
-		int getWindowHeight();
-		std::string getApplicationName();
-		std::string getEngineName();
-		RENDERER_TYPE getRendererType();
-		WINDOW_TYPE getWindowType();
-		bool isGraphicsRequired();
-		bool isComputeRequired();
-		bool isOnScreenRenderingRequired();
+	int getWindowWidth();
+	int getWindowHeight();
+	std::string getApplicationName();
+	std::string getEngineName();
+	RENDERER_TYPE getRendererType();
+	WINDOW_TYPE getWindowType();
+	bool isGraphicsRequired();
+	bool isComputeRequired();
+	bool isOnScreenRenderingRequired();
 
-	private:
-		static Settings* instance_;
+    private:
+	static Settings* instance_;
 
-		bool default_;
-		int window_width_;
-		int window_height_;
-		std::string application_name_;
-		std::string engine_name_;
+	bool default_;
+	int window_width_;
+	int window_height_;
+	std::string application_name_;
+	std::string engine_name_;
 
-		WINDOW_TYPE window_type_;
+	WINDOW_TYPE window_type_;
 
-		// Graphics Settings
-		RENDERER_TYPE renderer_type_;
+	// Graphics Settings
+	RENDERER_TYPE renderer_type_;
 
-		bool graphics_required_;
-		bool compute_required_;
-		bool on_screen_rendering_required_;
+	bool graphics_required_;
+	bool compute_required_;
+	bool on_screen_rendering_required_;
 
-        Settings();
-		Settings(const Settings& s);
-		Settings* operator=(const Settings& s);
+        Settings() {};
+        Settings(const Settings& s) {};
+        Settings* operator=(const Settings& s) {};
     };
 }
 

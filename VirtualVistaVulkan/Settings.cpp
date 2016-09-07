@@ -77,8 +77,4 @@ namespace vv
 		}
 		return instance_;
 	}
-
-	Settings::Settings()
-	{
-	}
 }

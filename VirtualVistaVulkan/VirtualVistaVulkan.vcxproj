@@ -131,7 +131,9 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="GLFWWindow.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="VulkanRenderer.cpp" />
     <ClCompile Include="VulkanRendererHelper.h" />
@@ -140,9 +142,17 @@
     <ClInclude Include="App.h" />
     <ClInclude Include="GLFWWindow.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="VulkanDevice.h" />
     <ClInclude Include="VulkanRenderer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="triangle.frag" />
+    <None Include="triangle.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
