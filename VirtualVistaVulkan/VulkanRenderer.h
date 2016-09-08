@@ -53,6 +53,7 @@ namespace vv
 		VkFormat swap_chain_format_;
 		std::vector<VkImage> swap_chain_images_;
 		std::vector<VkImageView> swap_chain_image_views_;
+		std::vector<VkFramebuffer> frame_buffers_;
 
 		Shader *shader_;
 		VkPipeline pipeline_;
@@ -60,6 +61,12 @@ namespace vv
 		// uniform data for shaders
 		VkPipelineLayout pipeline_layout_;
 		VkRenderPass render_pass_;
+
+		VkCommandPool command_pool_;
+		std::vector<VkCommandBuffer> command_buffers_;
+
+		VkSemaphore image_ready_semaphore_;
+		VkSemaphore rendering_complete_semaphore_;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
@@ -108,6 +115,27 @@ namespace vv
 		 * Starts creating the framebuffers for display.
 		 */
 		void createRenderPass();
+
+		/*
+		 * Creates Vulkan FrameBuffer objects that encapsulate all of the Vulkan image textures in the swap chain for storing rendered frames.
+		 */
+		void createFrameBuffers();
+
+		/*
+		 * Creates a Vulkan pool that stores gpu operations such as memory transfers, draw calls, and compute calls.
+		 */
+		void createCommandPool();
+
+		/*
+		 * Creates a list of executable commands that will be sent to a command pool.
+		 * These commands range from memory management calls, to binding framebuffers, to draw commands. 
+		 */
+		void createCommandBuffers();
+
+		/*
+		 * Creates locks for command queue operations to handle their asynchronous execution.
+		 */
+		void createVulkanSemaphores();
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.

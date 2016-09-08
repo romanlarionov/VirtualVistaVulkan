@@ -67,6 +67,10 @@ namespace vv
 
 			createRenderPass();
 			createGraphicsPipeline();
+			createFrameBuffers();
+			createCommandPool();
+			createCommandBuffers();
+			createVulkanSemaphores();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -80,22 +84,35 @@ namespace vv
 		// todo: expand for multiple possible devices.
 		// todo: some of these might be null
 
+		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
+		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
+
+		// Async devices
+		vkDestroySemaphore(physical_devices_[0]->logical_device, image_ready_semaphore_, nullptr);
+		vkDestroySemaphore(physical_devices_[0]->logical_device, rendering_complete_semaphore_, nullptr);
+
+		// Command Pool/Buffers
+		vkDestroyCommandPool(physical_devices_[0]->logical_device, command_pool_, nullptr);
+
 		// Graphics Pipeline
 		delete shader_; // todo: remove
 		vkDestroyPipelineLayout(physical_devices_[0]->logical_device, pipeline_layout_, nullptr);
 		vkDestroyRenderPass(physical_devices_[0]->logical_device, render_pass_, nullptr);
 		vkDestroyPipeline(physical_devices_[0]->logical_device, pipeline_, nullptr);
 
+		for (std::size_t i = 0; i < frame_buffers_.size(); ++i)
+			vkDestroyFramebuffer(physical_devices_[0]->logical_device, frame_buffers_[i], nullptr);
+
 		// Swap Chain
-		for (int i = 0; i < swap_chain_image_views_.size(); ++i)
+		for (std::size_t i = 0; i < swap_chain_image_views_.size(); ++i)
 			vkDestroyImageView(physical_devices_[0]->logical_device, swap_chain_image_views_[i], nullptr);
 
 		vkDestroySwapchainKHR(physical_devices_[0]->logical_device, swap_chain_, nullptr);
 		vkDestroySurfaceKHR(instance_, surface_, nullptr);
 
 		// Physical/Logical devices
-		for (const auto* device : physical_devices_)
-			delete device;
+		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
+			delete physical_devices_[i];
 
 		// Instance
 		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
@@ -110,7 +127,50 @@ namespace vv
 		// Poll window specific updates and input.
 		window_->run();
 
-		// Perform actual rendering calls
+		// Draw Frame
+
+		// Aquire an image from the swap chain
+		uint32_t image_index = 0;
+		VkResult image_aquired_result = vkAcquireNextImageKHR(physical_devices_[0]->logical_device,
+			swap_chain_,
+			std::numeric_limits<uint64_t>::max(),
+			image_ready_semaphore_,
+			VK_NULL_HANDLE,
+			&image_index);
+
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		/// tell the queue to wait until a command buffer successfully attaches a swap chain image as a color attachment (wait til its ready to begin rendering).
+		std::array<VkSemaphore, 1> wait_semaphores = { image_ready_semaphore_ };
+		std::array<VkPipelineStageFlags, 1> wait_stages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+		submit_info.waitSemaphoreCount = 1;
+		submit_info.pWaitSemaphores = wait_semaphores.data();
+		submit_info.pWaitDstStageMask = wait_stages.data();
+
+		/// Set the command buffer that will be used to rendering to be the one we waited for.
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &command_buffers_[image_index];
+
+		/// Detail the semaphore that marks when rendering is complete.
+		std::array<VkSemaphore, 1> signal_semaphores = { rendering_complete_semaphore_ };
+		submit_info.signalSemaphoreCount = 1;
+		submit_info.pSignalSemaphores = signal_semaphores.data();
+
+		VV_CHECK_SUCCESS(vkQueueSubmit(physical_devices_[0]->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+
+		// Presenting the rendered image
+		VkPresentInfoKHR present_info = {};
+		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		present_info.waitSemaphoreCount = 1;
+		present_info.pWaitSemaphores = signal_semaphores.data();
+
+		present_info.swapchainCount = 1;
+		present_info.pSwapchains = &swap_chain_;
+		present_info.pImageIndices = &image_index;
+
+		vkQueuePresentKHR(physical_devices_[0]->graphics_queue, &present_info);
 	}
 
 	
@@ -262,8 +322,8 @@ namespace vv
 		// todo: think of other things that might be useful to log
 
         std::ostringstream stream;
-        if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-            stream << "INFORMATION: ";
+        //if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+        //    stream << "INFORMATION: ";
         if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
             stream << "WARNING: ";
         if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
@@ -485,6 +545,15 @@ namespace vv
 		// todo: it's possible to have multiple sub-render-passes. You can perform things like post-processing
 		// on a single framebuffer within a single RenderPass object, saving memory. Look into this for the future.
 
+		// this handles the case for the implicit subpasses that occur for image layout transitions. this is to prevent the queue from accessing the framebuffer before its ready.
+		VkSubpassDependency subpass_dependency = {};
+		subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpass_dependency.dstSubpass = 0;
+		subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		subpass_dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 		VkAttachmentReference attachment_reference = {};
 		attachment_reference.attachment = 0; // framebuffer at index 0
 		attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // use internal framebuffer as color texture
@@ -502,6 +571,8 @@ namespace vv
 		render_pass_create_info.pAttachments = &attachment_description;
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass_description;
+		render_pass_create_info.dependencyCount = 1;
+		render_pass_create_info.pDependencies = &subpass_dependency;
 
 		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
 	}
@@ -588,22 +659,22 @@ namespace vv
 		multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
 		multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
+		// todo: for some reason, if this is activated the output color is overrided. fix me
 		/* This along with color blend create info specify alpha blending operations */
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
-		color_blend_attachment_state.blendEnable = VK_TRUE;
-		color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_A_BIT;
-		color_blend_attachment_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		color_blend_attachment_state.colorBlendOp = VK_BLEND_OP_ADD;
-		color_blend_attachment_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		color_blend_attachment_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		color_blend_attachment_state.alphaBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        color_blend_attachment_state.blendEnable = VK_FALSE;
 
-		VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
-		color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		color_blend_state_create_info.flags = 0;
-		color_blend_state_create_info.logicOpEnable = VK_FALSE;
-		color_blend_state_create_info.attachmentCount = 1;
-		color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+        VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
+        color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        color_blend_state_create_info.logicOpEnable = VK_FALSE;
+        color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+        color_blend_state_create_info.attachmentCount = 1;
+        color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+        color_blend_state_create_info.blendConstants[0] = 0.0f;
+        color_blend_state_create_info.blendConstants[1] = 0.0f;
+        color_blend_state_create_info.blendConstants[2] = 0.0f;
+        color_blend_state_create_info.blendConstants[3] = 0.0f;
 
 		// add enum values here for more dynamic pipeline state changes!! 
 		std::array<VkDynamicState, 2> dynamic_pipeline_settings = { VK_DYNAMIC_STATE_VIEWPORT };
@@ -633,7 +704,7 @@ namespace vv
 		graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_create_info;
 		graphics_pipeline_create_info.pViewportState = &viewport_state_create_info;
 		graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
-		graphics_pipeline_create_info.pDynamicState = &dynamic_state_create_info;
+		graphics_pipeline_create_info.pDynamicState = nullptr;//&dynamic_state_create_info;
 		graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
 		graphics_pipeline_create_info.pDepthStencilState = nullptr;
 		graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
@@ -646,5 +717,97 @@ namespace vv
 		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
 		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
+	}
+
+
+	void VulkanRenderer::createFrameBuffers()
+	{
+		frame_buffers_.resize(swap_chain_image_views_.size());
+
+		for (std::size_t i = 0; i < swap_chain_image_views_.size(); ++i)
+		{
+			VkImageView attachments = {
+				swap_chain_image_views_[i]
+			};
+
+			VkFramebufferCreateInfo frame_buffer_create_info = {};
+			frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			frame_buffer_create_info.flags = 0;
+			frame_buffer_create_info.renderPass = render_pass_;
+			frame_buffer_create_info.attachmentCount = 1;
+			frame_buffer_create_info.pAttachments = &attachments;
+			frame_buffer_create_info.width = swap_chain_extent_.width;
+			frame_buffer_create_info.height = swap_chain_extent_.height;
+			frame_buffer_create_info.layers = 1;
+
+			VV_CHECK_SUCCESS(vkCreateFramebuffer(physical_devices_[0]->logical_device, &frame_buffer_create_info, nullptr, &frame_buffers_[i]));
+		}
+	}
+
+	
+	void VulkanRenderer::createCommandPool()
+	{
+		VkCommandPoolCreateInfo command_pool_create_info = {};
+		command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		command_pool_create_info.flags = 0; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT <- tells vulkan that command buffers will change frequently
+		command_pool_create_info.queueFamilyIndex = physical_devices_[0]->graphics_family_index;
+
+		VV_CHECK_SUCCESS(vkCreateCommandPool(physical_devices_[0]->logical_device, &command_pool_create_info, nullptr, &command_pool_));
+	}
+
+
+	void VulkanRenderer::createCommandBuffers()
+	{
+		command_buffers_.resize(frame_buffers_.size());
+
+		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		command_buffer_allocate_info.commandPool = command_pool_;
+
+		// primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
+		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
+		command_buffer_allocate_info.commandBufferCount = (uint32_t)command_buffers_.size();
+
+		VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_devices_[0]->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
+
+		for (std::size_t i = 0; i < command_buffers_.size(); ++i)
+		{
+			VkCommandBufferBeginInfo command_buffer_begin_info = {};
+			command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
+			command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
+
+			VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
+
+			VkRenderPassBeginInfo render_pass_begin_info = {};
+			render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			render_pass_begin_info.renderPass = render_pass_;
+			render_pass_begin_info.framebuffer = frame_buffers_[i];
+			render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
+			render_pass_begin_info.renderArea.extent = swap_chain_extent_;
+
+			VkClearValue clear_value = {0.3, 0.5, 0.5, 1.0}; // todo: offload to settings
+			render_pass_begin_info.clearValueCount = 1;
+			render_pass_begin_info.pClearValues = &clear_value;
+
+			vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+			vkCmdDraw(command_buffers_[i], 3, 1, 0, 0); // VERY instance specific! change!
+
+			vkCmdEndRenderPass(command_buffers_[i]);
+
+			VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
+		}
+	}
+
+
+	void VulkanRenderer::createVulkanSemaphores()
+	{
+		VkSemaphoreCreateInfo semaphore_create_info = {};
+		semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VV_CHECK_SUCCESS(vkCreateSemaphore(physical_devices_[0]->logical_device, &semaphore_create_info, nullptr, &image_ready_semaphore_));
+		VV_CHECK_SUCCESS(vkCreateSemaphore(physical_devices_[0]->logical_device, &semaphore_create_info, nullptr, &rendering_complete_semaphore_));
 	}
 }
