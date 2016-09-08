@@ -8,9 +8,10 @@ using namespace vv;
 
 int main(int argc, char **argv)
 {
+	App app(argc, argv);
 	try
 	{
-		App app(argc, argv);
+		app.init();
 		app.mainLoop();
 	}
 	catch (const std::runtime_error& e)
@@ -18,6 +19,8 @@ int main(int argc, char **argv)
 		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
+
+	app.shutDown();
 
 	return EXIT_SUCCESS;
 }

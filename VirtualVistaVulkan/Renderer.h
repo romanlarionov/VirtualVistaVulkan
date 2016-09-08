@@ -10,10 +10,11 @@ namespace vv
     {
     public:
 		Renderer() {};
-		~Renderer() {};
+		virtual ~Renderer() {};
 
-		virtual void init() {};
-		virtual void run() {};
+		virtual void init() = 0;
+		virtual void shutDown() = 0;
+		virtual void run() = 0;
 		virtual bool shouldStop() { return false; };
 		virtual GLFWWindow* getWindow() { return nullptr; };
     };

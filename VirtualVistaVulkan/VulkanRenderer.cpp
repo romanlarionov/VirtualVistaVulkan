@@ -38,6 +38,16 @@ namespace vv
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	VulkanRenderer::VulkanRenderer()
 	{
+	}
+
+
+	VulkanRenderer::~VulkanRenderer()
+	{
+	}
+
+
+	void VulkanRenderer::init()
+	{
 		try
 		{
 			createWindow();
@@ -65,17 +75,16 @@ namespace vv
 	}
 
 
-	VulkanRenderer::~VulkanRenderer()
+	void VulkanRenderer::shutDown()
 	{
 		// todo: expand for multiple possible devices.
 		// todo: some of these might be null
 
 		// Graphics Pipeline
+		delete shader_; // todo: remove
 		vkDestroyPipelineLayout(physical_devices_[0]->logical_device, pipeline_layout_, nullptr);
 		vkDestroyRenderPass(physical_devices_[0]->logical_device, render_pass_, nullptr);
 		vkDestroyPipeline(physical_devices_[0]->logical_device, pipeline_, nullptr);
-
-		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
 
 		// Swap Chain
 		for (int i = 0; i < swap_chain_image_views_.size(); ++i)
@@ -84,8 +93,15 @@ namespace vv
 		vkDestroySwapchainKHR(physical_devices_[0]->logical_device, swap_chain_, nullptr);
 		vkDestroySurfaceKHR(instance_, surface_, nullptr);
 
+		// Physical/Logical devices
+		for (const auto* device : physical_devices_)
+			delete device;
+
 		// Instance
+		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
 		vkDestroyInstance(instance_, nullptr);
+
+		delete window_;
 	}
 
 
@@ -103,6 +119,7 @@ namespace vv
 		// todo: add other conditions
 		return window_->shouldClose();
 	}
+
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
 	void VulkanRenderer::createWindow()
@@ -447,7 +464,7 @@ namespace vv
 
 			VkImageView image_view = {};
 			VV_CHECK_SUCCESS(vkCreateImageView(physical_devices_[0]->logical_device, &image_view_create_info, nullptr, &image_view));
-			swap_chain_image_views_.push_back(image_view);
+			swap_chain_image_views_[i] = image_view;
 		}
 	}
 

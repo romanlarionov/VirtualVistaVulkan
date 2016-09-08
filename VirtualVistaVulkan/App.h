@@ -12,6 +12,8 @@ namespace vv
 		App(int argc, char **argv);
 		~App();
 
+		void init();
+		void shutDown();
 		void mainLoop();
 
 	private:

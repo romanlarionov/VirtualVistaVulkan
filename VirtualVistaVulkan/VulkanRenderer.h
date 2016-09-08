@@ -18,6 +18,19 @@ namespace vv
 		~VulkanRenderer();
 
 		/*
+		 * Initialize all necessary Vulkan internals.
+		 */
+		void init();
+
+		/*
+		 * Destroy all Vulkan internals in the correct order.
+		 * 
+		 * This needs to be called at application termination to ensure that all corresponding Vulkan
+		 * pieces are destroyed in the proper order. This is needed because of C++'s lack of destructor guarantees.
+		 */
+		void shutDown();
+
+		/*
 		 * Render pass function. Executed in engine main loop.
 		 */
 		void run();
