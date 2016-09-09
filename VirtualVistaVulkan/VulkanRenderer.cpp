@@ -50,11 +50,10 @@ namespace vv
 	{
 		try
 		{
+			// Note: this is a very specific order and is not to be messed with.
 			createWindow();
 			createVulkanInstance();
-
-			if (Settings::inst()->isOnScreenRenderingRequired())
-				createVulkanSurface();
+			createVulkanSurface();
 
 			setupDebugCallback();
 			createVulkanDevices();
@@ -62,7 +61,6 @@ namespace vv
 			if (Settings::inst()->isOnScreenRenderingRequired())
 			{
 				createVulkanSwapChain();
-				createVulkanImages();
 			}
 
 			createRenderPass();
@@ -87,38 +85,39 @@ namespace vv
 		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
-		// Async devices
-		vkDestroySemaphore(physical_devices_[0]->logical_device, image_ready_semaphore_, nullptr);
-		vkDestroySemaphore(physical_devices_[0]->logical_device, rendering_complete_semaphore_, nullptr);
-
-		// Command Pool/Buffers
-		vkDestroyCommandPool(physical_devices_[0]->logical_device, command_pool_, nullptr);
-
-		// Graphics Pipeline
-		delete shader_; // todo: remove
-		vkDestroyPipelineLayout(physical_devices_[0]->logical_device, pipeline_layout_, nullptr);
-		vkDestroyRenderPass(physical_devices_[0]->logical_device, render_pass_, nullptr);
-		vkDestroyPipeline(physical_devices_[0]->logical_device, pipeline_, nullptr);
-
-		for (std::size_t i = 0; i < frame_buffers_.size(); ++i)
-			vkDestroyFramebuffer(physical_devices_[0]->logical_device, frame_buffers_[i], nullptr);
-
-		// Swap Chain
-		for (std::size_t i = 0; i < swap_chain_image_views_.size(); ++i)
-			vkDestroyImageView(physical_devices_[0]->logical_device, swap_chain_image_views_[i], nullptr);
-
-		vkDestroySwapchainKHR(physical_devices_[0]->logical_device, swap_chain_, nullptr);
-		vkDestroySurfaceKHR(instance_, surface_, nullptr);
-
-		// Physical/Logical devices
+		// For all physical devices
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
+		{
+			// Async devices
+			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
+			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
+
+			// Command Pool/Buffers
+			vkDestroyCommandPool(physical_devices_[i]->logical_device, command_pool_, nullptr);
+
+			// Graphics Pipeline
+			delete shader_; // todo: remove
+			vkDestroyPipelineLayout(physical_devices_[i]->logical_device, pipeline_layout_, nullptr);
+			vkDestroyRenderPass(physical_devices_[i]->logical_device, render_pass_, nullptr);
+			vkDestroyPipeline(physical_devices_[i]->logical_device, pipeline_, nullptr);
+
+			for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
+				vkDestroyFramebuffer(physical_devices_[i]->logical_device, frame_buffers_[j], nullptr);
+
+			// todo: ensure this isn't called twice when multiple GPUs are in use.
+			swap_chain_->shutDown(physical_devices_[i]);
+			delete swap_chain_;
+
+			// Physical/Logical devices
 			delete physical_devices_[i];
+		}
+
+		window_->shutDown(instance_);
+		delete window_;
 
 		// Instance
 		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
 		vkDestroyInstance(instance_, nullptr);
-
-		delete window_;
 	}
 
 
@@ -129,24 +128,17 @@ namespace vv
 
 		// Draw Frame
 
-		// Aquire an image from the swap chain
+		/// Acquire an image from the swap chain
 		uint32_t image_index = 0;
-		VkResult image_aquired_result = vkAcquireNextImageKHR(physical_devices_[0]->logical_device,
-			swap_chain_,
-			std::numeric_limits<uint64_t>::max(),
-			image_ready_semaphore_,
-			VK_NULL_HANDLE,
-			&image_index);
+		swap_chain_->acquireNextImage(physical_devices_[0], image_ready_semaphore_, image_index);
 
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		/// tell the queue to wait until a command buffer successfully attaches a swap chain image as a color attachment (wait til its ready to begin rendering).
-		std::array<VkSemaphore, 1> wait_semaphores = { image_ready_semaphore_ };
+		/// tell the queue to wait until a command buffer successfully attaches a swap chain image as a color attachment (wait until its ready to begin rendering).
 		std::array<VkPipelineStageFlags, 1> wait_stages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
 		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = wait_semaphores.data();
+		submit_info.pWaitSemaphores = &image_ready_semaphore_;
 		submit_info.pWaitDstStageMask = wait_stages.data();
 
 		/// Set the command buffer that will be used to rendering to be the one we waited for.
@@ -159,18 +151,7 @@ namespace vv
 		submit_info.pSignalSemaphores = signal_semaphores.data();
 
 		VV_CHECK_SUCCESS(vkQueueSubmit(physical_devices_[0]->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-
-		// Presenting the rendered image
-		VkPresentInfoKHR present_info = {};
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present_info.waitSemaphoreCount = 1;
-		present_info.pWaitSemaphores = signal_semaphores.data();
-
-		present_info.swapchainCount = 1;
-		present_info.pSwapchains = &swap_chain_;
-		present_info.pImageIndices = &image_index;
-
-		vkQueuePresentKHR(physical_devices_[0]->graphics_queue, &present_info);
+		swap_chain_->queuePresent(physical_devices_[0]->graphics_queue, image_index, rendering_complete_semaphore_);
 	}
 
 	
@@ -185,6 +166,7 @@ namespace vv
 	void VulkanRenderer::createWindow()
 	{
 		window_ = new GLFWWindow;
+		window_->create();
 	}
 
 
@@ -217,20 +199,13 @@ namespace vv
 		instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
-			instance_create_info.enabledLayerCount = used_validation_layers_.size();
-			instance_create_info.ppEnabledLayerNames = used_validation_layers_.data();
+		instance_create_info.enabledLayerCount = used_validation_layers_.size();
+		instance_create_info.ppEnabledLayerNames = used_validation_layers_.data();
 #else
-			instance_create_info.enabledLayerCount = 0;
+		instance_create_info.enabledLayerCount = 0;
 #endif
 
 		VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
-	}
-
-
-	void VulkanRenderer::createVulkanSurface()
-	{
-	    // todo: figure out if this really needs it's own function.
-		VV_CHECK_SUCCESS(glfwCreateWindowSurface(instance_, window_->getHandle(), nullptr, &surface_));
 	}
 
 
@@ -241,7 +216,7 @@ namespace vv
 		uint32_t glfw_extension_count;
 		const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
-		// glfw specific
+		// GLFW specific
 		for (uint32_t i = 0; i < glfw_extension_count; i++)
 		    extensions.push_back(glfw_extensions[i]);
 
@@ -302,6 +277,12 @@ namespace vv
 		}
 
 		return true;
+	}
+
+
+	void VulkanRenderer::createVulkanSurface()
+	{
+		window_->createSurface(instance_);
 	}
 
 
@@ -369,7 +350,7 @@ namespace vv
 
 	void VulkanRenderer::createVulkanDevices()
 	{
-	    // todo: implement ranking system to choose most optimal gpu or order them in increasing order of relevance.
+	    // todo: implement ranking system to choose most optimal GPU or order them in increasing order of relevance.
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
 
@@ -379,16 +360,22 @@ namespace vv
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, physical_devices.data());
 
 		// Find any physical devices that might be suitable for on screen rendering.
-		for (auto device : physical_devices)
+		for (const auto& device : physical_devices)
 		{
-			VulkanDevice *vulkan_device = new VulkanDevice(device);
+			VulkanDevice *vulkan_device = new VulkanDevice;
+			vulkan_device->create(device);
 			VulkanSurfaceDetailsHandle surface_details_handle = {};
-			if (vulkan_device->isSuitable(surface_, surface_details_handle))
+			if (vulkan_device->isSuitable(window_->surface, surface_details_handle))
 			{
 				vulkan_device->createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT);
 				physical_devices_.push_back(vulkan_device);
-				surface_settings_ = surface_details_handle;
+				window_->surface_settings[vulkan_device] = surface_details_handle; // todo: find a better hash code than a pointer
 				break; // todo: remove. for now only adding one device.
+			}
+			else
+			{
+				vulkan_device->shutDown();
+				delete vulkan_device;
 			}
 		}
 
@@ -396,6 +383,13 @@ namespace vv
 	}
 
 
+	void VulkanRenderer::createVulkanSwapChain()
+	{
+		swap_chain_ = new VulkanSwapChain;
+		swap_chain_->create(physical_devices_[0], window_);
+	}
+
+	/*
 	VkSurfaceFormatKHR VulkanRenderer::chooseSwapSurfaceFormat()
 	{
 		// The case when the surface has no preferred format. I choose to use standard sRGB for storage and 32 bit linear for computation.
@@ -445,16 +439,15 @@ namespace vv
 	void VulkanRenderer::createVulkanSwapChain()
 	{
 		VV_ASSERT(physical_devices_[0]->logical_device, "Logical device not present");
-		VulkanSurfaceDetailsHandle details = surface_settings_;
 		VkSurfaceFormatKHR chosen_format = chooseSwapSurfaceFormat();
 		VkPresentModeKHR chosen_present_mode = chooseSwapSurfacePresentMode();
 		swap_chain_extent_ = chooseSwapSurfaceExtent();
 		swap_chain_format_ = chosen_format.format;
 
 		// Queue length for swap chain. (How many images are kept waiting).
-		uint32_t image_count = details.surface_capabilities.minImageCount;
-		if ((details.surface_capabilities.maxImageCount > 0) && (image_count > details.surface_capabilities.maxImageCount)) // if 0, maxImageCount doesn't have a limit.
-			image_count = details.surface_capabilities.maxImageCount;
+		uint32_t image_count = surface_settings_.surface_capabilities.minImageCount;
+		if ((surface_settings_.surface_capabilities.maxImageCount > 0) && (image_count > surface_settings_.surface_capabilities.maxImageCount)) // if 0, maxImageCount doesn't have a limit.
+			image_count = surface_settings_.surface_capabilities.maxImageCount;
 
 		VkSwapchainCreateInfoKHR swap_chain_create_info = {};
 		swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -526,21 +519,21 @@ namespace vv
 			VV_CHECK_SUCCESS(vkCreateImageView(physical_devices_[0]->logical_device, &image_view_create_info, nullptr, &image_view));
 			swap_chain_image_views_[i] = image_view;
 		}
-	}
+	}*/
 
 
 	void VulkanRenderer::createRenderPass()
 	{
 		VkAttachmentDescription attachment_description = {};
 		attachment_description.flags = 0;
-		attachment_description.format = swap_chain_format_;
+		attachment_description.format = swap_chain_->format;
 		attachment_description.samples = VK_SAMPLE_COUNT_1_BIT; // change for multi-sampling support
 		attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clears the image at the beginning of each render
 		attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save the image after rendering is complete
 		attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // not currently using stencil
 		attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // not currently using stencil
-		attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // dont care what type of texture the framebuffer was before rendering cuz it'll be cleared anyway
-		attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // finaly framebuffer layout should be presentable to screen
+		attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // don't care what type of texture the framebuffer was before rendering cuz it'll be cleared anyway
+		attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // finally framebuffer layout should be presentable to screen
 
 		// todo: it's possible to have multiple sub-render-passes. You can perform things like post-processing
 		// on a single framebuffer within a single RenderPass object, saving memory. Look into this for the future.
@@ -625,7 +618,7 @@ namespace vv
 
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
-		scissor.extent = swap_chain_extent_;
+		scissor.extent = swap_chain_->extent;
 
 		VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
 		viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -722,12 +715,12 @@ namespace vv
 
 	void VulkanRenderer::createFrameBuffers()
 	{
-		frame_buffers_.resize(swap_chain_image_views_.size());
+		frame_buffers_.resize(swap_chain_->image_views.size());
 
-		for (std::size_t i = 0; i < swap_chain_image_views_.size(); ++i)
+		for (std::size_t i = 0; i < swap_chain_->image_views.size(); ++i)
 		{
 			VkImageView attachments = {
-				swap_chain_image_views_[i]
+				swap_chain_->image_views[i]
 			};
 
 			VkFramebufferCreateInfo frame_buffer_create_info = {};
@@ -736,8 +729,8 @@ namespace vv
 			frame_buffer_create_info.renderPass = render_pass_;
 			frame_buffer_create_info.attachmentCount = 1;
 			frame_buffer_create_info.pAttachments = &attachments;
-			frame_buffer_create_info.width = swap_chain_extent_.width;
-			frame_buffer_create_info.height = swap_chain_extent_.height;
+			frame_buffer_create_info.width = swap_chain_->extent.width;
+			frame_buffer_create_info.height = swap_chain_->extent.height;
 			frame_buffer_create_info.layers = 1;
 
 			VV_CHECK_SUCCESS(vkCreateFramebuffer(physical_devices_[0]->logical_device, &frame_buffer_create_info, nullptr, &frame_buffers_[i]));
@@ -784,7 +777,7 @@ namespace vv
 			render_pass_begin_info.renderPass = render_pass_;
 			render_pass_begin_info.framebuffer = frame_buffers_[i];
 			render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
-			render_pass_begin_info.renderArea.extent = swap_chain_extent_;
+			render_pass_begin_info.renderArea.extent = swap_chain_->extent;
 
 			VkClearValue clear_value = {0.3, 0.5, 0.5, 1.0}; // todo: offload to settings
 			render_pass_begin_info.clearValueCount = 1;

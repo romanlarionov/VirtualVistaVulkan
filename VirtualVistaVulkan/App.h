@@ -2,7 +2,7 @@
 #ifndef VIRTUALVISTA_APP_H
 #define VIRTUALVISTA_APP_H
 
-#include "Renderer.h"
+#include "VulkanRenderer.h"
 
 namespace vv
 {
@@ -20,7 +20,7 @@ namespace vv
 		int argc_;
 		char **argv_;
 
-		Renderer *renderer_;
+		VulkanRenderer *renderer_;
 
 	};
 }

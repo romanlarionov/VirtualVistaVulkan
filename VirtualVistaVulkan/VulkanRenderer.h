@@ -4,14 +4,15 @@
 
 #include <vector>
 
-#include "Shader.h"
-#include "Renderer.h"
+#include "GLFWWindow.h"
+#include "VulkanSwapChain.h"
 #include "VulkanDevice.h"
+#include "Shader.h"
 #include "Utils.h"
 
 namespace vv
 {
-	class VulkanRenderer : public Renderer
+	class VulkanRenderer
 	{
 	public:
 		VulkanRenderer();
@@ -42,17 +43,11 @@ namespace vv
 
 	private:
 		GLFWWindow *window_ = nullptr;
-		VkInstance instance_;
+		VkInstance instance_ = VK_NULL_HANDLE;
 		VkDebugReportCallbackEXT debug_callback_;
 		std::vector<VulkanDevice*> physical_devices_;
+		VulkanSwapChain *swap_chain_;
 
-		VkSurfaceKHR surface_;
-		VulkanSurfaceDetailsHandle surface_settings_;
-		VkSwapchainKHR swap_chain_ = VK_NULL_HANDLE;
-		VkExtent2D swap_chain_extent_;
-		VkFormat swap_chain_format_;
-		std::vector<VkImage> swap_chain_images_;
-		std::vector<VkImageView> swap_chain_image_views_;
 		std::vector<VkFramebuffer> frame_buffers_;
 
 		Shader *shader_;
@@ -92,7 +87,7 @@ namespace vv
 		void setupDebugCallback();
 
 		/*
-		 * Creates device handles for any gpus found with Vulkan support.
+		 * Creates device handles for any GPUs found with Vulkan support.
 	 	 */
 		void createVulkanDevices();
 
@@ -100,11 +95,6 @@ namespace vv
 		 * Creates the abstraction for the Vulkan swap chain.
 		 */
 		void createVulkanSwapChain();
-
-		/*
-		 * Creates image views that explain to vulkan what the list of images for the swap chain are meant to be.
-		 */
-		void createVulkanImages();
 
 		/*
 		 * Starts initializing graphics computation components and their settings (anti-aliasing, rasterizer, etc) once core Vulkan components are ready.
@@ -122,7 +112,7 @@ namespace vv
 		void createFrameBuffers();
 
 		/*
-		 * Creates a Vulkan pool that stores gpu operations such as memory transfers, draw calls, and compute calls.
+		 * Creates a Vulkan pool that stores GPU operations such as memory transfers, draw calls, and compute calls.
 		 */
 		void createCommandPool();
 
@@ -152,23 +142,6 @@ namespace vv
 		 * FOR DEBUGGING PURPOSES ONLY 
 		 */
 		bool checkValidationLayerSupport();
-
-		/*
-		 * Picks the best image format to store the rendered frames in out of the surface's supported formats.
-		 * todo: maybe use settings to determine which format to choose. For now, only accept the best possible format.
-		 */
-		VkSurfaceFormatKHR chooseSwapSurfaceFormat();
-
-		/*
-		 * Picks the best form of image buffering. Used for establishing things like vertical sync.
-		 * todo: definitely defer to settings, as this is a very common setting in most applications. 
-		 */
-		VkPresentModeKHR chooseSwapSurfacePresentMode();
-
-		/*
-		 * Picks what resolution the images in the swap chain should be.
-		 */
-		VkExtent2D chooseSwapSurfaceExtent();
 	};
 }
 

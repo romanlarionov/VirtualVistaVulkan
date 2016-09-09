@@ -13,20 +13,10 @@
 
 namespace vv
 {
-	struct VulkanSurfaceDetailsHandle
-	{
-		VkSurfaceCapabilitiesKHR surface_capabilities;
-		std::vector<VkSurfaceFormatKHR> available_surface_formats;
-		std::vector<VkPresentModeKHR> available_surface_present_modes;
-	};
-
-	/* 
-	 * todo: abstract more properties and features to consumable formats.
-	 */
 	struct VulkanDevice
 	{
 	public:
-		// Settings and information related to the gpu itself. i.e. name, memory, whether there is VR support, etc.
+		// Settings and information related to the GPU itself. i.e. name, memory, whether there is VR support, etc.
 		VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 		VkDevice logical_device = VK_NULL_HANDLE;
 		VkPhysicalDeviceProperties physical_device_properties;
@@ -35,6 +25,7 @@ namespace vv
 		std::vector<VkQueueFamilyProperties> queue_family_properties;
 
 		VkQueue graphics_queue;
+		VkQueue compute_queue;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 
@@ -43,12 +34,23 @@ namespace vv
 		int compute_family_index = -1;
 		int display_family_index = -1;
 
-		VulkanDevice(VkPhysicalDevice device)
+		VulkanDevice()
+		{
+		};
+
+		~VulkanDevice()
+		{
+		};
+
+		/*
+		 * Creates all initial Vulkan internals.
+		 */
+		void create(VkPhysicalDevice device)
 		{
 			physical_device = device;
 			VV_ASSERT(physical_device, "Vulkan Physical Device NULL");
 
-			// Query and format all data related to this gpu.
+			// Query and format all data related to this GPU.
 			vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
 			vkGetPhysicalDeviceFeatures(physical_device, &physical_device_features);
 			vkGetPhysicalDeviceMemoryProperties(physical_device, &physical_device_memory_properties);
@@ -58,13 +60,16 @@ namespace vv
 			VV_ASSERT(queue_family_properties_count > 0, "vkGetPhysicalDeviceQueueFamilyProperties returned 0");
 			queue_family_properties.resize(queue_family_properties_count);
 			vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_properties_count, queue_family_properties.data());
-		};
+		}
 
-		~VulkanDevice()
+		/*
+		 * Deletes all Vulkan internals.
+		 */
+		void shutDown()
 		{
 			if (logical_device != VK_NULL_HANDLE)
 				vkDestroyDevice(logical_device, nullptr);
-		};
+		}
 
 		/*
 		 * Returns if this physical device will be suitable for all compute and rendering purposes.
@@ -135,7 +140,7 @@ namespace vv
 
 #ifdef _DEBUG
 			// todo: currently using the same layers for the device that I do for the instance level. might
-			// need to diverge here (but it's my understanding that device layers are becoming depricated).
+			// need to diverge here (but it's my understanding that device layers are becoming deprecated).
 			device_create_info.enabledLayerCount = used_validation_layers_.size();
 			device_create_info.ppEnabledLayerNames = used_validation_layers_.data();
 #else
@@ -144,14 +149,17 @@ namespace vv
 
 			VV_CHECK_SUCCESS(vkCreateDevice(physical_device, &device_create_info, nullptr, &logical_device));
 
-			// sets up graphics queue handle.
-			// todo: maybe move from here/investigate what command pools are
-			vkGetDeviceQueue(logical_device, graphics_family_index, 0, &graphics_queue);
+			// Set up queue handles.
+			if (graphics_family_index >= 0)
+				vkGetDeviceQueue(logical_device, graphics_family_index, 0, &graphics_queue);
+
+			if (compute_family_index >= 0)
+				vkGetDeviceQueue(logical_device, compute_family_index, 0, &compute_queue);
 		}
 
 	private:
 		/*
-		 * Checks to see if this gpu has swap chain support (creating queues of rendered frames to pass to a window system)
+		 * Checks to see if this GPU has swap chain support (creating queues of rendered frames to pass to a window system)
 		 */
 		bool querySwapChainSupport(VkSurfaceKHR surface, VulkanSurfaceDetailsHandle &surface_details_handle)
 		{

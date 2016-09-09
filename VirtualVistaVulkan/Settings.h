@@ -25,6 +25,9 @@ namespace vv
 	bool isComputeRequired();
 	bool isOnScreenRenderingRequired();
 
+	void setWindowWidth(int width);
+	void setWindowHeight(int height);
+
     private:
 	static Settings* instance_;
 

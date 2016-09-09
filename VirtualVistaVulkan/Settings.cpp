@@ -22,50 +22,72 @@ namespace vv
 		on_screen_rendering_required_ = true;
 	}
 
+
 	int Settings::getWindowWidth()
 	{
 		return window_width_;
 	}
+
 
 	int Settings::getWindowHeight()
 	{
 		return window_height_;
 	}
 
+
 	std::string Settings::getApplicationName()
 	{
 		return application_name_;
 	}
+
 
 	std::string Settings::getEngineName()
 	{
 		return engine_name_;
 	}
 
+
 	RENDERER_TYPE Settings::getRendererType()
 	{
 		return renderer_type_;
 	}
+
 
 	WINDOW_TYPE Settings::getWindowType()
 	{
 		return window_type_;
 	}
 
+
 	bool Settings::isGraphicsRequired()
 	{
 		return graphics_required_;
 	}
+
 
 	bool Settings::isComputeRequired()
 	{
 		return compute_required_;
 	}
 
+
 	bool Settings::isOnScreenRenderingRequired()
 	{
 		return on_screen_rendering_required_;
 	}
+
+
+	void Settings::setWindowWidth(int width)
+	{
+		window_width_ = width;
+	}
+
+
+	void Settings::setWindowHeight(int height)
+	{
+		window_height_ = height;
+	}
+
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
 	Settings* Settings::inst()
