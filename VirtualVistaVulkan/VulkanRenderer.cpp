@@ -67,6 +67,7 @@ namespace vv
 			createGraphicsPipeline();
 			createFrameBuffers();
 			createCommandPool();
+			createVertexBuffers();
 			createCommandBuffers();
 			createVulkanSemaphores();
 		}
@@ -89,6 +90,7 @@ namespace vv
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
 		{
 			// Async devices
+			vkDestroyBuffer(physical_devices_[i]->logical_device, vertex_buffer_, nullptr); // todo: remove
 			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
 
@@ -389,138 +391,6 @@ namespace vv
 		swap_chain_->create(physical_devices_[0], window_);
 	}
 
-	/*
-	VkSurfaceFormatKHR VulkanRenderer::chooseSwapSurfaceFormat()
-	{
-		// The case when the surface has no preferred format. I choose to use standard sRGB for storage and 32 bit linear for computation.
-		if ((surface_settings_.available_surface_formats.size() == 1) && surface_settings_.available_surface_formats[0].format == VK_FORMAT_UNDEFINED)
-			return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-
-		// Try to find the format specified above from the list of supported formats.
-		for (auto &format : surface_settings_.available_surface_formats)
-			if ((format.format == VK_FORMAT_B8G8R8A8_UNORM) && (format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR))
-				return format;
-
-		// If the desired format cannot be found, pick the first available one.
-		if (!surface_settings_.available_surface_formats.empty())
-			return surface_settings_.available_surface_formats[0];
-
-		return {};
-	}
-
-
-	// todo: fix up needed badly. right now this only chooses the MAILBOX present mode if its found.
-	// this choice should be offloaded to the settings once the available present modes are found.
-	VkPresentModeKHR VulkanRenderer::chooseSwapSurfacePresentMode()
-	{
-		for (const auto &mode : surface_settings_.available_surface_present_modes)
-			if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
-				return mode;
-
-		return VK_PRESENT_MODE_FIFO_KHR;
-	}
-
-
-	VkExtent2D VulkanRenderer::chooseSwapSurfaceExtent()
-	{
-		// if the extent is the max uint32_t, it means that the resolution of the swap chain cant be anything.
-		if (surface_settings_.surface_capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-			return surface_settings_.surface_capabilities.currentExtent;
-
-		VkExtent2D extent = {};
-		extent.width = std::max(surface_settings_.surface_capabilities.minImageExtent.width, std::min(surface_settings_.surface_capabilities.maxImageExtent.width, (uint32_t)Settings::inst()->getWindowWidth()));
-		extent.height = std::max(surface_settings_.surface_capabilities.minImageExtent.height, std::min(surface_settings_.surface_capabilities.maxImageExtent.height, (uint32_t)Settings::inst()->getWindowHeight()));
-		return extent;
-	}
-
-
-	// todo: this could be altered to allow for on-the-fly graphics configuration without a need for a hard restart.
-	// for now, I'm setting the swap chain to be initialized with whatever the default settings are on renderer initialization.
-	void VulkanRenderer::createVulkanSwapChain()
-	{
-		VV_ASSERT(physical_devices_[0]->logical_device, "Logical device not present");
-		VkSurfaceFormatKHR chosen_format = chooseSwapSurfaceFormat();
-		VkPresentModeKHR chosen_present_mode = chooseSwapSurfacePresentMode();
-		swap_chain_extent_ = chooseSwapSurfaceExtent();
-		swap_chain_format_ = chosen_format.format;
-
-		// Queue length for swap chain. (How many images are kept waiting).
-		uint32_t image_count = surface_settings_.surface_capabilities.minImageCount;
-		if ((surface_settings_.surface_capabilities.maxImageCount > 0) && (image_count > surface_settings_.surface_capabilities.maxImageCount)) // if 0, maxImageCount doesn't have a limit.
-			image_count = surface_settings_.surface_capabilities.maxImageCount;
-
-		VkSwapchainCreateInfoKHR swap_chain_create_info = {};
-		swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swap_chain_create_info.flags = 0;
-		swap_chain_create_info.surface = surface_;
-		swap_chain_create_info.minImageCount = image_count;
-		swap_chain_create_info.imageFormat = chosen_format.format;
-		swap_chain_create_info.imageColorSpace = chosen_format.colorSpace;
-		swap_chain_create_info.imageExtent = swap_chain_extent_;
-		swap_chain_create_info.imageArrayLayers = 1; // todo: make dynamic. 2 would be for VR support
-		swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT <- to do post processing
-
-		if (physical_devices_[0]->graphics_family_index != physical_devices_[0]->display_family_index)
-		{
-			uint32_t queue[] = { (uint32_t)physical_devices_[0]->graphics_family_index, (uint32_t)(physical_devices_[0]->display_family_index) };
-			swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			swap_chain_create_info.queueFamilyIndexCount = 2; // display and graphics use two different queues
-			swap_chain_create_info.pQueueFamilyIndices = queue;
-		}
-		else
-		{
-			swap_chain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			swap_chain_create_info.queueFamilyIndexCount = 0;
-			swap_chain_create_info.pQueueFamilyIndices = nullptr;
-		}
-
-		swap_chain_create_info.preTransform = surface_settings_.surface_capabilities.currentTransform;
-		swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		swap_chain_create_info.presentMode = chosen_present_mode;
-		swap_chain_create_info.clipped = VK_TRUE;
-		swap_chain_create_info.oldSwapchain = VK_NULL_HANDLE;
-
-		VV_CHECK_SUCCESS(vkCreateSwapchainKHR(physical_devices_[0]->logical_device, &swap_chain_create_info, nullptr, &swap_chain_));
-	}
-
-
-	void VulkanRenderer::createVulkanImages()
-	{
-		// This is effectively creating a queue of frames to be displayed. 
-		// todo: support VR by having multiple lists containing images/image views for each eye.
-
-		uint32_t swap_chain_image_count = 0;
-		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(physical_devices_[0]->logical_device, swap_chain_, &swap_chain_image_count, nullptr));
-		swap_chain_images_.resize(swap_chain_image_count);
-		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(physical_devices_[0]->logical_device, swap_chain_, &swap_chain_image_count, swap_chain_images_.data()));
-
-		swap_chain_image_views_.resize(swap_chain_image_count);
-		for (int i = 0; i < swap_chain_image_count; ++i)
-		{
-			VkImageViewCreateInfo image_view_create_info = {};
-			image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			image_view_create_info.flags = VK_NULL_HANDLE;
-			image_view_create_info.image = swap_chain_images_[i];
-			image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			image_view_create_info.format = swap_chain_format_;
-
-			image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-			image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			image_view_create_info.subresourceRange.baseMipLevel = 0;
-			image_view_create_info.subresourceRange.levelCount = 1;
-			image_view_create_info.subresourceRange.baseArrayLayer = 0;
-			image_view_create_info.subresourceRange.layerCount = 1;
-
-			VkImageView image_view = {};
-			VV_CHECK_SUCCESS(vkCreateImageView(physical_devices_[0]->logical_device, &image_view_create_info, nullptr, &image_view));
-			swap_chain_image_views_[i] = image_view;
-		}
-	}*/
-
 
 	void VulkanRenderer::createRenderPass()
 	{
@@ -570,6 +440,60 @@ namespace vv
 		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
 	}
 
+	const std::vector<Vertex> vertices = {
+		    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		};
+
+
+	uint32_t VulkanRenderer::findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
+	{
+		// todo: check for validity and robustness.
+		auto memory_properties = physical_devices_[0]->physical_device_memory_properties;
+		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
+		{
+			// Check all memory heaps to find memory type that fulfills out needs and has the correct properties.
+			if ((filter_type & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags)
+				return i;
+		}
+
+		VV_ASSERT(false, "Couldn't find appropriate memory type");
+	}
+
+	void VulkanRenderer::createVertexBuffers()
+	{
+		// Create the Vulkan abstraction for a vertex buffer.
+		VkBufferCreateInfo buffer_create_info = {};
+		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buffer_create_info.size = vertices.size() * sizeof(vertices[0]);
+		buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // use this as a vertex buffer
+		buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // buffers can be used in queues. choice between exclusive or shared
+		buffer_create_info.flags = 0; // can be used to specify this stores sparse data
+
+		VV_CHECK_SUCCESS(vkCreateBuffer(physical_devices_[0]->logical_device, &buffer_create_info, nullptr, &vertex_buffer_));
+
+		// Determine requirements for GPU memory (where it's allocated, type of memory, etc.)
+		VkMemoryRequirements memory_requirements = {};
+		vkGetBufferMemoryRequirements(physical_devices_[0]->logical_device, vertex_buffer_, &memory_requirements);
+		auto memory_type = findMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		// Allocate and bind vertex buffer GPU memory.
+		VkMemoryAllocateInfo memory_allocate_info = {};
+		memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		memory_allocate_info.allocationSize = memory_requirements.size;
+		memory_allocate_info.memoryTypeIndex = memory_type;
+
+		vkAllocateMemory(physical_devices_[0]->logical_device, &memory_allocate_info, nullptr, &vertex_buffer_memory_);
+		vkBindBufferMemory(physical_devices_[0]->logical_device, vertex_buffer_, vertex_buffer_memory_, 0);
+
+		// Move data from host to device.
+		void *data;
+		vkMapMemory(physical_devices_[0]->logical_device, vertex_buffer_memory_, 0, buffer_create_info.size, 0, &data);
+		memcpy(data, vertices.data(), buffer_create_info.size);
+		vkUnmapMemory(physical_devices_[0]->logical_device, vertex_buffer_memory_);
+	}
+
 
 	void VulkanRenderer::createGraphicsPipeline()
 	{
@@ -597,10 +521,12 @@ namespace vv
 		VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
 		vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertex_input_state_create_info.flags = 0;
-		vertex_input_state_create_info.vertexAttributeDescriptionCount = 0;
-		vertex_input_state_create_info.vertexBindingDescriptionCount = 0;
-		vertex_input_state_create_info.pVertexAttributeDescriptions = nullptr;
-		vertex_input_state_create_info.pVertexBindingDescriptions = nullptr;
+
+		// todo: this is highly specific to the shader I'm using. fix me
+		vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
+		vertex_input_state_create_info.vertexAttributeDescriptionCount = Vertex::getAttributeDescriptions().size();
+		vertex_input_state_create_info.pVertexBindingDescriptions = &Vertex::getBindingDesciption();
+		vertex_input_state_create_info.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
 
 		VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
 		input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -786,7 +712,13 @@ namespace vv
 			vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-			vkCmdDraw(command_buffers_[i], 3, 1, 0, 0); // VERY instance specific! change!
+
+			// todo: remove from single vertex buffer here
+			std::array<VkBuffer, 1> buffers = { vertex_buffer_ };
+			std::array<VkDeviceSize, 1> offsets = { 0 };
+			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, buffers.data(), offsets.data());
+
+			vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
 
 			vkCmdEndRenderPass(command_buffers_[i]);
 
