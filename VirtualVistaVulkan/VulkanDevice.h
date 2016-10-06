@@ -26,13 +26,15 @@ namespace vv
 
 		VkQueue graphics_queue;
 		VkQueue compute_queue;
+		VkQueue transfer_queue;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 
 		// General, abstracted, consumable information
-		int graphics_family_index = -1;
-		int compute_family_index = -1;
-		int display_family_index = -1;
+		uint32_t graphics_family_index = -1;
+		uint32_t compute_family_index = -1;
+		uint32_t transfer_family_index = -1;
+		uint32_t display_family_index = -1;
 
 		VulkanDevice()
 		{
@@ -60,6 +62,8 @@ namespace vv
 			VV_ASSERT(queue_family_properties_count > 0, "vkGetPhysicalDeviceQueueFamilyProperties returned 0");
 			queue_family_properties.resize(queue_family_properties_count);
 			vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_properties_count, queue_family_properties.data());
+
+			queryQueueFamilies();
 		}
 
 		/*
@@ -80,8 +84,6 @@ namespace vv
 			if (surface == VK_NULL_HANDLE) return false;
 			bool result = true;
 			
-			queryQueueFamilies();
-
 			if (Settings::inst()->isGraphicsRequired() && graphics_family_index < 0)
 				result = false;
 			if (Settings::inst()->isComputeRequired() && compute_family_index < 0)
@@ -113,6 +115,16 @@ namespace vv
 				VkDeviceQueueCreateInfo queue_create_info = {};
 				queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queue_create_info.queueFamilyIndex = compute_family_index;
+				queue_create_info.queueCount = 1;
+				queue_create_info.pQueuePriorities = &default_queue_priority;
+				device_queue_create_infos.push_back(queue_create_info);
+			}
+
+			if (queue_types & VK_QUEUE_TRANSFER_BIT)
+			{
+				VkDeviceQueueCreateInfo queue_create_info = {};
+				queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queue_create_info.queueFamilyIndex = transfer_family_index;
 				queue_create_info.queueCount = 1;
 				queue_create_info.pQueuePriorities = &default_queue_priority;
 				device_queue_create_infos.push_back(queue_create_info);
@@ -155,6 +167,9 @@ namespace vv
 
 			if (compute_family_index >= 0)
 				vkGetDeviceQueue(logical_device, compute_family_index, 0, &compute_queue);
+
+			if (transfer_family_index >= 0)
+				vkGetDeviceQueue(logical_device, transfer_family_index, 0, &transfer_queue);
 		}
 
 	private:
@@ -212,6 +227,8 @@ namespace vv
 						graphics_family_index = i;
 					if (family.queueFlags & VK_QUEUE_COMPUTE_BIT)
 						compute_family_index = i;
+					if (family.queueFlags & VK_QUEUE_TRANSFER_BIT && !(family.queueFlags & VK_QUEUE_GRAPHICS_BIT)) 
+						transfer_family_index = i;
 				}
 				i++;
 			}

@@ -92,7 +92,8 @@ namespace vv
 		VkPipelineLayout pipeline_layout_;
 		VkRenderPass render_pass_;
 
-		VkCommandPool command_pool_;
+		VkCommandPool graphics_command_pool_;
+		VkCommandPool transfer_command_pool_;
 		std::vector<VkCommandBuffer> command_buffers_;
 
 		VkBuffer vertex_buffer_;
@@ -152,7 +153,7 @@ namespace vv
 		/*
 		 * Creates a Vulkan pool that stores GPU operations such as memory transfers, draw calls, and compute calls.
 		 */
-		void createCommandPool();
+		void createCommandPool(int index, VkCommandPool &command_pool);
 
 		/*
 		 * Creates a list of executable commands that will be sent to a command pool.
@@ -164,6 +165,10 @@ namespace vv
 		 * Creates locks for command queue operations to handle their asynchronous execution.
 		 */
 		void createVulkanSemaphores();
+
+		void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory);
+
+		void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
 		void createVertexBuffers();
 

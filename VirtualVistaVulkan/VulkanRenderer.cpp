@@ -66,7 +66,8 @@ namespace vv
 			createRenderPass();
 			createGraphicsPipeline();
 			createFrameBuffers();
-			createCommandPool();
+			createCommandPool(physical_devices_[0]->graphics_family_index, graphics_command_pool_);
+			createCommandPool(physical_devices_[0]->transfer_family_index, transfer_command_pool_);
 			createVertexBuffers();
 			createCommandBuffers();
 			createVulkanSemaphores();
@@ -95,7 +96,8 @@ namespace vv
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
 
 			// Command Pool/Buffers
-			vkDestroyCommandPool(physical_devices_[i]->logical_device, command_pool_, nullptr);
+			vkDestroyCommandPool(physical_devices_[i]->logical_device, graphics_command_pool_, nullptr);
+			vkDestroyCommandPool(physical_devices_[i]->logical_device, transfer_command_pool_, nullptr);
 
 			// Graphics Pipeline
 			delete shader_; // todo: remove
@@ -369,7 +371,7 @@ namespace vv
 			VulkanSurfaceDetailsHandle surface_details_handle = {};
 			if (vulkan_device->isSuitable(window_->surface, surface_details_handle))
 			{
-				vulkan_device->createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT);
+				vulkan_device->createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT);
 				physical_devices_.push_back(vulkan_device);
 				window_->surface_settings[vulkan_device] = surface_details_handle; // todo: find a better hash code than a pointer
 				break; // todo: remove. for now only adding one device.
@@ -461,22 +463,26 @@ namespace vv
 		VV_ASSERT(false, "Couldn't find appropriate memory type");
 	}
 
-	void VulkanRenderer::createVertexBuffers()
+
+	void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory)
 	{
 		// Create the Vulkan abstraction for a vertex buffer.
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = vertices.size() * sizeof(vertices[0]);
-		buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; // use this as a vertex buffer
-		buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // buffers can be used in queues. choice between exclusive or shared
+		buffer_create_info.size = size;
+		buffer_create_info.usage = usage; // use this as a vertex buffer
+		buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT; // buffers can be used in queues. choice between exclusive or shared
+		buffer_create_info.queueFamilyIndexCount = 2;
+		std::array<uint32_t, 2> queue_family_indices = { physical_devices_[0]->graphics_family_index, physical_devices_[0]->transfer_family_index };
+		buffer_create_info.pQueueFamilyIndices = queue_family_indices.data();
 		buffer_create_info.flags = 0; // can be used to specify this stores sparse data
 
-		VV_CHECK_SUCCESS(vkCreateBuffer(physical_devices_[0]->logical_device, &buffer_create_info, nullptr, &vertex_buffer_));
+		VV_CHECK_SUCCESS(vkCreateBuffer(physical_devices_[0]->logical_device, &buffer_create_info, nullptr, &buffer));
 
 		// Determine requirements for GPU memory (where it's allocated, type of memory, etc.)
 		VkMemoryRequirements memory_requirements = {};
-		vkGetBufferMemoryRequirements(physical_devices_[0]->logical_device, vertex_buffer_, &memory_requirements);
-		auto memory_type = findMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		vkGetBufferMemoryRequirements(physical_devices_[0]->logical_device, buffer, &memory_requirements);
+		auto memory_type = findMemoryType(memory_requirements.memoryTypeBits, memory_properties);
 
 		// Allocate and bind vertex buffer GPU memory.
 		VkMemoryAllocateInfo memory_allocate_info = {};
@@ -484,14 +490,69 @@ namespace vv
 		memory_allocate_info.allocationSize = memory_requirements.size;
 		memory_allocate_info.memoryTypeIndex = memory_type;
 
-		vkAllocateMemory(physical_devices_[0]->logical_device, &memory_allocate_info, nullptr, &vertex_buffer_memory_);
-		vkBindBufferMemory(physical_devices_[0]->logical_device, vertex_buffer_, vertex_buffer_memory_, 0);
+		VV_CHECK_SUCCESS(vkAllocateMemory(physical_devices_[0]->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
+		vkBindBufferMemory(physical_devices_[0]->logical_device, buffer, buffer_memory, 0);
+	}
+
+
+	void VulkanRenderer::copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
+	{
+		// Create a special command buffer to perform the transfer operation
+		VkCommandBufferAllocateInfo allocate_info = {};
+		allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocate_info.commandPool = transfer_command_pool_;
+		allocate_info.commandBufferCount = 1;
+
+		VkCommandBuffer buffer;
+		vkAllocateCommandBuffers(physical_devices_[0]->logical_device, &allocate_info, &buffer);
+
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // this buffer will be used once then discarded
+
+		vkBeginCommandBuffer(buffer, &begin_info);
+
+		VkBufferCopy buffer_copy = {};
+		buffer_copy.size = size;
+		vkCmdCopyBuffer(buffer, src, dst, 1, &buffer_copy);
+		vkEndCommandBuffer(buffer);
+		// no need to call vkEndCommandBuffer because this will end as soon as the copy is finished
+
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &buffer;
+
+		// I could use a fence here to possibly wait for a series of copies to finish instead of this single one
+		vkQueueSubmit(physical_devices_[0]->transfer_queue, 1, &submit_info, nullptr);
+		vkQueueWaitIdle(physical_devices_[0]->transfer_queue);
+
+		// free the buffer memory
+		vkFreeCommandBuffers(physical_devices_[0]->logical_device, transfer_command_pool_, 1, &buffer);
+	}
+
+
+	void VulkanRenderer::createVertexBuffers()
+	{
+		VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
+		VkBuffer staging_buffer;
+		VkDeviceMemory staging_memory;
+		VkMemoryPropertyFlags prop = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		// Create temporary transfer buffer on CPU 
+		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, prop, staging_buffer, staging_memory);
 
 		// Move data from host to device.
 		void *data;
-		vkMapMemory(physical_devices_[0]->logical_device, vertex_buffer_memory_, 0, buffer_create_info.size, 0, &data);
-		memcpy(data, vertices.data(), buffer_create_info.size);
-		vkUnmapMemory(physical_devices_[0]->logical_device, vertex_buffer_memory_);
+		vkMapMemory(physical_devices_[0]->logical_device, staging_memory, 0, size, 0, &data);
+		memcpy(data, vertices.data(), (size_t)size);
+		vkUnmapMemory(physical_devices_[0]->logical_device, staging_memory);
+
+		// Create storage buffer for GPU
+		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_, vertex_buffer_memory_);
+
+		copyBuffer(staging_buffer, vertex_buffer_, size);
 	}
 
 
@@ -664,14 +725,14 @@ namespace vv
 	}
 
 	
-	void VulkanRenderer::createCommandPool()
+	void VulkanRenderer::createCommandPool(int index, VkCommandPool &command_pool)
 	{
 		VkCommandPoolCreateInfo command_pool_create_info = {};
 		command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		command_pool_create_info.flags = 0; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT <- tells vulkan that command buffers will change frequently
-		command_pool_create_info.queueFamilyIndex = physical_devices_[0]->graphics_family_index;
+		command_pool_create_info.queueFamilyIndex = index;
 
-		VV_CHECK_SUCCESS(vkCreateCommandPool(physical_devices_[0]->logical_device, &command_pool_create_info, nullptr, &command_pool_));
+		VV_CHECK_SUCCESS(vkCreateCommandPool(physical_devices_[0]->logical_device, &command_pool_create_info, nullptr, &command_pool));
 	}
 
 
@@ -681,7 +742,7 @@ namespace vv
 
 		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
 		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		command_buffer_allocate_info.commandPool = command_pool_;
+		command_buffer_allocate_info.commandPool = graphics_command_pool_;
 
 		// primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
 		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
