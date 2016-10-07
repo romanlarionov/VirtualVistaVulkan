@@ -17,6 +17,23 @@
 
 namespace vv
 {
+/*const std::vector<Vertex> vertices = {
+		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	};*/
+
+	const std::vector<Vertex> vertices = {
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	};
+
+	const std::vector<uint32_t> indices = {
+		0, 1, 2, 2, 3, 0
+	};
+
 	VkResult createDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 										  const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
 	{
@@ -68,7 +85,12 @@ namespace vv
 			createFrameBuffers();
 			createCommandPool(physical_devices_[0]->graphics_family_index, graphics_command_pool_);
 			createCommandPool(physical_devices_[0]->transfer_family_index, transfer_command_pool_);
-			createVertexBuffers();
+			//createVertexBuffer(vertices, vertex_buffer_, vertex_buffer_memory_);
+			//createIndexBuffer(indices, index_buffer_, index_buffer_memory_);
+			vertex_buffer_ = new VulkanBuffer();
+			vertex_buffer_->create(physical_devices_[0], transfer_command_pool_, vertices);
+			index_buffer_ = new VulkanBuffer();
+			index_buffer_->create(physical_devices_[0], transfer_command_pool_, indices);
 			createCommandBuffers();
 			createVulkanSemaphores();
 		}
@@ -87,11 +109,15 @@ namespace vv
 		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
+		// todo: remove
+		delete vertex_buffer_;
+		delete index_buffer_;
+
 		// For all physical devices
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
 		{
 			// Async devices
-			vkDestroyBuffer(physical_devices_[i]->logical_device, vertex_buffer_, nullptr); // todo: remove
+			//vkDestroyBuffer(physical_devices_[i]->logical_device, vertex_buffer_.buffer, nullptr); // todo: remove
 			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
 
@@ -442,14 +468,10 @@ namespace vv
 		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
 	}
 
-	const std::vector<Vertex> vertices = {
-		    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-		};
+	
 
 
-	uint32_t VulkanRenderer::findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
+	/*uint32_t VulkanRenderer::findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
 	{
 		// todo: check for validity and robustness.
 		auto memory_properties = physical_devices_[0]->physical_device_memory_properties;
@@ -517,7 +539,6 @@ namespace vv
 		buffer_copy.size = size;
 		vkCmdCopyBuffer(buffer, src, dst, 1, &buffer_copy);
 		vkEndCommandBuffer(buffer);
-		// no need to call vkEndCommandBuffer because this will end as soon as the copy is finished
 
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -533,7 +554,7 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::createVertexBuffers()
+	void VulkanRenderer::createVertexBuffer(const std::vector<Vertex> vertices, VkBuffer &vertex_buffer, VkDeviceMemory &vertex_memory)
 	{
 		VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
 		VkBuffer staging_buffer;
@@ -554,6 +575,29 @@ namespace vv
 
 		copyBuffer(staging_buffer, vertex_buffer_, size);
 	}
+
+
+	void VulkanRenderer::createIndexBuffer(const std::vector<uint32_t> indices, VkBuffer &index_buffer, VkDeviceMemory &index_buffer_memory)
+	{
+		VkDeviceSize size = sizeof(indices[0]) * indices.size();
+		VkBuffer staging_buffer;
+		VkDeviceMemory staging_memory;
+		VkMemoryPropertyFlags prop = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		// Create temporary transfer buffer on CPU 
+		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, prop, staging_buffer, staging_memory);
+
+		// Move data from host to device.
+		void *data;
+		vkMapMemory(physical_devices_[0]->logical_device, staging_memory, 0, size, 0, &data);
+		memcpy(data, indices.data(), (size_t)size);
+		vkUnmapMemory(physical_devices_[0]->logical_device, staging_memory);
+
+		// Create storage buffer for GPU
+		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer, index_buffer_memory);
+
+		copyBuffer(staging_buffer, index_buffer, size);
+	}*/
 
 
 	void VulkanRenderer::createGraphicsPipeline()
@@ -775,9 +819,9 @@ namespace vv
 			vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
 			// todo: remove from single vertex buffer here
-			std::array<VkBuffer, 1> buffers = { vertex_buffer_ };
+			//std::array<VkBuffer, 1> buffers = { vertex_buffer_ };
 			std::array<VkDeviceSize, 1> offsets = { 0 };
-			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, buffers.data(), offsets.data());
+			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
 
 			vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
 

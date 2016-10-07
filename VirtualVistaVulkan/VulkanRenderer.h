@@ -4,49 +4,16 @@
 
 #include <vector>
 #include <array>
-#include <glm/glm.hpp>
 
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
+#include "VulkanBuffer.h"
 #include "VulkanDevice.h"
 #include "Shader.h"
 #include "Utils.h"
 
 namespace vv
 {
-	struct Vertex
-	{
-	public:
-		glm::vec2 position;
-		glm::vec3 color;
-
-		static VkVertexInputBindingDescription getBindingDesciption()
-		{
-			VkVertexInputBindingDescription binding_description = {};
-			binding_description.binding = 0;
-			binding_description.stride = sizeof(Vertex);
-			binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-			return binding_description;
-		}
-
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
-		{
-			std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions;
-
-			attribute_descriptions[0].binding = 0;
-			attribute_descriptions[0].location = 0; // layout placement
-			attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // type
-			attribute_descriptions[0].offset = offsetof(Vertex, position); // placement in vertex 
-
-			attribute_descriptions[1].binding = 0;
-			attribute_descriptions[1].location = 1;
-			attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attribute_descriptions[1].offset = offsetof(Vertex, color);
-
-			return attribute_descriptions;
-		}
-	};
-
 	class VulkanRenderer
 	{
 	public:
@@ -96,8 +63,13 @@ namespace vv
 		VkCommandPool transfer_command_pool_;
 		std::vector<VkCommandBuffer> command_buffers_;
 
-		VkBuffer vertex_buffer_;
+		// todo: remove as this is not very general
+		/*VkBuffer vertex_buffer_;
 		VkDeviceMemory vertex_buffer_memory_;
+		VkBuffer index_buffer_;
+		VkDeviceMemory index_buffer_memory_;*/
+		VulkanBuffer *vertex_buffer_;
+		VulkanBuffer *index_buffer_;
 
 		VkSemaphore image_ready_semaphore_;
 		VkSemaphore rendering_complete_semaphore_;
@@ -166,13 +138,15 @@ namespace vv
 		 */
 		void createVulkanSemaphores();
 
-		void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory);
+		/*void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory);
 
 		void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 
-		void createVertexBuffers();
+		void createVertexBuffer(const std::vector<Vertex> vertices, VkBuffer &vertex_buffer, VkDeviceMemory &vertex_memory);
 
-		uint32_t findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags);
+		void createIndexBuffer(const std::vector<uint32_t> indices, VkBuffer &index_buffer, VkDeviceMemory &index_buffer_memory);
+
+		uint32_t findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags);*/
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.
