@@ -64,10 +64,6 @@ namespace vv
 		std::vector<VkCommandBuffer> command_buffers_;
 
 		// todo: remove as this is not very general
-		/*VkBuffer vertex_buffer_;
-		VkDeviceMemory vertex_buffer_memory_;
-		VkBuffer index_buffer_;
-		VkDeviceMemory index_buffer_memory_;*/
 		VulkanBuffer *vertex_buffer_;
 		VulkanBuffer *index_buffer_;
 
@@ -111,6 +107,11 @@ namespace vv
 		 * Starts initializing graphics computation components and their settings (anti-aliasing, rasterizer, etc) once core Vulkan components are ready.
 		 */
 		void createGraphicsPipeline();
+
+		/*
+		 * Specify to Vulkan a set of descriptors for global resources that will be used, i.e. uniforms.
+		 */
+		void createDescriptorSetLayout();
 
 		/*
 		 * Starts creating the framebuffers for display.

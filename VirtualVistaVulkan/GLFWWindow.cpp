@@ -31,6 +31,8 @@ namespace vv
 								  Settings::inst()->getWindowHeight(),
 								  application_name.c_str(),
 								  nullptr, nullptr);
+
+		glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 	}
 
 

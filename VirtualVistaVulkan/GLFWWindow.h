@@ -25,6 +25,8 @@ namespace vv
 		GLFWwindow *window; // GLFW typedef
 		VkSurfaceKHR surface;
 		std::unordered_map<VulkanDevice*, VulkanSurfaceDetailsHandle> surface_settings;
+		uint32_t glfw_extension_count;
+		const char** glfw_extensions;
 
         GLFWWindow();
         ~GLFWWindow();

@@ -4,10 +4,8 @@
 #include <stdexcept>
 #include <functional>
 #include <algorithm>
-#include <array>
 
 #include "VulkanRenderer.h"
-#include "GLFWWindow.h"
 #include "Settings.h"
 
 #ifdef _WIN32
@@ -17,11 +15,11 @@
 
 namespace vv
 {
-/*const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-	};*/
+	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};	
 
 	const std::vector<Vertex> vertices = {
 		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -85,8 +83,6 @@ namespace vv
 			createFrameBuffers();
 			createCommandPool(physical_devices_[0]->graphics_family_index, graphics_command_pool_);
 			createCommandPool(physical_devices_[0]->transfer_family_index, transfer_command_pool_);
-			//createVertexBuffer(vertices, vertex_buffer_, vertex_buffer_memory_);
-			//createIndexBuffer(indices, index_buffer_, index_buffer_memory_);
 			vertex_buffer_ = new VulkanBuffer();
 			vertex_buffer_->create(physical_devices_[0], transfer_command_pool_, vertices);
 			index_buffer_ = new VulkanBuffer();
@@ -243,12 +239,9 @@ namespace vv
 	{
 	    std::vector<const char*> extensions;
 
-		uint32_t glfw_extension_count;
-		const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
-
 		// GLFW specific
-		for (uint32_t i = 0; i < glfw_extension_count; i++)
-		    extensions.push_back(glfw_extensions[i]);
+		for (uint32_t i = 0; i < window_->glfw_extension_count; i++)
+		    extensions.push_back(window_->glfw_extensions[i]);
 
 		// System wide required (hardcoded)
 		for (auto extension : used_instance_extensions_)
@@ -357,10 +350,8 @@ namespace vv
     }
 
 
-
 	void VulkanRenderer::setupDebugCallback()
 	{
-		// Only execute if debugging to save in runtime execution processing.
 #ifdef _DEBUG
 
 		VkDebugReportCallbackCreateInfoEXT debug_callback_create_info = {};
@@ -467,137 +458,6 @@ namespace vv
 
 		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
 	}
-
-	
-
-
-	/*uint32_t VulkanRenderer::findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
-	{
-		// todo: check for validity and robustness.
-		auto memory_properties = physical_devices_[0]->physical_device_memory_properties;
-		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
-		{
-			// Check all memory heaps to find memory type that fulfills out needs and has the correct properties.
-			if ((filter_type & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags)
-				return i;
-		}
-
-		VV_ASSERT(false, "Couldn't find appropriate memory type");
-	}
-
-
-	void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory)
-	{
-		// Create the Vulkan abstraction for a vertex buffer.
-		VkBufferCreateInfo buffer_create_info = {};
-		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_create_info.size = size;
-		buffer_create_info.usage = usage; // use this as a vertex buffer
-		buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT; // buffers can be used in queues. choice between exclusive or shared
-		buffer_create_info.queueFamilyIndexCount = 2;
-		std::array<uint32_t, 2> queue_family_indices = { physical_devices_[0]->graphics_family_index, physical_devices_[0]->transfer_family_index };
-		buffer_create_info.pQueueFamilyIndices = queue_family_indices.data();
-		buffer_create_info.flags = 0; // can be used to specify this stores sparse data
-
-		VV_CHECK_SUCCESS(vkCreateBuffer(physical_devices_[0]->logical_device, &buffer_create_info, nullptr, &buffer));
-
-		// Determine requirements for GPU memory (where it's allocated, type of memory, etc.)
-		VkMemoryRequirements memory_requirements = {};
-		vkGetBufferMemoryRequirements(physical_devices_[0]->logical_device, buffer, &memory_requirements);
-		auto memory_type = findMemoryType(memory_requirements.memoryTypeBits, memory_properties);
-
-		// Allocate and bind vertex buffer GPU memory.
-		VkMemoryAllocateInfo memory_allocate_info = {};
-		memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memory_allocate_info.allocationSize = memory_requirements.size;
-		memory_allocate_info.memoryTypeIndex = memory_type;
-
-		VV_CHECK_SUCCESS(vkAllocateMemory(physical_devices_[0]->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
-		vkBindBufferMemory(physical_devices_[0]->logical_device, buffer, buffer_memory, 0);
-	}
-
-
-	void VulkanRenderer::copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
-	{
-		// Create a special command buffer to perform the transfer operation
-		VkCommandBufferAllocateInfo allocate_info = {};
-		allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocate_info.commandPool = transfer_command_pool_;
-		allocate_info.commandBufferCount = 1;
-
-		VkCommandBuffer buffer;
-		vkAllocateCommandBuffers(physical_devices_[0]->logical_device, &allocate_info, &buffer);
-
-		VkCommandBufferBeginInfo begin_info = {};
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // this buffer will be used once then discarded
-
-		vkBeginCommandBuffer(buffer, &begin_info);
-
-		VkBufferCopy buffer_copy = {};
-		buffer_copy.size = size;
-		vkCmdCopyBuffer(buffer, src, dst, 1, &buffer_copy);
-		vkEndCommandBuffer(buffer);
-
-		VkSubmitInfo submit_info = {};
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &buffer;
-
-		// I could use a fence here to possibly wait for a series of copies to finish instead of this single one
-		vkQueueSubmit(physical_devices_[0]->transfer_queue, 1, &submit_info, nullptr);
-		vkQueueWaitIdle(physical_devices_[0]->transfer_queue);
-
-		// free the buffer memory
-		vkFreeCommandBuffers(physical_devices_[0]->logical_device, transfer_command_pool_, 1, &buffer);
-	}
-
-
-	void VulkanRenderer::createVertexBuffer(const std::vector<Vertex> vertices, VkBuffer &vertex_buffer, VkDeviceMemory &vertex_memory)
-	{
-		VkDeviceSize size = sizeof(vertices[0]) * vertices.size();
-		VkBuffer staging_buffer;
-		VkDeviceMemory staging_memory;
-		VkMemoryPropertyFlags prop = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		// Create temporary transfer buffer on CPU 
-		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, prop, staging_buffer, staging_memory);
-
-		// Move data from host to device.
-		void *data;
-		vkMapMemory(physical_devices_[0]->logical_device, staging_memory, 0, size, 0, &data);
-		memcpy(data, vertices.data(), (size_t)size);
-		vkUnmapMemory(physical_devices_[0]->logical_device, staging_memory);
-
-		// Create storage buffer for GPU
-		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_buffer_, vertex_buffer_memory_);
-
-		copyBuffer(staging_buffer, vertex_buffer_, size);
-	}
-
-
-	void VulkanRenderer::createIndexBuffer(const std::vector<uint32_t> indices, VkBuffer &index_buffer, VkDeviceMemory &index_buffer_memory)
-	{
-		VkDeviceSize size = sizeof(indices[0]) * indices.size();
-		VkBuffer staging_buffer;
-		VkDeviceMemory staging_memory;
-		VkMemoryPropertyFlags prop = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		// Create temporary transfer buffer on CPU 
-		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, prop, staging_buffer, staging_memory);
-
-		// Move data from host to device.
-		void *data;
-		vkMapMemory(physical_devices_[0]->logical_device, staging_memory, 0, size, 0, &data);
-		memcpy(data, indices.data(), (size_t)size);
-		vkUnmapMemory(physical_devices_[0]->logical_device, staging_memory);
-
-		// Create storage buffer for GPU
-		createBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_buffer, index_buffer_memory);
-
-		copyBuffer(staging_buffer, index_buffer, size);
-	}*/
 
 
 	void VulkanRenderer::createGraphicsPipeline()
@@ -744,6 +604,12 @@ namespace vv
 	}
 
 
+	void VulkanRenderer::createDescriptorSetLayout()
+	{
+
+	}
+
+
 	void VulkanRenderer::createFrameBuffers()
 	{
 		frame_buffers_.resize(swap_chain_->image_views.size());
@@ -819,11 +685,13 @@ namespace vv
 			vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
 			// todo: remove from single vertex buffer here
-			//std::array<VkBuffer, 1> buffers = { vertex_buffer_ };
 			std::array<VkDeviceSize, 1> offsets = { 0 };
 			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
+			vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
+			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
 
 			vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
+			vkCmdDrawIndexed(command_buffers_[i], indices.size(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(command_buffers_[i]);
 
