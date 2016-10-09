@@ -55,17 +55,17 @@ namespace vv
 		Shader *shader_;
 		VkPipeline pipeline_;
 
-		// uniform data for shaders
+		// data for shaders
+		VkDescriptorSetLayout descriptor_set_layout_; // todo: move to model class
 		VkPipelineLayout pipeline_layout_;
 		VkRenderPass render_pass_;
 
-		VkCommandPool graphics_command_pool_;
-		VkCommandPool transfer_command_pool_;
 		std::vector<VkCommandBuffer> command_buffers_;
 
 		// todo: remove as this is not very general
 		VulkanBuffer *vertex_buffer_;
 		VulkanBuffer *index_buffer_;
+		VulkanBuffer *uniform_buffer_;
 
 		VkSemaphore image_ready_semaphore_;
 		VkSemaphore rendering_complete_semaphore_;
@@ -124,11 +124,6 @@ namespace vv
 		void createFrameBuffers();
 
 		/*
-		 * Creates a Vulkan pool that stores GPU operations such as memory transfers, draw calls, and compute calls.
-		 */
-		void createCommandPool(int index, VkCommandPool &command_pool);
-
-		/*
 		 * Creates a list of executable commands that will be sent to a command pool.
 		 * These commands range from memory management calls, to binding framebuffers, to draw commands. 
 		 */
@@ -138,16 +133,6 @@ namespace vv
 		 * Creates locks for command queue operations to handle their asynchronous execution.
 		 */
 		void createVulkanSemaphores();
-
-		/*void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkBuffer &buffer, VkDeviceMemory &buffer_memory);
-
-		void copyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
-
-		void createVertexBuffer(const std::vector<Vertex> vertices, VkBuffer &vertex_buffer, VkDeviceMemory &vertex_memory);
-
-		void createIndexBuffer(const std::vector<uint32_t> indices, VkBuffer &index_buffer, VkDeviceMemory &index_buffer_memory);
-
-		uint32_t findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags);*/
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.

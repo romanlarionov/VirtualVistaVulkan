@@ -15,12 +15,6 @@
 
 namespace vv
 {
-	struct UniformBufferObject {
-		glm::mat4 model;
-		glm::mat4 view;
-		glm::mat4 proj;
-	};	
-
 	const std::vector<Vertex> vertices = {
 		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
@@ -81,12 +75,12 @@ namespace vv
 			createRenderPass();
 			createGraphicsPipeline();
 			createFrameBuffers();
-			createCommandPool(physical_devices_[0]->graphics_family_index, graphics_command_pool_);
-			createCommandPool(physical_devices_[0]->transfer_family_index, transfer_command_pool_);
 			vertex_buffer_ = new VulkanBuffer();
-			vertex_buffer_->create(physical_devices_[0], transfer_command_pool_, vertices);
+			vertex_buffer_->create(physical_devices_[0], physical_devices_[0]->command_pools["transfer"], vertices);
 			index_buffer_ = new VulkanBuffer();
-			index_buffer_->create(physical_devices_[0], transfer_command_pool_, indices);
+			index_buffer_->create(physical_devices_[0], physical_devices_[0]->command_pools["transfer"], indices);
+			//uniform_buffer_ = new VulkanBuffer();
+			//uniform_buffer_->create();
 			createCommandBuffers();
 			createVulkanSemaphores();
 		}
@@ -116,10 +110,6 @@ namespace vv
 			//vkDestroyBuffer(physical_devices_[i]->logical_device, vertex_buffer_.buffer, nullptr); // todo: remove
 			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
-
-			// Command Pool/Buffers
-			vkDestroyCommandPool(physical_devices_[i]->logical_device, graphics_command_pool_, nullptr);
-			vkDestroyCommandPool(physical_devices_[i]->logical_device, transfer_command_pool_, nullptr);
 
 			// Graphics Pipeline
 			delete shader_; // todo: remove
@@ -572,8 +562,8 @@ namespace vv
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipeline_layout_create_info.flags = 0;
-		pipeline_layout_create_info.setLayoutCount = 0;
-		pipeline_layout_create_info.pSetLayouts = nullptr;
+		//pipeline_layout_create_info.setLayoutCount = 1; // descriptor set layouts (uniform info)
+		//pipeline_layout_create_info.pSetLayouts = &descriptor_set_layout_;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 
@@ -604,10 +594,25 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::createDescriptorSetLayout()
+	/*void VulkanRenderer::createDescriptorSetLayout()
 	{
+		VkDescriptorSetLayoutBinding layout_binding = {};
+		layout_binding.binding = 0;
+		layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		layout_binding.descriptorCount = 1;
 
-	}
+		layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // tells Vulkan where the uniform will be used. make general!!
+		layout_binding.pImmutableSamplers = nullptr; // for image samplers
+
+		VkDescriptorSetLayoutCreateInfo layout_create_info = {};
+		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layout_create_info.bindingCount = 1;
+		layout_create_info.pBindings = &layout_binding;
+
+		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &descriptor_set_layout_));
+
+
+	}*/
 
 
 	void VulkanRenderer::createFrameBuffers()
@@ -635,24 +640,13 @@ namespace vv
 	}
 
 	
-	void VulkanRenderer::createCommandPool(int index, VkCommandPool &command_pool)
-	{
-		VkCommandPoolCreateInfo command_pool_create_info = {};
-		command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		command_pool_create_info.flags = 0; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT <- tells vulkan that command buffers will change frequently
-		command_pool_create_info.queueFamilyIndex = index;
-
-		VV_CHECK_SUCCESS(vkCreateCommandPool(physical_devices_[0]->logical_device, &command_pool_create_info, nullptr, &command_pool));
-	}
-
-
 	void VulkanRenderer::createCommandBuffers()
 	{
 		command_buffers_.resize(frame_buffers_.size());
 
 		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
 		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		command_buffer_allocate_info.commandPool = graphics_command_pool_;
+		command_buffer_allocate_info.commandPool = physical_devices_[0]->command_pools["graphics"];
 
 		// primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
 		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 

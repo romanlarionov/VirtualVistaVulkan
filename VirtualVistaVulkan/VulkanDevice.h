@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <unordered_map>
 
 #include "GLFWWindow.h"
 #include "Settings.h"
@@ -35,6 +36,8 @@ namespace vv
 		uint32_t compute_family_index = -1;
 		uint32_t transfer_family_index = -1;
 		uint32_t display_family_index = -1;
+
+		std::unordered_map<std::string, VkCommandPool> command_pools;
 
 		VulkanDevice()
 		{
@@ -72,7 +75,14 @@ namespace vv
 		void shutDown()
 		{
 			if (logical_device != VK_NULL_HANDLE)
+			{
+				// Command Pool/Buffers
+
+				for (auto &pool : command_pools)
+					vkDestroyCommandPool(logical_device, pool.second, nullptr);
+
 				vkDestroyDevice(logical_device, nullptr);
+			}
 		}
 
 		/*
@@ -170,6 +180,26 @@ namespace vv
 
 			if (transfer_family_index >= 0)
 				vkGetDeviceQueue(logical_device, transfer_family_index, 0, &transfer_queue);
+
+			// Set up default command pools.
+			createCommandPool("graphics", graphics_family_index, 0);
+			createCommandPool("transfer", transfer_family_index, 0);
+		}
+
+		/*
+		 * Creates a Vulkan pool that stores GPU operations such as memory transfers, draw calls, and compute calls.
+		 */
+		void createCommandPool(std::string name, uint32_t queue_index, VkCommandPoolCreateFlags create_flags)
+		{
+			VkCommandPoolCreateInfo command_pool_create_info = {};
+			command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			command_pool_create_info.flags = create_flags; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT <- tells vulkan that command buffers will change frequently
+			command_pool_create_info.queueFamilyIndex = queue_index;
+
+			VkCommandPool command_pool;
+			VV_CHECK_SUCCESS(vkCreateCommandPool(logical_device, &command_pool_create_info, nullptr, &command_pool));
+
+			command_pools[name] = command_pool;
 		}
 
 	private:
