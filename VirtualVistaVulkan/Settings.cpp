@@ -14,9 +14,6 @@ namespace vv
 		application_name_ = "VirtualVistaVulkan";
 		engine_name_ = "VirtualVista";
 
-		renderer_type_ = VULKAN;
-		window_type_ = GLFW;
-
 		graphics_required_ = true;
 		compute_required_ = false;
 		on_screen_rendering_required_ = true;
@@ -44,18 +41,6 @@ namespace vv
 	std::string Settings::getEngineName()
 	{
 		return engine_name_;
-	}
-
-
-	RENDERER_TYPE Settings::getRendererType()
-	{
-		return renderer_type_;
-	}
-
-
-	WINDOW_TYPE Settings::getWindowType()
-	{
-		return window_type_;
 	}
 
 

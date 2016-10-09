@@ -57,6 +57,8 @@ namespace vv
 
 		// data for shaders
 		VkDescriptorSetLayout descriptor_set_layout_; // todo: move to model class
+		VkDescriptorPool descriptor_pool_;
+		VkDescriptorSet descriptor_set_;
 		VkPipelineLayout pipeline_layout_;
 		VkRenderPass render_pass_;
 
@@ -65,6 +67,7 @@ namespace vv
 		// todo: remove as this is not very general
 		VulkanBuffer *vertex_buffer_;
 		VulkanBuffer *index_buffer_;
+		UniformBufferObject ubo_;
 		VulkanBuffer *uniform_buffer_;
 
 		VkSemaphore image_ready_semaphore_;
@@ -110,8 +113,21 @@ namespace vv
 
 		/*
 		 * Specify to Vulkan a set of descriptors for global resources that will be used, i.e. uniforms.
+		 * The VkDescriptorSetLayout object is used as a template for a type of descriptor set that can be made.
 		 */
 		void createDescriptorSetLayout();
+
+		/*
+		 * The Descriptor Set stores all info of a particular descriptor set in use.
+		 * This can be a uniform buffer object, a texture, or a texel image view.
+		 * The word "descriptor" refers the the term in the shader for passing in uniform type information.
+		 */
+		void createDescriptorSet();
+
+		/*
+		 * The Descriptor Pool manages Descriptor Sets. As a result, no manual deletion for descriptor sets is needed. The pool will handle it.
+		 */
+		void createDescriptorPool();
 
 		/*
 		 * Starts creating the framebuffers for display.

@@ -19,8 +19,6 @@ namespace vv
 	int getWindowHeight();
 	std::string getApplicationName();
 	std::string getEngineName();
-	RENDERER_TYPE getRendererType();
-	WINDOW_TYPE getWindowType();
 	bool isGraphicsRequired();
 	bool isComputeRequired();
 	bool isOnScreenRenderingRequired();
@@ -36,11 +34,6 @@ namespace vv
 	int window_height_;
 	std::string application_name_;
 	std::string engine_name_;
-
-	WINDOW_TYPE window_type_;
-
-	// Graphics Settings
-	RENDERER_TYPE renderer_type_;
 
 	bool graphics_required_;
 	bool compute_required_;

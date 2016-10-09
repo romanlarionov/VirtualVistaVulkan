@@ -49,6 +49,15 @@ namespace vv
 		}
 
 		/*
+		 * Helper function to perform an update and transfer in a single step.
+		 */
+		void updateAndTransfer(void *data)
+		{
+			update(data);
+			transferToDevice();
+		}
+
+		/*
 		 * Updates the staging buffer with new raw data.
 		 */
 		void update(void *data)

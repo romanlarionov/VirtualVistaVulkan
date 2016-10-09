@@ -3,9 +3,7 @@
 #include <string>
 #include <functional>
 #include <array>
-
-// todo: this might break on a system with no Vulkan support. find an ifdef guard that will prevent this.
-#include <vulkan\vulkan.h>
+#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 #ifndef VIRTUALVISTA_UTILS_H
@@ -39,21 +37,7 @@
 
 namespace vv
 {
-	enum RENDERER_TYPE
-	{
-		VULKAN,
-		OPENGL,
-		DIRECT3D
-	};
-
-	enum WINDOW_TYPE
-	{
-		GLFW,
-		SDL,
-		WINDOWS,
-		X11
-	};
-
+	// todo: rework this horrible atrocity
 	struct Vertex
 	{
 	public:
@@ -91,6 +75,7 @@ namespace vv
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
+		glm::vec3 normal;
 	};	
 }
 

@@ -4,9 +4,12 @@
 #include <stdexcept>
 #include <functional>
 #include <algorithm>
+#include <chrono>
 
 #include "VulkanRenderer.h"
 #include "Settings.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 #ifdef _WIN32
 #define NOMINMAX  
@@ -27,9 +30,9 @@ namespace vv
 	};
 
 	VkResult createDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
-										  const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
+		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
 	{
-		auto func = (PFN_vkCreateDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+		auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
 		if (func != nullptr)
 			return func(instance, pCreateInfo, pAllocator, pCallback);
 		return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -38,9 +41,9 @@ namespace vv
 
 	void destroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
 	{
-	    auto func = (PFN_vkDestroyDebugReportCallbackEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-	    if (func != nullptr)
-	        func(instance, callback, pAllocator);
+		auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+		if (func != nullptr)
+			func(instance, callback, pAllocator);
 	}
 
 
@@ -67,27 +70,29 @@ namespace vv
 			setupDebugCallback();
 			createVulkanDevices();
 
-			if (Settings::inst()->isOnScreenRenderingRequired())
-			{
-				createVulkanSwapChain();
-			}
+			createVulkanSwapChain();
 
 			createRenderPass();
+			createDescriptorSetLayout();
 			createGraphicsPipeline();
 			createFrameBuffers();
 
 			vertex_buffer_ = new VulkanBuffer();
 			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]) * vertices.size());
-			vertex_buffer_->update(vertices.data());
-			vertex_buffer_->transferToDevice();
+			vertex_buffer_->updateAndTransfer(vertices.data());
 
 			index_buffer_ = new VulkanBuffer();
-			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(indices[0]) * indices.size());
-			index_buffer_->update(indices.data());
-			index_buffer_->transferToDevice();
+			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(indices[0]) * indices.size());
+			index_buffer_->updateAndTransfer(indices.data());
 
-			//uniform_buffer_ = new VulkanBuffer();
-			//uniform_buffer_->create();
+			// todo: push constants are a more efficient way of sending constantly changing values to the shader.
+			ubo_ = { glm::mat4(), glm::mat4(), glm::mat4(), glm::vec3(0.0, 0.0, 1.0) };
+			uniform_buffer_ = new VulkanBuffer();
+			uniform_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ubo_));
+
+			createDescriptorPool();
+			createDescriptorSet();
+
 			createCommandBuffers();
 			createVulkanSemaphores();
 		}
@@ -145,6 +150,15 @@ namespace vv
 		// Poll window specific updates and input.
 		window_->run();
 
+		// Update uniforms
+		// todo: remove
+		static auto start_time = std::chrono::high_resolution_clock::now();
+		auto curr_time = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count() / 1000.0f;
+
+		ubo_.normal = glm::vec3(glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		uniform_buffer_->updateAndTransfer(&ubo_);
+
 		// Draw Frame
 
 		/// Acquire an image from the swap chain
@@ -173,7 +187,7 @@ namespace vv
 		swap_chain_->queuePresent(physical_devices_[0]->graphics_queue, image_index, rendering_complete_semaphore_);
 	}
 
-	
+
 	bool VulkanRenderer::shouldStop()
 	{
 		// todo: add other conditions
@@ -230,17 +244,17 @@ namespace vv
 
 	std::vector<const char*> VulkanRenderer::getRequiredExtensions()
 	{
-	    std::vector<const char*> extensions;
+		std::vector<const char*> extensions;
 
 		// GLFW specific
 		for (uint32_t i = 0; i < window_->glfw_extension_count; i++)
-		    extensions.push_back(window_->glfw_extensions[i]);
+			extensions.push_back(window_->glfw_extensions[i]);
 
 		// System wide required (hardcoded)
 		for (auto extension : used_instance_extensions_)
 			extensions.push_back(extension);
 
-	    return extensions;
+		return extensions;
 	}
 
 
@@ -270,7 +284,7 @@ namespace vv
 		return true;
 	}
 
-	
+
 	bool VulkanRenderer::checkValidationLayerSupport()
 	{
 		uint32_t layer_count = 0;
@@ -305,42 +319,42 @@ namespace vv
 	/*
 	 * Callback that performs all printing of validation layer info.
 	 */
-    VKAPI_ATTR VkBool32 VKAPI_CALL
-        vulkanDebugCallback(VkDebugReportFlagsEXT flags,
-                            VkDebugReportObjectTypeEXT obj_type, // object that caused the error
-                            uint64_t src_obj,
-                            size_t location,
-                            int32_t msg_code,
-                            const char *layer_prefix,
-                            const char *msg,
-                            void *usr_data)
-    {
+	VKAPI_ATTR VkBool32 VKAPI_CALL
+		vulkanDebugCallback(VkDebugReportFlagsEXT flags,
+			VkDebugReportObjectTypeEXT obj_type, // object that caused the error
+			uint64_t src_obj,
+			size_t location,
+			int32_t msg_code,
+			const char *layer_prefix,
+			const char *msg,
+			void *usr_data)
+	{
 		// todo: maybe add logging to files
 		// todo: think of other things that might be useful to log
 
-        std::ostringstream stream;
-        //if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        //    stream << "INFORMATION: ";
-        if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-            stream << "WARNING: ";
-        if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-            stream << "PERFORMANCE: ";
-        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-            stream << "ERROR: ";
-        if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-            stream << "DEBUG: ";
+		std::ostringstream stream;
+		//if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+		//    stream << "INFORMATION: ";
+		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+			stream << "WARNING: ";
+		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+			stream << "PERFORMANCE: ";
+		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+			stream << "ERROR: ";
+		if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+			stream << "DEBUG: ";
 
-        stream << "@[" << layer_prefix << "]" << std::endl;
-        stream << msg << std::endl;
-        std::cout << stream.str() << std::endl;
+		stream << "@[" << layer_prefix << "]" << std::endl;
+		stream << msg << std::endl;
+		std::cout << stream.str() << std::endl;
 
 #ifdef _WIN32
-        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-            MessageBox(NULL, stream.str().c_str(), "VirtualVista Vulkan Error", 0);
+		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+			MessageBox(NULL, stream.str().c_str(), "VirtualVista Vulkan Error", 0);
 #endif
 
-        return false;
-    }
+		return false;
+	}
 
 
 	void VulkanRenderer::setupDebugCallback()
@@ -364,7 +378,7 @@ namespace vv
 
 	void VulkanRenderer::createVulkanDevices()
 	{
-	    // todo: implement ranking system to choose most optimal GPU or order them in increasing order of relevance.
+		// todo: implement ranking system to choose most optimal GPU or order them in increasing order of relevance.
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
 
@@ -472,7 +486,6 @@ namespace vv
 		frag_shader_create_info.module = shader_->frag_module;
 		frag_shader_create_info.pName = "main";
 
-		std::size_t two = 2;
 		std::array<VkPipelineShaderStageCreateInfo, 2> shaders = { vert_shader_create_info, frag_shader_create_info };
 
 		/* Fixed Function Pipeline Layout */
@@ -536,22 +549,22 @@ namespace vv
 		multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
 		multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
-		// todo: for some reason, if this is activated the output color is overrided. fix me
+		// todo: for some reason, if this is activated the output color is overridden. fix me
 		/* This along with color blend create info specify alpha blending operations */
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
-        color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        color_blend_attachment_state.blendEnable = VK_FALSE;
+		color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		color_blend_attachment_state.blendEnable = VK_FALSE;
 
-        VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
-        color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        color_blend_state_create_info.logicOpEnable = VK_FALSE;
-        color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-        color_blend_state_create_info.attachmentCount = 1;
-        color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
-        color_blend_state_create_info.blendConstants[0] = 0.0f;
-        color_blend_state_create_info.blendConstants[1] = 0.0f;
-        color_blend_state_create_info.blendConstants[2] = 0.0f;
-        color_blend_state_create_info.blendConstants[3] = 0.0f;
+		VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
+		color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		color_blend_state_create_info.logicOpEnable = VK_FALSE;
+		color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
+		color_blend_state_create_info.attachmentCount = 1;
+		color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
+		color_blend_state_create_info.blendConstants[0] = 0.0f;
+		color_blend_state_create_info.blendConstants[1] = 0.0f;
+		color_blend_state_create_info.blendConstants[2] = 0.0f;
+		color_blend_state_create_info.blendConstants[3] = 0.0f;
 
 		// add enum values here for more dynamic pipeline state changes!! 
 		std::array<VkDynamicState, 2> dynamic_pipeline_settings = { VK_DYNAMIC_STATE_VIEWPORT };
@@ -565,8 +578,8 @@ namespace vv
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipeline_layout_create_info.flags = 0;
-		//pipeline_layout_create_info.setLayoutCount = 1; // descriptor set layouts (uniform info)
-		//pipeline_layout_create_info.pSetLayouts = &descriptor_set_layout_;
+		pipeline_layout_create_info.setLayoutCount = 1; // descriptor set layouts (uniform info)
+		pipeline_layout_create_info.pSetLayouts = &descriptor_set_layout_;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 
@@ -597,7 +610,7 @@ namespace vv
 	}
 
 
-	/*void VulkanRenderer::createDescriptorSetLayout()
+	void VulkanRenderer::createDescriptorSetLayout()
 	{
 		VkDescriptorSetLayoutBinding layout_binding = {};
 		layout_binding.binding = 0;
@@ -613,9 +626,59 @@ namespace vv
 		layout_create_info.pBindings = &layout_binding;
 
 		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &descriptor_set_layout_));
+	}
 
 
-	}*/
+	void VulkanRenderer::createDescriptorPool()
+	{
+		// Descriptor Pools manage the internal memory of descriptor sets themselves for some reason.
+		// Need to specify how many, what types are used and the pool will create and manage them.
+		VkDescriptorPoolSize pool_size = {};
+		pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		pool_size.descriptorCount = 1;
+
+		VkDescriptorPoolCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		create_info.poolSizeCount = 1;
+		create_info.pPoolSizes = &pool_size;
+		create_info.maxSets = 1; // max # of descriptor sets allocated
+		create_info.flags = 0; // can be this => VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+
+		VV_CHECK_SUCCESS(vkCreateDescriptorPool(physical_devices_[0]->logical_device, &create_info, nullptr, &descriptor_pool_));
+	}
+
+
+	// todo: figure out what a lot of this means... It's so hard to follow.
+	void VulkanRenderer::createDescriptorSet()
+	{
+		VkDescriptorSetAllocateInfo alloc_info = {};
+		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		alloc_info.descriptorPool = descriptor_pool_;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &descriptor_set_layout_;
+
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(physical_devices_[0]->logical_device, &alloc_info, &descriptor_set_));
+
+		// to describe the uniform buffer
+		VkDescriptorBufferInfo buffer_info = {};
+		buffer_info.buffer = uniform_buffer_->buffer;
+		buffer_info.offset = 0;
+		buffer_info.range = sizeof(UniformBufferObject);
+
+		VkWriteDescriptorSet write_set = {};
+		write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_set.dstSet = descriptor_set_;
+		write_set.dstBinding = 0; // todo: ? figure out
+		write_set.dstArrayElement = 0;
+
+		// its possible to write to multiple types of descriptors in one call, figure that out?
+		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write_set.descriptorCount = 1; // how many elements to update
+
+		write_set.pBufferInfo = &buffer_info;
+
+		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, 1, &write_set, 0, nullptr);
+	}
 
 
 	void VulkanRenderer::createFrameBuffers()
@@ -687,7 +750,10 @@ namespace vv
 			vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
 			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
 
-			vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
+			// todo: really look into this whole uniform binding thing. It just seems wrong.
+			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &descriptor_set_, 0, nullptr);
+
+			//vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
 			vkCmdDrawIndexed(command_buffers_[i], indices.size(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(command_buffers_[i]);
