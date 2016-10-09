@@ -15,14 +15,14 @@
 
 namespace vv
 {
-	const std::vector<Vertex> vertices = {
+	std::vector<Vertex> vertices = {
 		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
 		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
 		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
 		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 	};
 
-	const std::vector<uint32_t> indices = {
+	std::vector<uint32_t> indices = {
 		0, 1, 2, 2, 3, 0
 	};
 
@@ -75,10 +75,17 @@ namespace vv
 			createRenderPass();
 			createGraphicsPipeline();
 			createFrameBuffers();
+
 			vertex_buffer_ = new VulkanBuffer();
-			vertex_buffer_->create(physical_devices_[0], physical_devices_[0]->command_pools["transfer"], vertices);
+			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]) * vertices.size());
+			vertex_buffer_->update(vertices.data());
+			vertex_buffer_->transferToDevice();
+
 			index_buffer_ = new VulkanBuffer();
-			index_buffer_->create(physical_devices_[0], physical_devices_[0]->command_pools["transfer"], indices);
+			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(indices[0]) * indices.size());
+			index_buffer_->update(indices.data());
+			index_buffer_->transferToDevice();
+
 			//uniform_buffer_ = new VulkanBuffer();
 			//uniform_buffer_->create();
 			createCommandBuffers();
@@ -93,9 +100,6 @@ namespace vv
 
 	void VulkanRenderer::shutDown()
 	{
-		// todo: expand for multiple possible devices.
-		// todo: some of these might be null
-
 		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
@@ -120,7 +124,6 @@ namespace vv
 			for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
 				vkDestroyFramebuffer(physical_devices_[i]->logical_device, frame_buffers_[j], nullptr);
 
-			// todo: ensure this isn't called twice when multiple GPUs are in use.
 			swap_chain_->shutDown(physical_devices_[i]);
 			delete swap_chain_;
 

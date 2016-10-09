@@ -119,6 +119,7 @@ namespace vv
 		 */
 		void shutDown(VulkanDevice *device)
 		{
+			VV_ASSERT(device, "Vulkan Device not present");
 			if (swap_chain != VK_NULL_HANDLE)
 			{
 				for (std::size_t i = 0; i < image_views.size(); ++i)
