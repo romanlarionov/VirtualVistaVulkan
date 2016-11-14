@@ -116,7 +116,6 @@ namespace vv
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
 		{
 			// Async devices
-			//vkDestroyBuffer(physical_devices_[i]->logical_device, vertex_buffer_.buffer, nullptr); // todo: remove
 			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
 

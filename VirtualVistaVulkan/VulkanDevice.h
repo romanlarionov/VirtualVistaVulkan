@@ -202,6 +202,24 @@ namespace vv
 			command_pools[name] = command_pool;
 		}
 
+		/*
+		 * Finds the index for the appropriate supported memory type for the given physical device.
+		 */
+		uint32_t findMemoryTypeIndex(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
+		{
+			// todo: check for validity and robustness.
+			auto memory_properties = physical_device_memory_properties;
+			for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
+			{
+				// Check all memory heaps to find memory type that fulfills out needs and has the correct properties.
+				if ((filter_type & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags)
+					return i;
+			}
+
+			VV_ASSERT(false, "Couldn't find appropriate memory type");
+		}
+
+
 	private:
 		/*
 		 * Checks to see if this GPU has swap chain support (creating queues of rendered frames to pass to a window system)

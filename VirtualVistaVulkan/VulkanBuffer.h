@@ -77,7 +77,7 @@ namespace vv
 			VV_ASSERT(staging_buffer_ && buffer, "Buffers not allocated correctly. Perhaps create() wasn't called.");
 
 			// Create a special command buffer to perform the transfer operation
-			VkCommandBufferAllocateInfo allocate_info = {};
+			/*VkCommandBufferAllocateInfo allocate_info = {};
 			allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			allocate_info.commandPool = device_->command_pools["transfer"];
@@ -90,12 +90,17 @@ namespace vv
 			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // this buffer will be used once then discarded
 
-			vkBeginCommandBuffer(command_buffer, &begin_info);
+			vkBeginCommandBuffer(command_buffer, &begin_info);*/
+
+			auto command_buffer = vv::beginSingleUseCommand(device_->logical_device, device_->command_pools["transfer"]);
 
 			VkBufferCopy buffer_copy = {};
 			buffer_copy.size = size_;
 			vkCmdCopyBuffer(command_buffer, staging_buffer_, buffer, 1, &buffer_copy);
-			vkEndCommandBuffer(command_buffer);
+
+			vv::endSingleUseCommand(command_buffer, device_->transfer_queue);
+
+			/*vkEndCommandBuffer(command_buffer);
 
 			VkSubmitInfo submit_info = {};
 			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -107,7 +112,7 @@ namespace vv
 			vkQueueWaitIdle(device_->transfer_queue);
 
 			// free the buffer memory
-			vkFreeCommandBuffers(device_->logical_device, device_->command_pools["transfer"], 1, &command_buffer);
+			vkFreeCommandBuffers(device_->logical_device, device_->command_pools["transfer"], 1, &command_buffer);*/
 		}
 
 	private:
@@ -139,7 +144,7 @@ namespace vv
 			// Determine requirements for memory (where it's allocated, type of memory, etc.)
 			VkMemoryRequirements memory_requirements = {};
 			vkGetBufferMemoryRequirements(device_->logical_device, buffer, &memory_requirements);
-			auto memory_type = findMemoryType(memory_requirements.memoryTypeBits, memory_properties);
+			auto memory_type = device_->findMemoryTypeIndex(memory_requirements.memoryTypeBits, memory_properties);
 
 			// Allocate and bind buffer memory.
 			VkMemoryAllocateInfo memory_allocate_info = {};
@@ -150,23 +155,6 @@ namespace vv
 			// todo: single allocations are costly. figure out how to batch data together. (might just do that logic outside of this class)
 			VV_CHECK_SUCCESS(vkAllocateMemory(device_->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
 			vkBindBufferMemory(device_->logical_device, buffer, buffer_memory, 0);
-		}
-
-		/*
-		 * Finds the index for the appropriate supported memory type for the given physical device.
-		 */
-		uint32_t findMemoryType(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
-		{
-			// todo: check for validity and robustness.
-			auto memory_properties = device_->physical_device_memory_properties;
-			for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
-			{
-				// Check all memory heaps to find memory type that fulfills out needs and has the correct properties.
-				if ((filter_type & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & memory_property_flags) == memory_property_flags)
-					return i;
-			}
-
-			VV_ASSERT(false, "Couldn't find appropriate memory type");
 		}
 	};
 }

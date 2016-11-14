@@ -76,7 +76,42 @@ namespace vv
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::vec3 normal;
-	};	
+	};
+
+	static VkCommandBuffer beginSingleUseCommand(VkDevice device, VkCommandPool command_pool)
+	{
+		VkCommandBufferAllocateInfo allocate_info = {};
+		allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    	allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocate_info.commandPool = command_pool;
+    	allocate_info.commandBufferCount = 1;
+
+    	VkCommandBuffer command_buffer;
+    	vkAllocateCommandBuffers(device, &allocate_info, &command_buffer);
+
+    	VkCommandBufferBeginInfo begin_info = {};
+    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    	vkBeginCommandBuffer(command_buffer, &begin_info);
+
+    	return command_buffer;
+	}
+
+	static void endSingleUseCommand(VkCommandBuffer command_buffer, VkQueue queue)
+	{
+	    vkEndCommandBuffer(command_buffer);
+
+	    VkSubmitInfo submit_info = {};
+	    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	    submit_info.commandBufferCount = 1;
+	    submit_info.pCommandBuffers = &command_buffer;
+
+	    vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+	    vkQueueWaitIdle(queue);
+
+	    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+	}
 }
 
 #endif // VIRTUALVISTA_UTILS_H

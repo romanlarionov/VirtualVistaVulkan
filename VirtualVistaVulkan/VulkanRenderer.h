@@ -7,6 +7,7 @@
 
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
+#include "VulkanImage.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
 #include "Shader.h"
@@ -69,6 +70,8 @@ namespace vv
 		VulkanBuffer *index_buffer_;
 		UniformBufferObject ubo_;
 		VulkanBuffer *uniform_buffer_;
+		VulkanImage *texture_;
+
 
 		VkSemaphore image_ready_semaphore_;
 		VkSemaphore rendering_complete_semaphore_;
@@ -120,7 +123,7 @@ namespace vv
 		/*
 		 * The Descriptor Set stores all info of a particular descriptor set in use.
 		 * This can be a uniform buffer object, a texture, or a texel image view.
-		 * The word "descriptor" refers the the term in the shader for passing in uniform type information.
+		 * The word "descriptor" refers to the term "binding" in the shader for passing in uniform type information.
 		 */
 		void createDescriptorSet();
 
