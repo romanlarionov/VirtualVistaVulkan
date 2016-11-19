@@ -124,7 +124,7 @@ namespace vv
 		 * Creates the Vulkan abstraction for a data buffer with the given specifications.
 		 * todo: maybe think about putting this sort of thing in its own "memory management" system
 		 */
-		void allocateMemory(VkImageType image_type, VkFormat format, VkImageTiling tiling, VkImageUsageFlagBits usage, VkMemoryPropertyFlagBits memory_properties, VkImage image, VkDeviceMemory memory)
+		void allocateMemory(VkImageType image_type, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkImage image, VkDeviceMemory memory)
 		{
 			VkImageCreateInfo image_create_info = {};
 			image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
