@@ -9,3 +9,5 @@ VirtualVistaVulkan/x64*
 *.user
 *.vcxproj
 *.filters
+
+*.spv

@@ -7,7 +7,7 @@
 
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
-#include "VulkanImage.h"
+#include "VulkanImageView.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
 #include "Shader.h"
@@ -70,8 +70,11 @@ namespace vv
 		VulkanBuffer *index_buffer_;
 		UniformBufferObject ubo_;
 		VulkanBuffer *uniform_buffer_;
-		VulkanImage *texture_;
 
+		// texture aka remove
+		VulkanImage *texture_image_;
+		VulkanImageView *texture_image_view_;
+		VkSampler sampler_;
 
 		VkSemaphore image_ready_semaphore_;
 		VkSemaphore rendering_complete_semaphore_;
@@ -131,6 +134,12 @@ namespace vv
 		 * The Descriptor Pool manages Descriptor Sets. As a result, no manual deletion for descriptor sets is needed. The pool will handle it.
 		 */
 		void createDescriptorPool();
+
+		/*
+		 * Sampler is what allows for interpolation of texture data on the GPU.
+		 * Doesn't hold texture data, just the processes that should be acted on it.
+		 */
+		void createSampler();
 
 		/*
 		 * Starts creating the framebuffers for display.

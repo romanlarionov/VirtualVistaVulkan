@@ -92,13 +92,14 @@ namespace vv
 
 			vkBeginCommandBuffer(command_buffer, &begin_info);*/
 
-			auto command_buffer = vv::beginSingleUseCommand(device_->logical_device, device_->command_pools["transfer"]);
+			auto command_pool_used = device_->command_pools["transfer"];
+			auto command_buffer = vv::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 			VkBufferCopy buffer_copy = {};
 			buffer_copy.size = size_;
 			vkCmdCopyBuffer(command_buffer, staging_buffer_, buffer, 1, &buffer_copy);
 
-			vv::endSingleUseCommand(command_buffer, device_->transfer_queue);
+			vv::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
 
 			/*vkEndCommandBuffer(command_buffer);
 

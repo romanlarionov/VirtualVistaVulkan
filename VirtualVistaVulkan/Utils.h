@@ -18,14 +18,14 @@
 
 #define VV_CHECK_SUCCESS(success) { \
         if (success == VK_SUCCESS) { } \
-		else throw std::runtime_error(__FUNCTION__  + std::to_string(__LINE__) + __FILE__); \
+		else throw std::runtime_error(__FUNCTION__ + std::to_string(__LINE__) + " " + __FILE__); \
     }
 
 #define VV_ASSERT(condition, message) \
 		if (condition) { } \
 		else \
 		{ \
-			throw std::runtime_error(#message + std::to_string(__LINE__) + __FILE__ ); \
+			throw std::runtime_error(#message + std::to_string(__LINE__) + " " + __FILE__ ); \
 		}
 
 #else
@@ -43,6 +43,7 @@ namespace vv
 	public:
 		glm::vec2 position;
 		glm::vec3 color;
+		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription getBindingDesciption()
 		{
@@ -53,9 +54,9 @@ namespace vv
 			return binding_description;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions()
+		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 2> attribute_descriptions;
+			std::array<VkVertexInputAttributeDescription, 3> attribute_descriptions;
 
 			attribute_descriptions[0].binding = 0;
 			attribute_descriptions[0].location = 0; // layout placement
@@ -66,6 +67,11 @@ namespace vv
 			attribute_descriptions[1].location = 1;
 			attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 			attribute_descriptions[1].offset = offsetof(Vertex, color);
+
+			attribute_descriptions[2].binding = 0;
+			attribute_descriptions[2].location = 2;
+			attribute_descriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+			attribute_descriptions[2].offset = offsetof(Vertex, texCoord);
 
 			return attribute_descriptions;
 		}
@@ -98,7 +104,7 @@ namespace vv
     	return command_buffer;
 	}
 
-	static void endSingleUseCommand(VkCommandBuffer command_buffer, VkQueue queue)
+	static void endSingleUseCommand(VkDevice device, VkCommandPool command_pool, VkCommandBuffer command_buffer, VkQueue queue)
 	{
 	    vkEndCommandBuffer(command_buffer);
 

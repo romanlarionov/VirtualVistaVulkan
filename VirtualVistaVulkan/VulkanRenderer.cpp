@@ -19,10 +19,10 @@
 namespace vv
 {
 	std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 	};
 
 	std::vector<uint32_t> indices = {
@@ -76,6 +76,16 @@ namespace vv
 			createDescriptorSetLayout();
 			createGraphicsPipeline();
 			createFrameBuffers();
+
+			texture_image_ = new VulkanImage();
+			//texture_image_->create("../../VirtualVistaVulkan/statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM);
+			texture_image_->create("statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM);
+			texture_image_->transferToDevice();
+
+			texture_image_view_ = new VulkanImageView();
+			texture_image_view_->create(physical_devices_[0], texture_image_);
+
+			createSampler();
 
 			vertex_buffer_ = new VulkanBuffer();
 			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]) * vertices.size());
@@ -132,6 +142,7 @@ namespace vv
 			delete swap_chain_;
 
 			// Physical/Logical devices
+			//physical_devices_[i]->shutDown(); // todo: fix deletion errors by adding shutdown functions.
 			delete physical_devices_[i];
 		}
 
@@ -609,21 +620,37 @@ namespace vv
 	}
 
 
+	// think everything to do with descriptor sets are on a per model basis.
+	// each model has its own requirements when it comes to storing uniform type objects
+	// thus each unique model should create its own layouts and manage its own descriptor pools.
+	// todo: move ^^
 	void VulkanRenderer::createDescriptorSetLayout()
 	{
-		VkDescriptorSetLayoutBinding layout_binding = {};
-		layout_binding.binding = 0;
-		layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		layout_binding.descriptorCount = 1;
+		VkDescriptorSetLayoutBinding ubo_layout_binding = {};
+		ubo_layout_binding.binding = 0;
+		ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		ubo_layout_binding.descriptorCount = 1;
 
-		layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // tells Vulkan where the uniform will be used. make general!!
-		layout_binding.pImmutableSamplers = nullptr; // for image samplers
+		ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // tells Vulkan where the uniform will be used. make general!!
+		ubo_layout_binding.pImmutableSamplers = nullptr; // for image samplers
+
+		VkDescriptorSetLayoutBinding sampler_layout_binding = {};
+		sampler_layout_binding.binding = 1;
+		sampler_layout_binding.descriptorCount = 1;
+		sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		sampler_layout_binding.pImmutableSamplers = nullptr;
+		sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // todo: make general. you dont always want texture in fragment
+
+		std::array<VkDescriptorSetLayoutBinding, 2> layouts = { ubo_layout_binding, sampler_layout_binding };
 
 		VkDescriptorSetLayoutCreateInfo layout_create_info = {};
 		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layout_create_info.bindingCount = 1;
-		layout_create_info.pBindings = &layout_binding;
+		layout_create_info.bindingCount = layouts.size();
+		layout_create_info.pBindings = layouts.data();
 
+		// assuming this sets a creates a template for vulkan to accept a certain type of descriptor.
+		// pools allocate memory for those template types and handle moving/managing them.
+		// descriptor sets are the actual things to store.
 		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &descriptor_set_layout_));
 	}
 
@@ -632,14 +659,16 @@ namespace vv
 	{
 		// Descriptor Pools manage the internal memory of descriptor sets themselves for some reason.
 		// Need to specify how many, what types are used and the pool will create and manage them.
-		VkDescriptorPoolSize pool_size = {};
-		pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		pool_size.descriptorCount = 1;
+		std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
+		pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		pool_sizes[0].descriptorCount = 1;
+		pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		pool_sizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo create_info = {};
 		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		create_info.poolSizeCount = 1;
-		create_info.pPoolSizes = &pool_size;
+		create_info.poolSizeCount = pool_sizes.size();
+		create_info.pPoolSizes = pool_sizes.data();
 		create_info.maxSets = 1; // max # of descriptor sets allocated
 		create_info.flags = 0; // can be this => VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
 
@@ -664,19 +693,57 @@ namespace vv
 		buffer_info.offset = 0;
 		buffer_info.range = sizeof(UniformBufferObject);
 
-		VkWriteDescriptorSet write_set = {};
-		write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = descriptor_set_;
-		write_set.dstBinding = 0; // todo: ? figure out
-		write_set.dstArrayElement = 0;
+		VkDescriptorImageInfo image_info = {};
+		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		image_info.imageView = texture_image_view_->image_view;
+		image_info.sampler = sampler_;
 
-		// its possible to write to multiple types of descriptors in one call, figure that out?
-		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_set.descriptorCount = 1; // how many elements to update
+		std::array<VkWriteDescriptorSet, 2> write_sets = {};
 
-		write_set.pBufferInfo = &buffer_info;
+		write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_sets[0].dstSet = descriptor_set_;
+		write_sets[0].dstBinding = 0;
+		write_sets[0].dstArrayElement = 0;
+		write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write_sets[0].descriptorCount = 1; // how many elements to update
+		write_sets[0].pBufferInfo = &buffer_info;
 
-		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, 1, &write_set, 0, nullptr);
+		write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_sets[1].dstSet = descriptor_set_;
+		write_sets[1].dstBinding = 1; // location in layout
+		write_sets[1].dstArrayElement = 0; // if sending array of uniforms
+		write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write_sets[1].descriptorCount = 1; // how many elements to update
+		write_sets[1].pImageInfo = &image_info;
+
+		// if you want to update uniforms per frame
+		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, write_sets.size(), write_sets.data(), 0, nullptr);
+	}
+
+
+	void VulkanRenderer::createSampler()
+	{
+		VkSamplerCreateInfo sampler_create_info = {};
+		sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		sampler_create_info.magFilter = VK_FILTER_LINEAR; // VK_FILTER_NEAREST
+		sampler_create_info.minFilter = VK_FILTER_LINEAR; // VK_FILTER_NEAREST
+
+		// can be a number of things: https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#VkSamplerAddressMode
+		sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+		sampler_create_info.anisotropyEnable = VK_TRUE;
+		sampler_create_info.maxAnisotropy = 16; // max value
+
+		sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;// VK_BORDER_COLOR_INT_OPAQUE_BLACK; // black, white, transparent
+		sampler_create_info.unnormalizedCoordinates = VK_FALSE; // [0,1]
+		sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		sampler_create_info.mipLodBias = 0.0f;
+		sampler_create_info.minLod = 0.0f;
+		sampler_create_info.maxLod = 0.0f; // todo: figure out how lod works with these things
+
+		VV_CHECK_SUCCESS(vkCreateSampler(physical_devices_[0]->logical_device, &sampler_create_info, nullptr, &sampler_));
 	}
 
 
@@ -687,7 +754,7 @@ namespace vv
 		for (std::size_t i = 0; i < swap_chain_->image_views.size(); ++i)
 		{
 			VkImageView attachments = {
-				swap_chain_->image_views[i]
+				swap_chain_->image_views[i]->image_view
 			};
 
 			VkFramebufferCreateInfo frame_buffer_create_info = {};
@@ -735,7 +802,7 @@ namespace vv
 			render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
 			render_pass_begin_info.renderArea.extent = swap_chain_->extent;
 
-			VkClearValue clear_value = {0.3, 0.5, 0.5, 1.0}; // todo: offload to settings
+			VkClearValue clear_value = {0.3f, 0.5f, 0.5f, 1.0f}; // todo: offload to settings
 			render_pass_begin_info.clearValueCount = 1;
 			render_pass_begin_info.pClearValues = &clear_value;
 

@@ -154,7 +154,7 @@ namespace vv
 
 			if (!device_extensions.empty())
 			{
-				device_create_info.enabledExtensionCount = device_extensions.size();
+				device_create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
 				device_create_info.ppEnabledExtensionNames = device_extensions.data();
 			}
 			else
@@ -163,7 +163,7 @@ namespace vv
 #ifdef _DEBUG
 			// todo: currently using the same layers for the device that I do for the instance level. might
 			// need to diverge here (but it's my understanding that device layers are becoming deprecated).
-			device_create_info.enabledLayerCount = used_validation_layers_.size();
+			device_create_info.enabledLayerCount = static_cast<uint32_t>(used_validation_layers_.size());
 			device_create_info.ppEnabledLayerNames = used_validation_layers_.data();
 #else
 			device_create_info.enabledLayerCount = 0;
@@ -196,7 +196,7 @@ namespace vv
 			command_pool_create_info.flags = create_flags; // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT <- tells vulkan that command buffers will change frequently
 			command_pool_create_info.queueFamilyIndex = queue_index;
 
-			VkCommandPool command_pool;
+			VkCommandPool command_pool = VK_NULL_HANDLE;
 			VV_CHECK_SUCCESS(vkCreateCommandPool(logical_device, &command_pool_create_info, nullptr, &command_pool));
 
 			command_pools[name] = command_pool;

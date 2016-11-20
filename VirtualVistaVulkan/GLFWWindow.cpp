@@ -1,8 +1,8 @@
 
 #include <iostream>
 
-#include "GLFWWindow.h";
-#include "Settings.h";
+#include "GLFWWindow.h"
+#include "Settings.h"
 #include "Utils.h"
 
 namespace vv
@@ -60,7 +60,7 @@ namespace vv
 
 	bool GLFWWindow::shouldClose()
 	{
-		return glfwWindowShouldClose(window);
+		return glfwWindowShouldClose(window) == 1;
 	}
 
 

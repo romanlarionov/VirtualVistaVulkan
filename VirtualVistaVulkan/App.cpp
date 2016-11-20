@@ -1,4 +1,6 @@
 
+#define STB_IMAGE_IMPLEMENTATION
+
 #include <stdexcept>
 
 #include "App.h"
