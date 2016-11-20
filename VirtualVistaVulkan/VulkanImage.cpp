@@ -14,13 +14,6 @@ namespace vv
 
 	VulkanImage::~VulkanImage()
 	{
-		if (staging_image_)
-			vkDestroyImage(device_->logical_device, staging_image_, nullptr);
-		if (staging_memory_)
-			vkFreeMemory(device_->logical_device, staging_memory_, nullptr);
-		
-		vkDestroyImage(device_->logical_device, image, nullptr);
-		vkFreeMemory(device_->logical_device, image_memory_, nullptr);
 	}
 
 
@@ -66,6 +59,18 @@ namespace vv
 
 		// free loaded raw data
 		stbi_image_free(texels);
+	}
+
+
+	void VulkanImage::shutDown()
+	{
+		if (staging_image_ != VK_NULL_HANDLE)
+			vkDestroyImage(device_->logical_device, staging_image_, nullptr);
+		if (staging_memory_ != VK_NULL_HANDLE)
+			vkFreeMemory(device_->logical_device, staging_memory_, nullptr);
+		
+		vkDestroyImage(device_->logical_device, image, nullptr);
+		vkFreeMemory(device_->logical_device, image_memory_, nullptr);
 	}
 
 

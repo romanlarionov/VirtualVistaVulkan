@@ -31,6 +31,11 @@ namespace vv
 		 * Loads, allocates, and stores a requested texture using the header-only STB image library.
 		 */
 		void create(std::string path, VulkanDevice *device, VkFormat format);
+
+		/*
+		 *
+		 */
+		void shutDown();
 	
 		/*
 		 * todo: should be able to load different types of textures such as,

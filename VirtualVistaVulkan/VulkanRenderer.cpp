@@ -78,8 +78,7 @@ namespace vv
 			createFrameBuffers();
 
 			texture_image_ = new VulkanImage();
-			//texture_image_->create("../../VirtualVistaVulkan/statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM);
-			texture_image_->create("statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM);
+			texture_image_->create("statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
 			texture_image_->transferToDevice();
 
 			texture_image_view_ = new VulkanImageView();
@@ -119,9 +118,13 @@ namespace vv
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
 		// todo: remove
-		delete vertex_buffer_;
-		delete index_buffer_;
+		vertex_buffer_->shutDown(); delete vertex_buffer_;
+		index_buffer_->shutDown(); delete index_buffer_;
+		uniform_buffer_->shutDown(); delete uniform_buffer_;
 
+		texture_image_->shutDown(); delete texture_image_;
+		texture_image_view_->shutDown(); delete texture_image_view_;
+		
 		// For all physical devices
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
 		{
@@ -129,8 +132,13 @@ namespace vv
 			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
 			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
 
+			// todo: not general. extend to handle more situations.
+			vkDestroyDescriptorPool(physical_devices_[i]->logical_device, descriptor_pool_, nullptr);
+			vkDestroyDescriptorSetLayout(physical_devices_[i]->logical_device, descriptor_set_layout_, nullptr);
+			vkDestroySampler(physical_devices_[i]->logical_device, sampler_, nullptr);
+			shader_->shutDown(); delete shader_;
+
 			// Graphics Pipeline
-			delete shader_; // todo: remove
 			vkDestroyPipelineLayout(physical_devices_[i]->logical_device, pipeline_layout_, nullptr);
 			vkDestroyRenderPass(physical_devices_[i]->logical_device, render_pass_, nullptr);
 			vkDestroyPipeline(physical_devices_[i]->logical_device, pipeline_, nullptr);
@@ -142,12 +150,11 @@ namespace vv
 			delete swap_chain_;
 
 			// Physical/Logical devices
-			//physical_devices_[i]->shutDown(); // todo: fix deletion errors by adding shutdown functions.
+			physical_devices_[i]->shutDown(); // todo: fix deletion errors by adding shutdown functions.
 			delete physical_devices_[i];
 		}
 
-		window_->shutDown(instance_);
-		delete window_;
+		window_->shutDown(instance_); delete window_;
 
 		// Instance
 		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);

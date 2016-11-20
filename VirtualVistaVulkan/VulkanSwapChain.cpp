@@ -85,13 +85,7 @@ namespace vv
 
 		// If we've just created a new swap chain, we need to delete the old Vulkan objects.
 		if (old_swap_chain != VK_NULL_HANDLE)
-		{
 			shutDown(device);
-			/*for (uint32_t i = 0; i < image_count; ++i)
-				vkDestroyImageView(device->logical_device, image_views[i]->image_view, nullptr);
-
-			vkDestroySwapchainKHR(device->logical_device, swap_chain, nullptr);*/
-		}
 
 		VV_CHECK_SUCCESS(vkCreateSwapchainKHR(device->logical_device, &swap_chain_create_info, nullptr, &swap_chain));
 		createVulkanImageViews(device);
@@ -104,8 +98,10 @@ namespace vv
 		if (swap_chain != VK_NULL_HANDLE)
 		{
 			for (std::size_t i = 0; i < image_views.size(); ++i)
+			{
+				image_views[i]->shutDown();
 				delete image_views[i];
-			//	vkDestroyImageView(device->logical_device, image_views[i]->image_view, nullptr);
+			}
 
 			vkDestroySwapchainKHR(device->logical_device, swap_chain, nullptr);
 		}
@@ -157,28 +153,6 @@ namespace vv
 			VulkanImageView *curr_image_view = new VulkanImageView();
 			curr_image_view->create(device, curr_image);
 			image_views[i] = curr_image_view;
-
-			/*VkImageViewCreateInfo image_view_create_info = {};
-			image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			image_view_create_info.flags = VK_NULL_HANDLE;
-			image_view_create_info.image = images[i];
-			image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			image_view_create_info.format = format;
-
-			image_view_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-			image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			image_view_create_info.subresourceRange.baseMipLevel = 0;
-			image_view_create_info.subresourceRange.levelCount = 1;
-			image_view_create_info.subresourceRange.baseArrayLayer = 0;
-			image_view_create_info.subresourceRange.layerCount = 1;
-
-			VkImageView image_view = {};
-			VV_CHECK_SUCCESS(vkCreateImageView(device->logical_device, &image_view_create_info, nullptr, &image_view));
-			image_views[i] = image_view;*/
 		}
 	}
 

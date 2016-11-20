@@ -20,6 +20,7 @@ namespace vv
 		~Shader();
 
 		void create(std::string path, std::string name, VkDevice device);
+		void shutDown();
 
 	private:
 		VkDevice device_;

@@ -16,11 +16,6 @@ namespace vv
 
 	Shader::~Shader()
 	{
-		if (vert_module != VK_NULL_HANDLE)
-			vkDestroyShaderModule(device_, vert_module, nullptr);
-
-		if (frag_module != VK_NULL_HANDLE)
-			vkDestroyShaderModule(device_, frag_module, nullptr);
 	}
 
 
@@ -34,6 +29,16 @@ namespace vv
 
 		createShaderModule(vert_binary_data_, vert_module);
 		createShaderModule(frag_binary_data_, frag_module);
+	}
+
+
+	void Shader::shutDown()
+	{
+		if (vert_module)
+			vkDestroyShaderModule(device_, vert_module, nullptr);
+
+		if (frag_module)
+			vkDestroyShaderModule(device_, frag_module, nullptr);
 	}
 
 	
