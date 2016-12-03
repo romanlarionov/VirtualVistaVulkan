@@ -20,8 +20,8 @@ namespace vv
 	
 	void VulkanSwapChain::create(VulkanDevice *device, GLFWWindow *window)
 	{
-		VV_ASSERT(device, "VulkanDevice not present");
-		VV_ASSERT(window, "Window not present");
+		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
+		VV_ASSERT(window != nullptr, "Window not present");
 
 		VkSwapchainKHR old_swap_chain = swap_chain;
 		window_ = window;
@@ -94,7 +94,7 @@ namespace vv
 
 	void VulkanSwapChain::shutDown(VulkanDevice *device)
 	{
-		VV_ASSERT(device, "Vulkan Device not present");
+		VV_ASSERT(device != VK_NULL_HANDLE, "Vulkan Device not present");
 		if (swap_chain != VK_NULL_HANDLE)
 		{
 			for (std::size_t i = 0; i < image_views.size(); ++i)

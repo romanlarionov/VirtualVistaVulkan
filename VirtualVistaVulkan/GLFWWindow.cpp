@@ -20,7 +20,7 @@ namespace vv
 	
 	void GLFWWindow::create()
 	{
-		VV_ASSERT(glfwInit(), "GLFW failed to init");
+		VV_ASSERT(glfwInit() != 0, "GLFW failed to init");
 
 		// Don't use OpenGL
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

@@ -19,7 +19,7 @@ namespace vv
 
 	void VulkanImage::create(VkImage image, VulkanDevice *device, VkFormat format)
 	{
-		VV_ASSERT(device, "VulkanDevice not present");
+		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		this->format = format;
 		this->image = image;
@@ -28,7 +28,7 @@ namespace vv
 
 	void VulkanImage::create(std::string path, VulkanDevice *device, VkFormat format)
 	{
-		VV_ASSERT(device, "VulkanDevice not present");
+		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		this->format = format;
 		this->path = path;
@@ -43,7 +43,7 @@ namespace vv
 		size_ = width_ * height_ * 4; // todo: change depending on passed in channel size
 		this->depth_ = 1;
 
-		VV_ASSERT(texels, "STB failed to load image");
+		VV_ASSERT(texels != NULL, "STB failed to load image");
 
 		allocateMemory(VK_IMAGE_TYPE_2D, format, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_image_, staging_memory_);

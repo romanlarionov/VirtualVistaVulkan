@@ -53,7 +53,7 @@ namespace vv
 		void create(VkPhysicalDevice device)
 		{
 			physical_device = device;
-			VV_ASSERT(physical_device, "Vulkan Physical Device NULL");
+			VV_ASSERT(physical_device != VK_NULL_HANDLE, "Vulkan Physical Device NULL");
 
 			// Query and format all data related to this GPU.
 			vkGetPhysicalDeviceProperties(physical_device, &physical_device_properties);
@@ -217,6 +217,7 @@ namespace vv
 			}
 
 			VV_ASSERT(false, "Couldn't find appropriate memory type");
+			return 0;
 		}
 
 

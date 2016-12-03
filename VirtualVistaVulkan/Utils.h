@@ -21,7 +21,7 @@ namespace vv
 {
 
 #ifdef _DEBUG
-	inline void VV_CHECK_SUCCESS(bool success)
+	inline void VV_CHECK_SUCCESS(VkResult success)
 	{
 		if (success != VK_SUCCESS)
 			throw std::runtime_error(std::to_string(__LINE__) + " " + __FILE__);
@@ -33,10 +33,17 @@ namespace vv
 			throw std::runtime_error(message + std::to_string(__LINE__) + " " + __FILE__);
 	}
 
+	inline void VV_ASSERT(VkResult condition, std::string message)
+	{
+		if (condition != VK_SUCCESS)
+			throw std::runtime_error(message + std::to_string(__LINE__) + " " + __FILE__);
+	}
+
 #else
 
-	inline void VV_CHECK_SUCCESS(bool success) {}
+	inline void VV_CHECK_SUCCESS(VkResult success) {}
 	inline void VV_ASSERT(bool condition, std::string message) {}
+	inline void VV_ASSERT(VkResult condition, std::string message) {}
 
 #endif
 

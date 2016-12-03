@@ -74,6 +74,7 @@ namespace vv
 
 			createRenderPass();
 			createDescriptorSetLayout();
+
 			createGraphicsPipeline();
 			createFrameBuffers();
 
@@ -239,7 +240,7 @@ namespace vv
 		VkApplicationInfo app_info = {};
 		app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		app_info.pApplicationName = application_name.c_str();
-		app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 3);
+		app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 26);
 		app_info.pEngineName = engine_name.c_str();
 		app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
 		app_info.apiVersion = VK_API_VERSION_1_0;
@@ -252,18 +253,17 @@ namespace vv
 		instance_create_info.pApplicationInfo = &app_info;
 
 		auto required_extensions = getRequiredExtensions();
-		instance_create_info.enabledExtensionCount = required_extensions.size();
+		instance_create_info.enabledExtensionCount = (uint32_t)required_extensions.size();
 		instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
-		instance_create_info.enabledLayerCount = used_validation_layers_.size();
+		instance_create_info.enabledLayerCount = (uint32_t)used_validation_layers_.size();
 		instance_create_info.ppEnabledLayerNames = used_validation_layers_.data();
 #else
 		instance_create_info.enabledLayerCount = 0;
 #endif
 
-		//VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
-		vkCreateInstance(&instance_create_info, nullptr, &instance_);
+		VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
 	}
 
 
@@ -482,7 +482,7 @@ namespace vv
 		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		render_pass_create_info.flags = 0;
 		render_pass_create_info.attachmentCount = 1;
-		render_pass_create_info.pAttachments = &attachment_description;
+		render_pass_create_info.pAttachments = &attachment_description; // todo: this is how you create deferred renderer. Add multiple attachments for render targets
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass_description;
 		render_pass_create_info.dependencyCount = 1;
@@ -520,7 +520,7 @@ namespace vv
 
 		// todo: this is highly specific to the shader I'm using. fix me
 		vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-		vertex_input_state_create_info.vertexAttributeDescriptionCount = Vertex::getAttributeDescriptions().size();
+		vertex_input_state_create_info.vertexAttributeDescriptionCount = (uint32_t)Vertex::getAttributeDescriptions().size();
 		vertex_input_state_create_info.pVertexBindingDescriptions = &Vertex::getBindingDesciption();
 		vertex_input_state_create_info.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
 
@@ -531,8 +531,8 @@ namespace vv
 		input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
 
 		VkViewport viewport = {};
-		viewport.width = Settings::inst()->getWindowWidth();
-		viewport.height = Settings::inst()->getWindowHeight();
+		viewport.width = (float)Settings::inst()->getWindowWidth();
+		viewport.height = (float)Settings::inst()->getWindowHeight();
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
 		viewport.minDepth = 0.0f;
@@ -597,7 +597,7 @@ namespace vv
 		VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
 		dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamic_state_create_info.flags = 0;
-		dynamic_state_create_info.dynamicStateCount = dynamic_pipeline_settings.size();
+		dynamic_state_create_info.dynamicStateCount = (uint32_t)dynamic_pipeline_settings.size();
 		dynamic_state_create_info.pDynamicStates = dynamic_pipeline_settings.data();
 
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
@@ -631,8 +631,7 @@ namespace vv
 
 		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
-		//VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
-		vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_);
+		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
 	}
 
 
@@ -661,7 +660,7 @@ namespace vv
 
 		VkDescriptorSetLayoutCreateInfo layout_create_info = {};
 		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layout_create_info.bindingCount = layouts.size();
+		layout_create_info.bindingCount = (uint32_t)layouts.size();
 		layout_create_info.pBindings = layouts.data();
 
 		// assuming this sets a creates a template for vulkan to accept a certain type of descriptor.
@@ -683,7 +682,7 @@ namespace vv
 
 		VkDescriptorPoolCreateInfo create_info = {};
 		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		create_info.poolSizeCount = pool_sizes.size();
+		create_info.poolSizeCount = (uint32_t)pool_sizes.size();
 		create_info.pPoolSizes = pool_sizes.data();
 		create_info.maxSets = 1; // max # of descriptor sets allocated
 		create_info.flags = 0; // can be this => VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
@@ -692,7 +691,6 @@ namespace vv
 	}
 
 
-	// todo: figure out what a lot of this means... It's so hard to follow.
 	void VulkanRenderer::createDescriptorSet()
 	{
 		VkDescriptorSetAllocateInfo alloc_info = {};
@@ -733,7 +731,7 @@ namespace vv
 		write_sets[1].pImageInfo = &image_info;
 
 		// if you want to update uniforms per frame
-		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, write_sets.size(), write_sets.data(), 0, nullptr);
+		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, (uint32_t)write_sets.size(), write_sets.data(), 0, nullptr);
 	}
 
 
@@ -836,7 +834,7 @@ namespace vv
 			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &descriptor_set_, 0, nullptr);
 
 			//vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
-			vkCmdDrawIndexed(command_buffers_[i], mesh_->indices.size(), 1, 0, 0, 0);
+			vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(command_buffers_[i]);
 

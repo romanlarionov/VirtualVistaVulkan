@@ -70,7 +70,7 @@ namespace vv
 
 				if (vertex_map.count(vertex) == 0)
 				{
-					vertex_map[vertex] = vertices.size();
+					vertex_map[vertex] = (int)vertices.size();
 					vertices.push_back(vertex);
 				}
 

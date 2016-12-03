@@ -16,7 +16,7 @@ namespace vv
 
 	void VulkanBuffer::create(VulkanDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize size)
 	{
-		VV_ASSERT(device, "VulkanDevice not present");
+		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		usage_flags_ = usage_flags;
 		size_ = size;

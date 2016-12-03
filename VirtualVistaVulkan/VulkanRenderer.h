@@ -55,7 +55,7 @@ namespace vv
 		std::vector<VkFramebuffer> frame_buffers_;
 
 		Shader *shader_;
-		VkPipeline pipeline_;
+		VkPipeline pipeline_ = VK_NULL_HANDLE;
 
 		// data for shaders
 		VkDescriptorSetLayout descriptor_set_layout_; // todo: move to model class
