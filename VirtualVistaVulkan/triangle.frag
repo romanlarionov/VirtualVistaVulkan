@@ -10,7 +10,5 @@ layout(location = 1) in vec2 fragTexCoord;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-	vec4 col = vec4(0.5);
-    vec4 diffuse_color = texture(diffuseTex, fragTexCoord);
-    outColor = diffuse_color;//vec4(fragTexCoord, 0.0, 1.0);
+    outColor = texture(diffuseTex, fragTexCoord);
 }

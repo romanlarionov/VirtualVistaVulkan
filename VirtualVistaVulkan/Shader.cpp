@@ -19,7 +19,7 @@ namespace vv
 	}
 
 
-	void Shader::create(std::string path, std::string name, VkDevice device)
+	void Shader::init(std::string path, std::string name, VkDevice device)
 	{
 		device_ = device;
 		vert_path_ = path + name + "_vert" + ".spv";

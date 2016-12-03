@@ -18,16 +18,16 @@
 
 namespace vv
 {
-	std::vector<Vertex> vertices = {
+	/*std::vector<Vertex> vertices = {
 		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
 		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
 		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
 		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-	};
+	};*/
 
-	std::vector<uint32_t> indices = {
+	/*std::vector<uint32_t> indices = {
 		0, 1, 2, 2, 3, 0
-	};
+	};*/
 
 	VkResult createDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
@@ -77,8 +77,11 @@ namespace vv
 			createGraphicsPipeline();
 			createFrameBuffers();
 
+			mesh_ = new Mesh();
+			mesh_->init("../assets/Models/OBJ/chalet.obj");
+			
 			texture_image_ = new VulkanImage();
-			texture_image_->create("statue.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
+			texture_image_->create("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
 			texture_image_->transferToDevice();
 
 			texture_image_view_ = new VulkanImageView();
@@ -87,12 +90,12 @@ namespace vv
 			createSampler();
 
 			vertex_buffer_ = new VulkanBuffer();
-			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]) * vertices.size());
-			vertex_buffer_->updateAndTransfer(vertices.data());
+			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(mesh_->vertices[0]) * mesh_->vertices.size());
+			vertex_buffer_->updateAndTransfer(mesh_->vertices.data());
 
 			index_buffer_ = new VulkanBuffer();
-			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(indices[0]) * indices.size());
-			index_buffer_->updateAndTransfer(indices.data());
+			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(mesh_->indices[0]) * mesh_->indices.size());
+			index_buffer_->updateAndTransfer(mesh_->indices.data());
 
 			// todo: push constants are a more efficient way of sending constantly changing values to the shader.
 			ubo_ = { glm::mat4(), glm::mat4(), glm::mat4(), glm::vec3(0.0, 0.0, 1.0) };
@@ -173,6 +176,10 @@ namespace vv
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count() / 1000.0f;
 
+		ubo_.model = glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		ubo_.model = glm::rotate(ubo_.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		ubo_.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo_.proj = glm::perspective(glm::radians(45.0f), swap_chain_->extent.width / (float) swap_chain_->extent.height, 0.1f, 10.0f);
 		ubo_.normal = glm::vec3(glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 		uniform_buffer_->updateAndTransfer(&ubo_);
 
@@ -255,7 +262,8 @@ namespace vv
 		instance_create_info.enabledLayerCount = 0;
 #endif
 
-		VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
+		//VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &instance_));
+		vkCreateInstance(&instance_create_info, nullptr, &instance_);
 	}
 
 
@@ -487,7 +495,7 @@ namespace vv
 	void VulkanRenderer::createGraphicsPipeline()
 	{
 		shader_ = new Shader;
-		shader_->create("D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle", physical_devices_[0]->logical_device);
+		shader_->init("D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle", physical_devices_[0]->logical_device);
 
 		VkPipelineShaderStageCreateInfo vert_shader_create_info = {};
 		vert_shader_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -623,7 +631,8 @@ namespace vv
 
 		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
-		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
+		//VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
+		vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_);
 	}
 
 
@@ -827,7 +836,7 @@ namespace vv
 			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &descriptor_set_, 0, nullptr);
 
 			//vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
-			vkCmdDrawIndexed(command_buffers_[i], indices.size(), 1, 0, 0, 0);
+			vkCmdDrawIndexed(command_buffers_[i], mesh_->indices.size(), 1, 0, 0, 0);
 
 			vkCmdEndRenderPass(command_buffers_[i]);
 

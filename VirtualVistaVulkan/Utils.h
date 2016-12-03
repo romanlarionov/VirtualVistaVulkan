@@ -5,6 +5,7 @@
 #include <array>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 
 #ifndef VIRTUALVISTA_UTILS_H
 #define VIRTUALVISTA_UTILS_H
@@ -14,34 +15,36 @@
 		else { delete p; p = NULL; } \
 	}
 
-#ifdef _DEBUG
 
-#define VV_CHECK_SUCCESS(success) { \
-        if (success == VK_SUCCESS) { } \
-		else throw std::runtime_error(__FUNCTION__ + std::to_string(__LINE__) + " " + __FILE__); \
-    }
-
-#define VV_ASSERT(condition, message) \
-		if (condition) { } \
-		else \
-		{ \
-			throw std::runtime_error(#message + std::to_string(__LINE__) + " " + __FILE__ ); \
-		}
-
-#else
-
-#define VV_CHECK_SUCCESS(success) {}
-#define VV_ASSERT(condition, message) {}
-
-#endif
 
 namespace vv
 {
+
+#ifdef _DEBUG
+	inline void VV_CHECK_SUCCESS(bool success)
+	{
+		if (success != VK_SUCCESS)
+			throw std::runtime_error(std::to_string(__LINE__) + " " + __FILE__);
+	}
+
+	inline void VV_ASSERT(bool condition, std::string message)
+	{
+		if (!condition)
+			throw std::runtime_error(message + std::to_string(__LINE__) + " " + __FILE__);
+	}
+
+#else
+
+	inline void VV_CHECK_SUCCESS(bool success) {}
+	inline void VV_ASSERT(bool condition, std::string message) {}
+
+#endif
+
 	// todo: rework this horrible atrocity
 	struct Vertex
 	{
 	public:
-		glm::vec2 position;
+		glm::vec3 position;
 		glm::vec3 color;
 		glm::vec2 texCoord;
 
@@ -60,7 +63,7 @@ namespace vv
 
 			attribute_descriptions[0].binding = 0;
 			attribute_descriptions[0].location = 0; // layout placement
-			attribute_descriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // type
+			attribute_descriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // type
 			attribute_descriptions[0].offset = offsetof(Vertex, position); // placement in vertex 
 
 			attribute_descriptions[1].binding = 0;
@@ -74,6 +77,11 @@ namespace vv
 			attribute_descriptions[2].offset = offsetof(Vertex, texCoord);
 
 			return attribute_descriptions;
+		}
+
+		bool operator==(const Vertex& other) const
+		{
+			return position == other.position && color == other.color && texCoord == other.texCoord;
 		}
 	};
 
@@ -118,6 +126,16 @@ namespace vv
 
 	    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 	}
+}
+
+namespace std {
+	template<> struct hash<vv::Vertex> {
+		size_t operator()(vv::Vertex const& vertex) const {
+			return ((hash<glm::vec3>()(vertex.position) ^
+				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.texCoord) << 1);
+		}
+	};
 }
 
 #endif // VIRTUALVISTA_UTILS_H

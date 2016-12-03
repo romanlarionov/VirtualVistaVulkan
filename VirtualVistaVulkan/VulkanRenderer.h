@@ -10,6 +10,7 @@
 #include "VulkanImageView.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
+#include "Mesh.h"
 #include "Shader.h"
 #include "Utils.h"
 
@@ -66,6 +67,7 @@ namespace vv
 		std::vector<VkCommandBuffer> command_buffers_;
 
 		// todo: remove as this is not very general
+		Mesh *mesh_;
 		VulkanBuffer *vertex_buffer_;
 		VulkanBuffer *index_buffer_;
 		UniformBufferObject ubo_;

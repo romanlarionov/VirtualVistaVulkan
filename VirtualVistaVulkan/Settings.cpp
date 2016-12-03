@@ -9,8 +9,8 @@ namespace vv
 	void Settings::setDefault()
 	{
 		default_ = true;
-		window_width_ = 640;
-		window_height_ = 480;
+		window_width_ = 1920;
+		window_height_ = 1080;
 		application_name_ = "VirtualVistaVulkan";
 		engine_name_ = "VirtualVista";
 
