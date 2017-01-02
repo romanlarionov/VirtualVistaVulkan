@@ -46,9 +46,9 @@ namespace vv
 		bool shouldStop();
 
 	private:
-		GLFWWindow *window_ = nullptr;
-		VkInstance instance_ = VK_NULL_HANDLE;
-		VkDebugReportCallbackEXT debug_callback_;
+		GLFWWindow *window_						 = nullptr;
+		VkInstance instance_					 = VK_NULL_HANDLE;
+		VkDebugReportCallbackEXT debug_callback_ = VK_NULL_HANDLE;
 		std::vector<VulkanDevice*> physical_devices_;
 		VulkanSwapChain *swap_chain_;
 
@@ -58,11 +58,11 @@ namespace vv
 		VkPipeline pipeline_ = VK_NULL_HANDLE;
 
 		// data for shaders
-		VkDescriptorSetLayout descriptor_set_layout_; // todo: move to model class
-		VkDescriptorPool descriptor_pool_;
-		VkDescriptorSet descriptor_set_;
-		VkPipelineLayout pipeline_layout_;
-		VkRenderPass render_pass_;
+		VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE; // todo: move to model class
+		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
+		VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
+		VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
+		VkRenderPass render_pass_ = VK_NULL_HANDLE;
 
 		std::vector<VkCommandBuffer> command_buffers_;
 
@@ -76,10 +76,10 @@ namespace vv
 		// texture aka remove
 		VulkanImage *texture_image_;
 		VulkanImageView *texture_image_view_;
-		VkSampler sampler_;
+		VkSampler sampler_ = VK_NULL_HANDLE;
 
-		VkSemaphore image_ready_semaphore_;
-		VkSemaphore rendering_complete_semaphore_;
+		VkSemaphore image_ready_semaphore_ = VK_NULL_HANDLE;
+		VkSemaphore rendering_complete_semaphore_ = VK_NULL_HANDLE;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };

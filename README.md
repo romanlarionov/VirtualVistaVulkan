@@ -23,7 +23,8 @@ I have exclusively been writing and testing this on Windows 10 with Visual Studi
 Goals
 -----
 
-- [ ] Renderable OBJ models
+- [x] Renderable OBJ models
+- [ ] Light support
 - [ ] Renderable OBJ models with multiple submeshes w/ distinct materials
 - [ ] Render multiple distinct models
 - [ ] Support physically plausible, BRDF based materials

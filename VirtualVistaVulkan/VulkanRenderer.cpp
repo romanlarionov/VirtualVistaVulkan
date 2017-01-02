@@ -18,17 +18,6 @@
 
 namespace vv
 {
-	/*std::vector<Vertex> vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-	};*/
-
-	/*std::vector<uint32_t> indices = {
-		0, 1, 2, 2, 3, 0
-	};*/
-
 	VkResult createDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
 		const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
 	{
@@ -65,7 +54,7 @@ namespace vv
 			// Note: this is a very specific order and is not to be messed with.
 			createWindow();
 			createVulkanInstance();
-			createVulkanSurface();
+			window_->createSurface(instance_);
 
 			setupDebugCallback();
 			createVulkanDevices();
@@ -73,10 +62,13 @@ namespace vv
 			createVulkanSwapChain();
 
 			createRenderPass();
-			createDescriptorSetLayout();
-
-			createGraphicsPipeline();
 			createFrameBuffers();
+
+			createVulkanSemaphores();
+
+			//////////////////////////////// All below should be generalized and moved to application file
+			createDescriptorSetLayout();
+			createGraphicsPipeline();
 
 			mesh_ = new Mesh();
 			mesh_->init("../assets/Models/OBJ/chalet.obj");
@@ -107,7 +99,6 @@ namespace vv
 			createDescriptorSet();
 
 			createCommandBuffers();
-			createVulkanSemaphores();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -240,9 +231,9 @@ namespace vv
 		VkApplicationInfo app_info = {};
 		app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		app_info.pApplicationName = application_name.c_str();
-		app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 26);
+		app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		app_info.pEngineName = engine_name.c_str();
-		app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
+		app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 		app_info.apiVersion = VK_API_VERSION_1_0;
 
 		// Ensure required extensions are found.
@@ -592,13 +583,13 @@ namespace vv
 		color_blend_state_create_info.blendConstants[3] = 0.0f;
 
 		// add enum values here for more dynamic pipeline state changes!! 
-		std::array<VkDynamicState, 2> dynamic_pipeline_settings = { VK_DYNAMIC_STATE_VIEWPORT };
+		/*std::array<VkDynamicState, 2> dynamic_pipeline_settings = { VK_DYNAMIC_STATE_VIEWPORT };
 
 		VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
 		dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamic_state_create_info.flags = 0;
 		dynamic_state_create_info.dynamicStateCount = (uint32_t)dynamic_pipeline_settings.size();
-		dynamic_state_create_info.pDynamicStates = dynamic_pipeline_settings.data();
+		dynamic_state_create_info.pDynamicStates = dynamic_pipeline_settings.data();*/
 
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
