@@ -22,8 +22,10 @@ namespace vv
 		VkSwapchainKHR swap_chain = VK_NULL_HANDLE;
 		VkExtent2D extent;
 		VkFormat format;
-		std::vector<VulkanImage*> images;
-		std::vector<VulkanImageView*> image_views;
+		std::vector<VulkanImage*> color_images;
+		std::vector<VulkanImageView*> color_image_views;
+		VulkanImage *depth_image;
+		VulkanImageView *depth_image_view;
 
 		VulkanSwapChain();
 		~VulkanSwapChain();

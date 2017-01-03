@@ -5,6 +5,7 @@
 #include <functional>
 #include <algorithm>
 #include <chrono>
+#include <array>
 
 #include "VulkanRenderer.h"
 #include "Settings.h"
@@ -60,7 +61,6 @@ namespace vv
 			createVulkanDevices();
 
 			createVulkanSwapChain();
-
 			createRenderPass();
 			createFrameBuffers();
 
@@ -72,9 +72,9 @@ namespace vv
 
 			mesh_ = new Mesh();
 			mesh_->init("../assets/Models/OBJ/chalet.obj");
-			
+
 			texture_image_ = new VulkanImage();
-			texture_image_->create("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
+			texture_image_->createColorAttachment("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
 			texture_image_->transferToDevice();
 
 			texture_image_view_ = new VulkanImageView();
@@ -436,16 +436,29 @@ namespace vv
 
 	void VulkanRenderer::createRenderPass()
 	{
-		VkAttachmentDescription attachment_description = {};
-		attachment_description.flags = 0;
-		attachment_description.format = swap_chain_->format;
-		attachment_description.samples = VK_SAMPLE_COUNT_1_BIT; // change for multi-sampling support
-		attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clears the image at the beginning of each render
-		attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save the image after rendering is complete
-		attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // not currently using stencil
-		attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // not currently using stencil
-		attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // don't care what type of texture the framebuffer was before rendering cuz it'll be cleared anyway
-		attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // finally framebuffer layout should be presentable to screen
+		VkAttachmentDescription color_attachment_description = {};
+		color_attachment_description.flags = 0;
+		color_attachment_description.format = swap_chain_->format;
+		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT; // change for multi-sampling support
+		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clears the image at the beginning of each render
+		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save the image after rendering is complete
+		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // not currently using stencil
+		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // not currently using stencil
+		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // don't care what type of texture the framebuffer was before rendering cuz it'll be cleared anyway
+		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // finally framebuffer layout should be presentable to screen
+
+		VkAttachmentDescription depth_attachment_description = {};
+		depth_attachment_description.flags = 0;
+		depth_attachment_description.format = swap_chain_->depth_image->format;
+		depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		std::array<VkAttachmentDescription, 2> attachment_descriptions = { color_attachment_description, depth_attachment_description };
 
 		// todo: it's possible to have multiple sub-render-passes. You can perform things like post-processing
 		// on a single framebuffer within a single RenderPass object, saving memory. Look into this for the future.
@@ -459,21 +472,26 @@ namespace vv
 		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-		VkAttachmentReference attachment_reference = {};
-		attachment_reference.attachment = 0; // framebuffer at index 0
-		attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // use internal framebuffer as color texture
+		VkAttachmentReference color_attachment_reference = {};
+		color_attachment_reference.attachment = 0; // framebuffer at index 0
+		color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // use internal framebuffer as color texture
+
+		VkAttachmentReference depth_attachment_reference = {};
+		depth_attachment_reference.attachment = 1;
+		depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription subpass_description = {};
 		subpass_description.flags = 0;
-		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // this will be a graphics subpass
-		subpass_description.colorAttachmentCount = 1; // one framebuffer
-		subpass_description.pColorAttachments = &attachment_reference;
+		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass_description.colorAttachmentCount = 1; // only rendering to one single color buffer. can do more for deferred.
+		subpass_description.pColorAttachments = &color_attachment_reference;
+		subpass_description.pDepthStencilAttachment = &depth_attachment_reference;
 
 		VkRenderPassCreateInfo render_pass_create_info = {};
 		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		render_pass_create_info.flags = 0;
-		render_pass_create_info.attachmentCount = 1;
-		render_pass_create_info.pAttachments = &attachment_description; // todo: this is how you create deferred renderer. Add multiple attachments for render targets
+		render_pass_create_info.attachmentCount = attachment_descriptions.size();
+		render_pass_create_info.pAttachments = attachment_descriptions.data(); // todo: you can add more here to perform deferred rendering.
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass_description;
 		render_pass_create_info.dependencyCount = 1;
@@ -565,6 +583,19 @@ namespace vv
 		multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
 		multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
+		VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {};
+		depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depth_stencil_state_create_info.flags = 0;
+		depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
+		depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
+		depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+		depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+		depth_stencil_state_create_info.minDepthBounds = 0.0f;
+		depth_stencil_state_create_info.maxDepthBounds = 1.0f;
+		depth_stencil_state_create_info.stencilTestEnable = VK_FALSE; // dont want to do any cutting of the image currently.
+		depth_stencil_state_create_info.front = {};
+		depth_stencil_state_create_info.back = {};
+
 		// todo: for some reason, if this is activated the output color is overridden. fix me
 		/* This along with color blend create info specify alpha blending operations */
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
@@ -612,7 +643,7 @@ namespace vv
 		graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
 		graphics_pipeline_create_info.pDynamicState = nullptr;//&dynamic_state_create_info;
 		graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
-		graphics_pipeline_create_info.pDepthStencilState = nullptr;
+		graphics_pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
 		graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
 		graphics_pipeline_create_info.layout = pipeline_layout_;
 		graphics_pipeline_create_info.renderPass = render_pass_;
@@ -754,20 +785,18 @@ namespace vv
 
 	void VulkanRenderer::createFrameBuffers()
 	{
-		frame_buffers_.resize(swap_chain_->image_views.size());
+		frame_buffers_.resize(swap_chain_->color_image_views.size());
 
-		for (std::size_t i = 0; i < swap_chain_->image_views.size(); ++i)
+		for (std::size_t i = 0; i < swap_chain_->color_image_views.size(); ++i)
 		{
-			VkImageView attachments = {
-				swap_chain_->image_views[i]->image_view
-			};
+			std::array<VkImageView, 2> attachments = { swap_chain_->color_image_views[i]->image_view, swap_chain_->depth_image_view->image_view };
 
 			VkFramebufferCreateInfo frame_buffer_create_info = {};
 			frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			frame_buffer_create_info.flags = 0;
 			frame_buffer_create_info.renderPass = render_pass_;
-			frame_buffer_create_info.attachmentCount = 1;
-			frame_buffer_create_info.pAttachments = &attachments;
+			frame_buffer_create_info.attachmentCount = attachments.size();
+			frame_buffer_create_info.pAttachments = attachments.data();
 			frame_buffer_create_info.width = swap_chain_->extent.width;
 			frame_buffer_create_info.height = swap_chain_->extent.height;
 			frame_buffer_create_info.layers = 1;
@@ -807,9 +836,12 @@ namespace vv
 			render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
 			render_pass_begin_info.renderArea.extent = swap_chain_->extent;
 
-			VkClearValue clear_value = {0.3f, 0.5f, 0.5f, 1.0f}; // todo: offload to settings
-			render_pass_begin_info.clearValueCount = 1;
-			render_pass_begin_info.pClearValues = &clear_value;
+			std::array<VkClearValue, 2> clear_values; // todo: offload to settings
+			clear_values[0].color = { 0.3f, 0.5f, 0.5f, 1.0f };
+			clear_values[1].depthStencil = {1.0f, 0};
+
+			render_pass_begin_info.clearValueCount = clear_values.size();
+			render_pass_begin_info.pClearValues = clear_values.data();
 
 			vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 

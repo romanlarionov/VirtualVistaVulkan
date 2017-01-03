@@ -17,20 +17,25 @@ namespace vv
 	}
 
 
-	void VulkanImage::create(VkImage image, VulkanDevice *device, VkFormat format)
+	void VulkanImage::createFromImage(VkImage image, VulkanDevice *device, VkFormat format)
 	{
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		this->format = format;
+		this->aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+		this->image_view_type = VK_IMAGE_VIEW_TYPE_2D;
+		this->path = "";
 		this->image = image;
 	}
 
 
-	void VulkanImage::create(std::string path, VulkanDevice *device, VkFormat format)
+	void VulkanImage::createColorAttachment(std::string path, VulkanDevice *device, VkFormat format)
 	{
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		this->format = format;
+		this->aspect_flags = VK_IMAGE_ASPECT_COLOR_BIT;
+		this->image_view_type = VK_IMAGE_VIEW_TYPE_2D;
 		this->path = path;
 
 		int channels;
@@ -59,6 +64,47 @@ namespace vv
 
 		// free loaded raw data
 		stbi_image_free(texels);
+	}
+
+
+	void VulkanImage::createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features)
+	{
+		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
+		this->device_ = device;
+		this->format = format;
+		this->aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
+		this->image_view_type = VK_IMAGE_VIEW_TYPE_2D;
+		this->path = path;
+		this->width_ = extent.width;
+		this->height_ = extent.height;
+		this->depth_ = 1;
+
+		// check to see if physical device supports the particular image format required for depth operations.
+		std::vector<VkFormat> candidates = { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+		for (VkFormat &format : candidates)
+		{
+			VkFormatProperties properties;
+			vkGetPhysicalDeviceFormatProperties(device->physical_device, format, &properties);
+
+			if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
+			{
+				this->format = format;
+				break;
+			}
+			else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features)
+			{
+				this->format = format;
+				break;
+			}
+		}
+
+		allocateMemory(VK_IMAGE_TYPE_2D, this->format, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, image_memory_);
+
+		if (hasStencilComponent())
+			this->aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		transformImageLayout(image, this->format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	}
 
 
@@ -105,6 +151,11 @@ namespace vv
 		transformImageLayout(image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
+
+	bool VulkanImage::hasStencilComponent()
+	{
+		return (format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT);
+	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
 
@@ -160,8 +211,9 @@ namespace vv
 		memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memory_barrier.image = image;
+
 		// todo: make all of below more general
-		memory_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // what parts of the image are included?
+		memory_barrier.subresourceRange.aspectMask = this->aspect_flags;
 		memory_barrier.subresourceRange.baseMipLevel = 0;
 		memory_barrier.subresourceRange.levelCount = 1;
 		memory_barrier.subresourceRange.baseArrayLayer = 0;
@@ -177,6 +229,9 @@ namespace vv
 		} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
 			memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+			memory_barrier.srcAccessMask = 0;
+			memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		} else {
 			VV_ASSERT(false, "Unsupported image layout transformation.");
 		}

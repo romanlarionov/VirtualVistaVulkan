@@ -23,7 +23,7 @@ namespace vv
 		image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		image_view_create_info.flags = VK_NULL_HANDLE;
 		image_view_create_info.image = image->image;
-		image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		image_view_create_info.viewType = image->image_view_type;
 		image_view_create_info.format = image->format;
 
 		// todo: make general
@@ -32,7 +32,7 @@ namespace vv
 		image_view_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 		image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-		image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		image_view_create_info.subresourceRange.aspectMask = image->aspect_flags;
 		image_view_create_info.subresourceRange.baseMipLevel = 0;
 		image_view_create_info.subresourceRange.levelCount = 1;
 		image_view_create_info.subresourceRange.baseArrayLayer = 0;

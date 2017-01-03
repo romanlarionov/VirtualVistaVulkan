@@ -17,6 +17,8 @@ namespace vv
 	public:
 		VkImage image;
 		VkFormat format;
+		VkImageAspectFlags aspect_flags;
+		VkImageViewType image_view_type;
 		std::string path;
 
 		VulkanImage();
@@ -25,12 +27,17 @@ namespace vv
 		/*
 		 * Creates an image from existing image. Mainly for swap chain image support.
 		 */
-		void create(VkImage image, VulkanDevice *device, VkFormat format);
+		void createFromImage(VkImage image, VulkanDevice *device, VkFormat format);
 
 		/*
 		 * Loads, allocates, and stores a requested texture using the header-only STB image library.
 		 */
-		void create(std::string path, VulkanDevice *device, VkFormat format);
+		void createColorAttachment(std::string path, VulkanDevice *device, VkFormat format);
+
+		/*
+		 * Allocates a depth image with the proper format.
+		 */
+		void createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 		/*
 		 *
@@ -51,6 +58,11 @@ namespace vv
 		 * todo: this issues a lot of commands that are sent to be executed linearly. These should be done asynchronously for best performance.
 		 */
 		void transferToDevice();
+
+		/*
+		 * Returns whether this image format supports stencil operations.
+		 */
+		bool hasStencilComponent();
 
 	private:
 		VulkanDevice *device_;

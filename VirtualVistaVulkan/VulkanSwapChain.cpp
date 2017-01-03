@@ -97,11 +97,14 @@ namespace vv
 		VV_ASSERT(device != VK_NULL_HANDLE, "Vulkan Device not present");
 		if (swap_chain != VK_NULL_HANDLE)
 		{
-			for (std::size_t i = 0; i < image_views.size(); ++i)
+			for (std::size_t i = 0; i < color_image_views.size(); ++i)
 			{
-				image_views[i]->shutDown();
-				delete image_views[i];
+				color_image_views[i]->shutDown();
+				delete color_image_views[i];
 			}
+
+			depth_image->shutDown(); delete depth_image;
+			depth_image_view->shutDown(); delete depth_image_view;
 
 			vkDestroySwapchainKHR(device->logical_device, swap_chain, nullptr);
 		}
@@ -140,20 +143,26 @@ namespace vv
 		std::vector<VkImage> raw_images(swap_chain_image_count);
 		VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(device->logical_device, swap_chain, &swap_chain_image_count, raw_images.data()));
 
-		images.resize(swap_chain_image_count);
-		image_views.resize(swap_chain_image_count);
+		color_images.resize(swap_chain_image_count);
+		color_image_views.resize(swap_chain_image_count);
 
 		for (uint32_t i = 0; i < swap_chain_image_count; ++i)
 		{
 			// convert to abstracted format
 			VulkanImage *curr_image = new VulkanImage();
-			curr_image->create(raw_images[i], device, format);
-			images[i] = curr_image;
+			curr_image->createFromImage(raw_images[i], device, format);
+			color_images[i] = curr_image;
 
 			VulkanImageView *curr_image_view = new VulkanImageView();
 			curr_image_view->create(device, curr_image);
-			image_views[i] = curr_image_view;
+			color_image_views[i] = curr_image_view;
 		}
+
+		depth_image = new VulkanImage();
+		depth_image->createDepthAttachment(device, extent, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+		depth_image_view = new VulkanImageView();
+		depth_image_view->create(device, depth_image);
 	}
 
 
