@@ -24,6 +24,9 @@ namespace vv
 		VulkanImage();
 		~VulkanImage();
 
+		// todo: i don't like how these functions operate. It seems like some manager should have control of what 
+		// the intended use of the image will be. Maybe VulkanImageView?
+
 		/*
 		 * Creates an image from existing image. Mainly for swap chain image support.
 		 */
@@ -40,11 +43,6 @@ namespace vv
 		void createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 		/*
-		 *
-		 */
-		void shutDown();
-	
-		/*
 		 * todo: should be able to load different types of textures such as,
 		 * 3d textures, generated textures, and deferred staging buffers.
 		 */
@@ -53,6 +51,11 @@ namespace vv
 
 		}*/
 
+		/*
+		 *
+		 */
+		void shutDown();
+	
 		/*
 		 * Copies a buffer allocated on CPU memory to one allocated on GPU memory.
 		 * todo: this issues a lot of commands that are sent to be executed linearly. These should be done asynchronously for best performance.
@@ -66,9 +69,9 @@ namespace vv
 
 	private:
 		VulkanDevice *device_;
-		VkImage staging_image_ = VK_NULL_HANDLE;
-		VkDeviceMemory staging_memory_ = VK_NULL_HANDLE;
-		VkDeviceMemory image_memory_;
+		VkImage staging_image_			= VK_NULL_HANDLE;
+		VkDeviceMemory staging_memory_	= VK_NULL_HANDLE;
+		VkDeviceMemory image_memory_	= VK_NULL_HANDLE;
 		VkDeviceSize size_; // width * height * num_elements
 		int width_;
 		int height_;
@@ -78,7 +81,8 @@ namespace vv
 		 * Creates the Vulkan abstraction for a data buffer with the given specifications.
 		 * todo: maybe think about putting this sort of thing in its own "memory management" system
 		 */
-		void allocateMemory(VkImageType image_type, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_properties, VkImage &image, VkDeviceMemory &memory);
+		void allocateMemory(VkImageType image_type, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+			VkMemoryPropertyFlags memory_properties, VkImage &image, VkDeviceMemory &memory);
 	
 		/*
 		 * Move the linearly stored staging image into an optimal texture storage layout.

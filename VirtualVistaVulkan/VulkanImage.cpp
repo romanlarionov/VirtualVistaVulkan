@@ -126,7 +126,7 @@ namespace vv
 		transformImageLayout(image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		auto command_pool_used = device_->command_pools["transfer"];
-		auto command_buffer = vv::beginSingleUseCommand(device_->logical_device, command_pool_used);
+		auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 		VkImageSubresourceLayers sub_resource = {};
 		sub_resource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -146,7 +146,7 @@ namespace vv
 		vkCmdCopyImage(command_buffer, staging_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-		vv::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+		util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
 
 		transformImageLayout(image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
@@ -201,7 +201,7 @@ namespace vv
 	void VulkanImage::transformImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
 	{
 		auto command_pool_used = device_->command_pools["transfer"];
-		auto command_buffer = vv::beginSingleUseCommand(device_->logical_device, command_pool_used);
+		auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 		// using this ensures that writing is completed before reading.
 		VkImageMemoryBarrier memory_barrier = {};
@@ -239,6 +239,6 @@ namespace vv
 		vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			0, 0, nullptr, 0, nullptr, 1, &memory_barrier);
 
-		vv::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+		util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
 	}
 }

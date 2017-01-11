@@ -8,6 +8,7 @@
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
 #include "VulkanImageView.h"
+#include "VulkanPipeline.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
 #include "Mesh.h"
@@ -55,13 +56,12 @@ namespace vv
 		std::vector<VkFramebuffer> frame_buffers_;
 
 		Shader *shader_;
-		VkPipeline pipeline_ = VK_NULL_HANDLE;
+		VulkanPipeline *pipeline_;
 
 		// data for shaders
-		VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE; // todo: move to model class
+		std::vector<VkDescriptorSetLayout> descriptor_set_layouts_;
 		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
 		VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
-		VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
 		VkRenderPass render_pass_ = VK_NULL_HANDLE;
 
 		std::vector<VkCommandBuffer> command_buffers_;
@@ -110,16 +110,6 @@ namespace vv
 		void createVulkanDevices();
 
 		/*
-		 * Creates the abstraction for the Vulkan swap chain.
-		 */
-		void createVulkanSwapChain();
-
-		/*
-		 * Starts initializing graphics computation components and their settings (anti-aliasing, rasterizer, etc) once core Vulkan components are ready.
-		 */
-		void createGraphicsPipeline();
-
-		/*
 		 * Specify to Vulkan a set of descriptors for global resources that will be used, i.e. uniforms.
 		 * The VkDescriptorSetLayout object is used as a template for a type of descriptor set that can be made.
 		 */
@@ -158,11 +148,6 @@ namespace vv
 		 * These commands range from memory management calls, to binding framebuffers, to draw commands. 
 		 */
 		void createCommandBuffers();
-
-		/*
-		 * Creates locks for command queue operations to handle their asynchronous execution.
-		 */
-		void createVulkanSemaphores();
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.

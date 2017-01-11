@@ -19,7 +19,7 @@ namespace vv
 	}
 
 
-	void Shader::init(std::string path, std::string name, VkDevice device)
+	void Shader::create(VulkanDevice *device, std::string path, std::string name)
 	{
 		device_ = device;
 		vert_path_ = path + name + "_vert" + ".spv";
@@ -35,10 +35,10 @@ namespace vv
 	void Shader::shutDown()
 	{
 		if (vert_module)
-			vkDestroyShaderModule(device_, vert_module, nullptr);
+			vkDestroyShaderModule(device_->logical_device, vert_module, nullptr);
 
 		if (frag_module)
-			vkDestroyShaderModule(device_, frag_module, nullptr);
+			vkDestroyShaderModule(device_->logical_device, frag_module, nullptr);
 	}
 
 	
@@ -68,6 +68,6 @@ namespace vv
 		shader_module_create_info.codeSize = byte_code.size();
 		shader_module_create_info.pCode = (uint32_t *)byte_code.data();
 
-		VV_CHECK_SUCCESS(vkCreateShaderModule(device_, &shader_module_create_info, nullptr, &module));
+		VV_CHECK_SUCCESS(vkCreateShaderModule(device_->logical_device, &shader_module_create_info, nullptr, &module));
 	}
 }

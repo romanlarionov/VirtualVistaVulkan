@@ -6,6 +6,7 @@
 #include <string>
 #include <vulkan\vulkan.h>
 
+#include "VulkanDevice.h"
 #include "Resource.h"
 
 namespace vv
@@ -19,11 +20,11 @@ namespace vv
 		Shader();
 		~Shader();
 
-		void init(std::string path, std::string name, VkDevice device);
+		void create(VulkanDevice *device, std::string path, std::string name);
 		void shutDown();
 
 	private:
-		VkDevice device_;
+		VulkanDevice *device_;
 
 		std::string vert_path_;
 		std::string frag_path_;

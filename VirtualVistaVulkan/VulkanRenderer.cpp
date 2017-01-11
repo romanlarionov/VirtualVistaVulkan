@@ -60,15 +60,21 @@ namespace vv
 			setupDebugCallback();
 			createVulkanDevices();
 
-			createVulkanSwapChain();
+			swap_chain_ = new VulkanSwapChain;
+			swap_chain_->create(physical_devices_[0], window_);
+
 			createRenderPass();
 			createFrameBuffers();
 
-			createVulkanSemaphores();
+			image_ready_semaphore_ = util::createVulkanSemaphore(this->physical_devices_[0]->logical_device);
+			rendering_complete_semaphore_ = util::createVulkanSemaphore(this->physical_devices_[0]->logical_device);
 
 			//////////////////////////////// All below should be generalized and moved to application file
 			createDescriptorSetLayout();
-			createGraphicsPipeline();
+			pipeline_ = new VulkanPipeline();
+			shader_ = new Shader;
+			shader_->create(physical_devices_[0], "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle");
+			pipeline_->create(physical_devices_[0], shader_, descriptor_set_layouts_, render_pass_, true, true);
 
 			mesh_ = new Mesh();
 			mesh_->init("../assets/Models/OBJ/chalet.obj");
@@ -129,14 +135,16 @@ namespace vv
 
 			// todo: not general. extend to handle more situations.
 			vkDestroyDescriptorPool(physical_devices_[i]->logical_device, descriptor_pool_, nullptr);
-			vkDestroyDescriptorSetLayout(physical_devices_[i]->logical_device, descriptor_set_layout_, nullptr);
+
+			for (auto &l : descriptor_set_layouts_)
+				vkDestroyDescriptorSetLayout(physical_devices_[i]->logical_device, l, nullptr);
+
 			vkDestroySampler(physical_devices_[i]->logical_device, sampler_, nullptr);
-			shader_->shutDown(); delete shader_;
 
 			// Graphics Pipeline
-			vkDestroyPipelineLayout(physical_devices_[i]->logical_device, pipeline_layout_, nullptr);
+			pipeline_->shutDown(); delete pipeline_;
+			shader_->shutDown(); delete shader_;
 			vkDestroyRenderPass(physical_devices_[i]->logical_device, render_pass_, nullptr);
-			vkDestroyPipeline(physical_devices_[i]->logical_device, pipeline_, nullptr);
 
 			for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
 				vkDestroyFramebuffer(physical_devices_[i]->logical_device, frame_buffers_[j], nullptr);
@@ -347,10 +355,7 @@ namespace vv
 	{
 		// todo: maybe add logging to files
 		// todo: think of other things that might be useful to log
-
 		std::ostringstream stream;
-		//if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-		//    stream << "INFORMATION: ";
 		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
 			stream << "WARNING: ";
 		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
@@ -427,13 +432,6 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::createVulkanSwapChain()
-	{
-		swap_chain_ = new VulkanSwapChain;
-		swap_chain_->create(physical_devices_[0], window_);
-	}
-
-
 	void VulkanRenderer::createRenderPass()
 	{
 		VkAttachmentDescription color_attachment_description = {};
@@ -500,163 +498,6 @@ namespace vv
 		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
 	}
 
-
-	void VulkanRenderer::createGraphicsPipeline()
-	{
-		shader_ = new Shader;
-		shader_->init("D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle", physical_devices_[0]->logical_device);
-
-		VkPipelineShaderStageCreateInfo vert_shader_create_info = {};
-		vert_shader_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vert_shader_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-
-		vert_shader_create_info.module = shader_->vert_module;
-		vert_shader_create_info.pName = "main";
-
-		VkPipelineShaderStageCreateInfo frag_shader_create_info = {};
-		frag_shader_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		frag_shader_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		frag_shader_create_info.module = shader_->frag_module;
-		frag_shader_create_info.pName = "main";
-
-		std::array<VkPipelineShaderStageCreateInfo, 2> shaders = { vert_shader_create_info, frag_shader_create_info };
-
-		/* Fixed Function Pipeline Layout */
-		VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
-		vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertex_input_state_create_info.flags = 0;
-
-		// todo: this is highly specific to the shader I'm using. fix me
-		vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-		vertex_input_state_create_info.vertexAttributeDescriptionCount = (uint32_t)Vertex::getAttributeDescriptions().size();
-		vertex_input_state_create_info.pVertexBindingDescriptions = &Vertex::getBindingDesciption();
-		vertex_input_state_create_info.pVertexAttributeDescriptions = Vertex::getAttributeDescriptions().data();
-
-		VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
-		input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		input_assembly_create_info.flags = 0;
-		input_assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; // render triangles
-		input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
-
-		VkViewport viewport = {};
-		viewport.width = (float)Settings::inst()->getWindowWidth();
-		viewport.height = (float)Settings::inst()->getWindowHeight();
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = swap_chain_->extent;
-
-		VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
-		viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewport_state_create_info.flags = 0;
-		viewport_state_create_info.viewportCount = 1;
-		viewport_state_create_info.scissorCount = 1;
-		viewport_state_create_info.pViewports = &viewport;
-		viewport_state_create_info.pScissors = &scissor;
-
-		VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {};
-		rasterization_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterization_state_create_info.depthClampEnable = VK_FALSE; // clamp geometry within clip space
-		rasterization_state_create_info.rasterizerDiscardEnable = VK_FALSE; // discard geometry
-		rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL; // create fragments from the inside of a polygon
-		rasterization_state_create_info.lineWidth = 1.0f;
-		rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT; // cull the back of polygons from rendering
-		rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE; // order of vertices
-		rasterization_state_create_info.depthBiasEnable = VK_FALSE; // all stuff for shadow mapping? look into it
-		rasterization_state_create_info.depthBiasClamp = 0.0f;
-		rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
-		rasterization_state_create_info.depthBiasSlopeFactor = 0.0f;
-
-		// todo: add anti-aliasing settings support
-		VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {};
-		multisample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisample_state_create_info.flags = 0;
-		multisample_state_create_info.sampleShadingEnable = VK_FALSE;
-		multisample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		multisample_state_create_info.minSampleShading = 1.0f;
-		multisample_state_create_info.pSampleMask = nullptr;
-		multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
-		multisample_state_create_info.alphaToOneEnable = VK_FALSE;
-
-		VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info = {};
-		depth_stencil_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depth_stencil_state_create_info.flags = 0;
-		depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
-		depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
-		depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
-		depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
-		depth_stencil_state_create_info.minDepthBounds = 0.0f;
-		depth_stencil_state_create_info.maxDepthBounds = 1.0f;
-		depth_stencil_state_create_info.stencilTestEnable = VK_FALSE; // dont want to do any cutting of the image currently.
-		depth_stencil_state_create_info.front = {};
-		depth_stencil_state_create_info.back = {};
-
-		// todo: for some reason, if this is activated the output color is overridden. fix me
-		/* This along with color blend create info specify alpha blending operations */
-		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
-		color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		color_blend_attachment_state.blendEnable = VK_FALSE;
-
-		VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {};
-		color_blend_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		color_blend_state_create_info.logicOpEnable = VK_FALSE;
-		color_blend_state_create_info.logicOp = VK_LOGIC_OP_COPY;
-		color_blend_state_create_info.attachmentCount = 1;
-		color_blend_state_create_info.pAttachments = &color_blend_attachment_state;
-		color_blend_state_create_info.blendConstants[0] = 0.0f;
-		color_blend_state_create_info.blendConstants[1] = 0.0f;
-		color_blend_state_create_info.blendConstants[2] = 0.0f;
-		color_blend_state_create_info.blendConstants[3] = 0.0f;
-
-		// add enum values here for more dynamic pipeline state changes!! 
-		/*std::array<VkDynamicState, 2> dynamic_pipeline_settings = { VK_DYNAMIC_STATE_VIEWPORT };
-
-		VkPipelineDynamicStateCreateInfo dynamic_state_create_info = {};
-		dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamic_state_create_info.flags = 0;
-		dynamic_state_create_info.dynamicStateCount = (uint32_t)dynamic_pipeline_settings.size();
-		dynamic_state_create_info.pDynamicStates = dynamic_pipeline_settings.data();*/
-
-		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_create_info.flags = 0;
-		pipeline_layout_create_info.setLayoutCount = 1; // descriptor set layouts (uniform info)
-		pipeline_layout_create_info.pSetLayouts = &descriptor_set_layout_;
-		pipeline_layout_create_info.pPushConstantRanges = nullptr;
-		pipeline_layout_create_info.pushConstantRangeCount = 0;
-
-		VV_CHECK_SUCCESS(vkCreatePipelineLayout(physical_devices_[0]->logical_device, &pipeline_layout_create_info, nullptr, &pipeline_layout_));
-
-		VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
-		graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		graphics_pipeline_create_info.flags = 0;
-		graphics_pipeline_create_info.stageCount = 2; // vert & frag shader
-		graphics_pipeline_create_info.pStages = shaders.data();
-		graphics_pipeline_create_info.pVertexInputState = &vertex_input_state_create_info;
-		graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_create_info;
-		graphics_pipeline_create_info.pViewportState = &viewport_state_create_info;
-		graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
-		graphics_pipeline_create_info.pDynamicState = nullptr;//&dynamic_state_create_info;
-		graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
-		graphics_pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
-		graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
-		graphics_pipeline_create_info.layout = pipeline_layout_;
-		graphics_pipeline_create_info.renderPass = render_pass_;
-		graphics_pipeline_create_info.subpass = 0; // index of framebuffer used for graphics
-		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
-		graphics_pipeline_create_info.basePipelineIndex = -1; // set to nothing for now cuz only single pipeline
-
-		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
-		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
-		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(physical_devices_[0]->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline_));
-	}
-
-
 	// think everything to do with descriptor sets are on a per model basis.
 	// each model has its own requirements when it comes to storing uniform type objects
 	// thus each unique model should create its own layouts and manage its own descriptor pools.
@@ -678,17 +519,16 @@ namespace vv
 		sampler_layout_binding.pImmutableSamplers = nullptr;
 		sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // todo: make general. you dont always want texture in fragment
 
-		std::array<VkDescriptorSetLayoutBinding, 2> layouts = { ubo_layout_binding, sampler_layout_binding };
+		std::vector<VkDescriptorSetLayoutBinding> layouts = { ubo_layout_binding, sampler_layout_binding };
 
 		VkDescriptorSetLayoutCreateInfo layout_create_info = {};
 		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layout_create_info.bindingCount = (uint32_t)layouts.size();
 		layout_create_info.pBindings = layouts.data();
 
-		// assuming this sets a creates a template for vulkan to accept a certain type of descriptor.
-		// pools allocate memory for those template types and handle moving/managing them.
-		// descriptor sets are the actual things to store.
-		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &descriptor_set_layout_));
+		VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &layout));
+		descriptor_set_layouts_.push_back(layout);
 	}
 
 
@@ -719,7 +559,7 @@ namespace vv
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		alloc_info.descriptorPool = descriptor_pool_;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &descriptor_set_layout_;
+		alloc_info.pSetLayouts = &descriptor_set_layouts_[0]; // todo: remove. not general
 
 		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(physical_devices_[0]->logical_device, &alloc_info, &descriptor_set_));
 
@@ -845,33 +685,19 @@ namespace vv
 
 			vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-			vkCmdBindPipeline(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+			pipeline_->bind(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS);
 
 			// todo: remove from single vertex buffer here
 			std::array<VkDeviceSize, 1> offsets = { 0 };
+			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
 			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
 			vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
-			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
+			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_->pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);
 
-			// todo: really look into this whole uniform binding thing. It just seems wrong.
-			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &descriptor_set_, 0, nullptr);
-
-			//vkCmdDraw(command_buffers_[i], vertices.size(), 1, 0, 0); // VERY instance specific! change!
-			vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0);
+			vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0); // VERY instance specific! change!
 
 			vkCmdEndRenderPass(command_buffers_[i]);
-
 			VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
 		}
-	}
-
-
-	void VulkanRenderer::createVulkanSemaphores()
-	{
-		VkSemaphoreCreateInfo semaphore_create_info = {};
-		semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VV_CHECK_SUCCESS(vkCreateSemaphore(physical_devices_[0]->logical_device, &semaphore_create_info, nullptr, &image_ready_semaphore_));
-		VV_CHECK_SUCCESS(vkCreateSemaphore(physical_devices_[0]->logical_device, &semaphore_create_info, nullptr, &rendering_complete_semaphore_));
 	}
 }

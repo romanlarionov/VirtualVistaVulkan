@@ -15,12 +15,10 @@
 		else { delete p; p = NULL; } \
 	}
 
-
-
 namespace vv
 {
-
 #ifdef _DEBUG
+
 	inline void VV_CHECK_SUCCESS(VkResult success)
 	{
 		if (success != VK_SUCCESS)
@@ -99,39 +97,52 @@ namespace vv
 		glm::vec3 normal;
 	};
 
-	static VkCommandBuffer beginSingleUseCommand(VkDevice device, VkCommandPool command_pool)
+	namespace util
 	{
-		VkCommandBufferAllocateInfo allocate_info = {};
-		allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    	allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocate_info.commandPool = command_pool;
-    	allocate_info.commandBufferCount = 1;
+		static VkCommandBuffer beginSingleUseCommand(VkDevice device, VkCommandPool command_pool)
+		{
+			VkCommandBufferAllocateInfo allocate_info = {};
+			allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			allocate_info.commandPool = command_pool;
+			allocate_info.commandBufferCount = 1;
 
-    	VkCommandBuffer command_buffer;
-    	vkAllocateCommandBuffers(device, &allocate_info, &command_buffer);
+			VkCommandBuffer command_buffer;
+			vkAllocateCommandBuffers(device, &allocate_info, &command_buffer);
 
-    	VkCommandBufferBeginInfo begin_info = {};
-    	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			VkCommandBufferBeginInfo begin_info = {};
+			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    	vkBeginCommandBuffer(command_buffer, &begin_info);
+			vkBeginCommandBuffer(command_buffer, &begin_info);
 
-    	return command_buffer;
-	}
+			return command_buffer;
+		}
 
-	static void endSingleUseCommand(VkDevice device, VkCommandPool command_pool, VkCommandBuffer command_buffer, VkQueue queue)
-	{
-	    vkEndCommandBuffer(command_buffer);
+		static void endSingleUseCommand(VkDevice device, VkCommandPool command_pool, VkCommandBuffer command_buffer, VkQueue queue)
+		{
+			vkEndCommandBuffer(command_buffer);
 
-	    VkSubmitInfo submit_info = {};
-	    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	    submit_info.commandBufferCount = 1;
-	    submit_info.pCommandBuffers = &command_buffer;
+			VkSubmitInfo submit_info = {};
+			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submit_info.commandBufferCount = 1;
+			submit_info.pCommandBuffers = &command_buffer;
 
-	    vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-	    vkQueueWaitIdle(queue);
+			vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+			vkQueueWaitIdle(queue);
 
-	    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+			vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+		}
+
+		static VkSemaphore createVulkanSemaphore(VkDevice device)
+		{
+			VkSemaphore semaphore;
+			VkSemaphoreCreateInfo semaphore_create_info = {};
+			semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+			VV_CHECK_SUCCESS(vkCreateSemaphore(device, &semaphore_create_info, nullptr, &semaphore));
+			return semaphore;
+		}
 	}
 }
 
