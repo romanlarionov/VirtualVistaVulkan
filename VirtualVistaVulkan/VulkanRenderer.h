@@ -9,6 +9,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanImageView.h"
 #include "VulkanPipeline.h"
+#include "VulkanRenderPass.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
 #include "Mesh.h"
@@ -57,12 +58,12 @@ namespace vv
 
 		Shader *shader_;
 		VulkanPipeline *pipeline_;
+		VulkanRenderPass *render_pass_;
 
 		// data for shaders
 		std::vector<VkDescriptorSetLayout> descriptor_set_layouts_;
 		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
 		VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
-		VkRenderPass render_pass_ = VK_NULL_HANDLE;
 
 		std::vector<VkCommandBuffer> command_buffers_;
 
@@ -132,11 +133,6 @@ namespace vv
 		 * Doesn't hold texture data, just the processes that should be acted on it.
 		 */
 		void createSampler();
-
-		/*
-		 * Starts creating the framebuffers for display.
-		 */
-		void createRenderPass();
 
 		/*
 		 * Creates Vulkan FrameBuffer objects that encapsulate all of the Vulkan image textures in the swap chain for storing rendered frames.

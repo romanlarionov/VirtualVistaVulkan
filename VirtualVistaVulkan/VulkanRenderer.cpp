@@ -60,10 +60,12 @@ namespace vv
 			setupDebugCallback();
 			createVulkanDevices();
 
-			swap_chain_ = new VulkanSwapChain;
+			swap_chain_ = new VulkanSwapChain();
 			swap_chain_->create(physical_devices_[0], window_);
 
-			createRenderPass();
+			render_pass_ = new VulkanRenderPass();
+			render_pass_->create(physical_devices_[0], swap_chain_);
+
 			createFrameBuffers();
 
 			image_ready_semaphore_ = util::createVulkanSemaphore(this->physical_devices_[0]->logical_device);
@@ -72,9 +74,9 @@ namespace vv
 			//////////////////////////////// All below should be generalized and moved to application file
 			createDescriptorSetLayout();
 			pipeline_ = new VulkanPipeline();
-			shader_ = new Shader;
+			shader_ = new Shader();
 			shader_->create(physical_devices_[0], "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle");
-			pipeline_->create(physical_devices_[0], shader_, descriptor_set_layouts_, render_pass_, true, true);
+			pipeline_->create(physical_devices_[0], shader_, descriptor_set_layouts_, render_pass_->render_pass, true, true);
 
 			mesh_ = new Mesh();
 			mesh_->init("../assets/Models/OBJ/chalet.obj");
@@ -144,7 +146,7 @@ namespace vv
 			// Graphics Pipeline
 			pipeline_->shutDown(); delete pipeline_;
 			shader_->shutDown(); delete shader_;
-			vkDestroyRenderPass(physical_devices_[i]->logical_device, render_pass_, nullptr);
+			render_pass_->shutDown(); delete render_pass_;
 
 			for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
 				vkDestroyFramebuffer(physical_devices_[i]->logical_device, frame_buffers_[j], nullptr);
@@ -432,72 +434,6 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::createRenderPass()
-	{
-		VkAttachmentDescription color_attachment_description = {};
-		color_attachment_description.flags = 0;
-		color_attachment_description.format = swap_chain_->format;
-		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT; // change for multi-sampling support
-		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clears the image at the beginning of each render
-		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save the image after rendering is complete
-		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // not currently using stencil
-		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // not currently using stencil
-		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // don't care what type of texture the framebuffer was before rendering cuz it'll be cleared anyway
-		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // finally framebuffer layout should be presentable to screen
-
-		VkAttachmentDescription depth_attachment_description = {};
-		depth_attachment_description.flags = 0;
-		depth_attachment_description.format = swap_chain_->depth_image->format;
-		depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-		depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		std::array<VkAttachmentDescription, 2> attachment_descriptions = { color_attachment_description, depth_attachment_description };
-
-		// todo: it's possible to have multiple sub-render-passes. You can perform things like post-processing
-		// on a single framebuffer within a single RenderPass object, saving memory. Look into this for the future.
-
-		// this handles the case for the implicit subpasses that occur for image layout transitions. this is to prevent the queue from accessing the framebuffer before its ready.
-		VkSubpassDependency subpass_dependency = {};
-		subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		subpass_dependency.dstSubpass = 0;
-		subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		subpass_dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-		subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkAttachmentReference color_attachment_reference = {};
-		color_attachment_reference.attachment = 0; // framebuffer at index 0
-		color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // use internal framebuffer as color texture
-
-		VkAttachmentReference depth_attachment_reference = {};
-		depth_attachment_reference.attachment = 1;
-		depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass_description = {};
-		subpass_description.flags = 0;
-		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass_description.colorAttachmentCount = 1; // only rendering to one single color buffer. can do more for deferred.
-		subpass_description.pColorAttachments = &color_attachment_reference;
-		subpass_description.pDepthStencilAttachment = &depth_attachment_reference;
-
-		VkRenderPassCreateInfo render_pass_create_info = {};
-		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		render_pass_create_info.flags = 0;
-		render_pass_create_info.attachmentCount = attachment_descriptions.size();
-		render_pass_create_info.pAttachments = attachment_descriptions.data(); // todo: you can add more here to perform deferred rendering.
-		render_pass_create_info.subpassCount = 1;
-		render_pass_create_info.pSubpasses = &subpass_description;
-		render_pass_create_info.dependencyCount = 1;
-		render_pass_create_info.pDependencies = &subpass_dependency;
-
-		VV_CHECK_SUCCESS(vkCreateRenderPass(physical_devices_[0]->logical_device, &render_pass_create_info, nullptr, &render_pass_));
-	}
-
 	// think everything to do with descriptor sets are on a per model basis.
 	// each model has its own requirements when it comes to storing uniform type objects
 	// thus each unique model should create its own layouts and manage its own descriptor pools.
@@ -629,12 +565,12 @@ namespace vv
 
 		for (std::size_t i = 0; i < swap_chain_->color_image_views.size(); ++i)
 		{
-			std::array<VkImageView, 2> attachments = { swap_chain_->color_image_views[i]->image_view, swap_chain_->depth_image_view->image_view };
+			std::vector<VkImageView> attachments = { swap_chain_->color_image_views[i]->image_view, swap_chain_->depth_image_view->image_view };
 
 			VkFramebufferCreateInfo frame_buffer_create_info = {};
 			frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			frame_buffer_create_info.flags = 0;
-			frame_buffer_create_info.renderPass = render_pass_;
+			frame_buffer_create_info.renderPass = render_pass_->render_pass;
 			frame_buffer_create_info.attachmentCount = attachments.size();
 			frame_buffer_create_info.pAttachments = attachments.data();
 			frame_buffer_create_info.width = swap_chain_->extent.width;
@@ -666,29 +602,21 @@ namespace vv
 			command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
 			command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
-
 			VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
 
-			VkRenderPassBeginInfo render_pass_begin_info = {};
-			render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			render_pass_begin_info.renderPass = render_pass_;
-			render_pass_begin_info.framebuffer = frame_buffers_[i];
-			render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
-			render_pass_begin_info.renderArea.extent = swap_chain_->extent;
+			std::vector<VkClearValue> clear_values; // todo: offload to settings
+			VkClearValue color_value, depth_value;
+			color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
+			depth_value.depthStencil = {1.0f, 0};
+			clear_values.push_back(color_value);
+			clear_values.push_back(depth_value);
 
-			std::array<VkClearValue, 2> clear_values; // todo: offload to settings
-			clear_values[0].color = { 0.3f, 0.5f, 0.5f, 1.0f };
-			clear_values[1].depthStencil = {1.0f, 0};
-
-			render_pass_begin_info.clearValueCount = clear_values.size();
-			render_pass_begin_info.pClearValues = clear_values.data();
-
-			vkCmdBeginRenderPass(command_buffers_[i], &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
+			render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
 			pipeline_->bind(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS);
 
-			// todo: remove from single vertex buffer here
 			std::array<VkDeviceSize, 1> offsets = { 0 };
+
+			// todo: remove from single vertex buffer here
 			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
 			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
 			vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -696,7 +624,7 @@ namespace vv
 
 			vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0); // VERY instance specific! change!
 
-			vkCmdEndRenderPass(command_buffers_[i]);
+			render_pass_->endRenderPass(command_buffers_[i]);
 			VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
 		}
 	}
