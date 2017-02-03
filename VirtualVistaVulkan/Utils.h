@@ -89,12 +89,21 @@ namespace vv
 		}
 	};
 
-	struct UniformBufferObject {
+	struct UniformBufferObject
+    {
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::vec3 normal;
 	};
+
+    struct MaterialConstants
+    {
+        glm::vec3 ambient;
+        glm::vec3 diffuse;
+        glm::vec3 specular;
+        int shininess;
+    };
 
 	namespace util
 	{

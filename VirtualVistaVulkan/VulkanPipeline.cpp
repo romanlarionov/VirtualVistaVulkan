@@ -40,8 +40,6 @@ namespace vv
 		VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
 		vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertex_input_state_create_info.flags = 0;
-
-		// todo: this is highly specific to the shader I'm using
 		vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
 		vertex_input_state_create_info.vertexAttributeDescriptionCount = (uint32_t)Vertex::getAttributeDescriptions().size();
 		vertex_input_state_create_info.pVertexBindingDescriptions = &Vertex::getBindingDesciption();
@@ -147,13 +145,14 @@ namespace vv
 		graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_create_info;
 		graphics_pipeline_create_info.pViewportState = &viewport_state_create_info;
 		graphics_pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
-		graphics_pipeline_create_info.pDynamicState = nullptr;//&dynamic_state_create_info;
+        graphics_pipeline_create_info.pDynamicState = VK_NULL_HANDLE;//&dynamic_state_create_info;
+        graphics_pipeline_create_info.pTessellationState = VK_NULL_HANDLE;
 		graphics_pipeline_create_info.pMultisampleState = &multisample_state_create_info;
 		graphics_pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
 		graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
 		graphics_pipeline_create_info.layout = pipeline_layout;
 		graphics_pipeline_create_info.renderPass = render_pass->render_pass;
-		graphics_pipeline_create_info.subpass = 0; // index of framebuffer used for graphics
+		graphics_pipeline_create_info.subpass = 0; // index of render_pass that this pipeline will be used with
 		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
 		graphics_pipeline_create_info.basePipelineIndex = -1; // set to nothing for now cuz only single pipeline
 

@@ -15,7 +15,7 @@ namespace vv
 
 
     // Need access to raw vk pointers for creation.
-    auto convertLayouts(std::vector<VulkanDescriptorSetLayout> layouts)
+    std::vector<VkDescriptorSetLayout> convertLayouts(std::vector<VulkanDescriptorSetLayout> layouts)
     {
         std::vector<VkDescriptorSetLayout> output;
         for (auto &l : layouts)
@@ -43,7 +43,8 @@ namespace vv
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipeline_layout_create_info.flags = 0;
 		pipeline_layout_create_info.setLayoutCount = (uint32_t)descriptor_set_layouts.size();
-		pipeline_layout_create_info.pSetLayouts = convertLayouts(descriptor_set_layouts).data();
+        std::vector<VkDescriptorSetLayout> l = convertLayouts(descriptor_set_layouts);
+		pipeline_layout_create_info.pSetLayouts = l.data();
 		pipeline_layout_create_info.pPushConstantRanges = nullptr; // todo: pass in as parameter
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 

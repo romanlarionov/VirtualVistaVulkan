@@ -105,7 +105,7 @@ namespace vv
 		if (swap_chain_support && checkDeviceExtensionSupport(VK_KHR_SWAPCHAIN_EXTENSION_NAME))
 			device_extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-		VkDeviceCreateInfo device_create_info;
+        VkDeviceCreateInfo device_create_info = {};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device_create_info.flags = 0;
 		device_create_info.pQueueCreateInfos = device_queue_create_infos.data();

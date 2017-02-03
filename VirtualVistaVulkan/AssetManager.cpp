@@ -34,7 +34,8 @@ namespace vv
 
     bool AssetManager::loadModel(std::string path, std::string name, Model &model)
     {
-        std::string file_type = name.substr(name.find_first_of('.') + 1); // todo: test if correct
+        path = Settings::inst()->getModelDirectory() + path;
+        std::string file_type = name.substr(name.find_first_of('.') + 1);
 
         // check if model has already been loaded.
         if (cached_models_.count(path + name) > 0)
@@ -92,10 +93,15 @@ namespace vv
 					attrib.vertices[3 * index.vertex_index + 2]
 				);
 
-				vertex.texCoord = glm::vec2(
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-				);
+                if (!attrib.texcoords.empty())
+                {
+                    vertex.texCoord = glm::vec2(
+                        attrib.texcoords[2 * index.texcoord_index + 0],
+                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                    );
+                }
+                else
+                    vertex.texCoord = glm::vec2(0.0f, 0.0f);
 
 				if (vertex_map.count(vertex) == 0)
 				{
@@ -137,10 +143,30 @@ namespace vv
                     for (size_t i = 0; i < orderings.size(); ++i)
                     {
                         auto o = orderings[i];
-                        if (o == DescriptorType::DIFFUSE_MAP && m.diffuse_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
+                        if (o == DescriptorType::CONSTANTS) // todo: check if these are always present. for now assuming they are.
+                        {
+                            glm::vec3 amb(m.ambient[0], m.ambient[1], m.ambient[2]);
+                            glm::vec3 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
+                            glm::vec3 spec(m.specular[0], m.specular[1], m.specular[2]);
+                            int shin = m.shininess;
+                            MaterialConstants constants = { amb, dif, spec, shin };
+
+                            VulkanBuffer *buffer = new VulkanBuffer();
+                            buffer->create(device_, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(MaterialConstants), 1);
+                            buffer->updateAndTransfer(&constants);
+
+                            material.addUniformBuffer(buffer, static_cast<int>(i));
+                        }
+                        else if (o == DescriptorType::AMBIENT_MAP && m.ambient_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
                         {
                             VulkanImage *texture = new VulkanImage();
-                            texture->createColorAttachment(path + m.diffuse_texname, device_, VK_FORMAT_R8G8B8A8_UNORM);
+                            texture->createColorAttachment(path + m.ambient_texname, device_, VK_FORMAT_R8G8B8A8_UNORM);
+                            material.addTexture(texture, static_cast<int>(i));
+                        }
+                        else if (o == DescriptorType::DIFFUSE_MAP && m.diffuse_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
+                        {
+                            VulkanImage *texture = new VulkanImage();
+                            texture->createColorAttachment(path + m.diffuse_texname, device_, VK_FORMAT_R8G8B8A8_UNORM); // todo: test texname. what value will it be?
                             material.addTexture(texture, static_cast<int>(i));
                         }
                         else if (o == DescriptorType::SPECULAR_MAP && m.specular_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
@@ -149,14 +175,6 @@ namespace vv
                             texture->createColorAttachment(path + m.specular_texname, device_, VK_FORMAT_R8G8B8A8_UNORM);
                             material.addTexture(texture, static_cast<int>(i));
                         }
-                        else if (o == DescriptorType::AMBIENT_MAP && m.ambient_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
-                        {
-                            VulkanImage *texture = new VulkanImage();
-                            texture->createColorAttachment(path + m.ambient_texname, device_, VK_FORMAT_R8G8B8A8_UNORM);
-                            material.addTexture(texture, static_cast<int>(i));
-                        }
-                        // todo: add others
-
                         else // descriptor type not populated
                         {
                             std::cerr << "ERROR: Descriptor Type not populated for model: " << name << ". Using dummy material.\n";
@@ -164,6 +182,7 @@ namespace vv
                         }
                     }
 
+                    material.updateDescriptorSets();
                     template_found = true;
                     break;
                 }

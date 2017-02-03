@@ -39,7 +39,7 @@ namespace vv
 
     void Model::renderByMaterial(VkCommandBuffer command_buffer, VkDescriptorSet general_descriptor_set)
     {
-        int curr_material_id = 0;
+        int curr_material_id = -1;
         for (auto &mesh : meshes_)
         {
             Material material = material_instances_[mesh.material_id];

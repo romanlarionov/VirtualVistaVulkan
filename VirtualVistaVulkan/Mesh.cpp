@@ -37,7 +37,8 @@ namespace vv
 
     void Mesh::bindBuffers(VkCommandBuffer command_buffer) const
     {
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer, 0);
+        std::array<VkDeviceSize, 1> offsets = { 0 };
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer, offsets.data());
         vkCmdBindIndexBuffer(command_buffer, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 

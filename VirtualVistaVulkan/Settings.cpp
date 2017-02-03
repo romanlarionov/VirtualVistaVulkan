@@ -15,6 +15,7 @@ namespace vv
 		engine_name_ = "VirtualVista";
         shader_directory_ = "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/"; // todo: change!
         asset_directory_ = "../assets/";
+        model_directory_ = asset_directory_ + "models/";
 
 		graphics_required_ = true;
 		compute_required_ = false;
@@ -22,55 +23,61 @@ namespace vv
 	}
 
 
-	int Settings::getWindowWidth()
+	int Settings::getWindowWidth() const
 	{
 		return window_width_;
 	}
 
 
-	int Settings::getWindowHeight()
+	int Settings::getWindowHeight() const
 	{
 		return window_height_;
 	}
 
 
-	std::string Settings::getApplicationName()
+	std::string Settings::getApplicationName() const
 	{
 		return application_name_;
 	}
 
 
-	std::string Settings::getEngineName()
+	std::string Settings::getEngineName() const
 	{
 		return engine_name_;
 	}
 
 
-    std::string Settings::getShaderDirectory()
+    std::string Settings::getShaderDirectory() const
 	{
 		return shader_directory_;
 	}
 
 
-    std::string Settings::getAssetDirectory()
+    std::string Settings::getAssetDirectory() const
 	{
 		return asset_directory_;
 	}
 
 
-	bool Settings::isGraphicsRequired()
+    std::string Settings::getModelDirectory() const
+	{
+		return model_directory_;
+	}
+
+
+	bool Settings::isGraphicsRequired() const
 	{
 		return graphics_required_;
 	}
 
 
-	bool Settings::isComputeRequired()
+	bool Settings::isComputeRequired() const
 	{
 		return compute_required_;
 	}
 
 
-	bool Settings::isOnScreenRenderingRequired()
+	bool Settings::isOnScreenRenderingRequired() const
 	{
 		return on_screen_rendering_required_;
 	}

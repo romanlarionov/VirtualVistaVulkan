@@ -31,10 +31,10 @@ namespace vv
 	void Material::shutDown()
 	{
         for (auto &ubo : uniform_buffers_)
-            ubo->shutDown();
+            ubo.second->shutDown();
 
         for (auto &tex : textures_)
-            tex->shutDown();
+            tex.second->shutDown();
 	}
 
 
@@ -45,6 +45,9 @@ namespace vv
 		buffer_info.offset = 0;
 		buffer_info.range = uniform_buffer->range;
 
+        auto position = uniform_buffers_.size();
+        uniform_buffers_.push_back(std::pair<VkDescriptorBufferInfo, VulkanBuffer *>(buffer_info, uniform_buffer));
+
         VkWriteDescriptorSet write_set = {};
 
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -53,7 +56,7 @@ namespace vv
 		write_set.dstArrayElement = 0;
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pBufferInfo = &buffer_info;
+		write_set.pBufferInfo = &uniform_buffers_[position].first;
 
         write_sets_.push_back(write_set);
     }
@@ -63,12 +66,13 @@ namespace vv
     {
         VulkanImageView *texture_image_view = new VulkanImageView();
         texture_image_view->create(material_template->device_, texture);
-        textures_.push_back(texture_image_view);
 
 		VkDescriptorImageInfo image_info = {};
 		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		image_info.imageView = texture_image_view->image_view;
 		image_info.sampler = material_template->sampler_;
+
+        textures_.push_back(std::pair<VkDescriptorImageInfo, VulkanImageView *>(image_info, texture_image_view));
 
         VkWriteDescriptorSet write_set = {};
         
@@ -86,8 +90,8 @@ namespace vv
 
     void Material::updateDescriptorSets() const
     {
-        // todo: find out if doing this per material is good idea. might want to have batched update
-		vkUpdateDescriptorSets(material_template-> device_->logical_device, (uint32_t)write_sets_.size(), write_sets_.data(), 0, nullptr);
+        // called by AssetManager initially upon upon creation. needs update whenever data has changed
+		vkUpdateDescriptorSets(material_template->device_->logical_device, (uint32_t)write_sets_.size(), write_sets_.data(), 0, nullptr);
     }
 
 

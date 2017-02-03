@@ -20,12 +20,12 @@ namespace vv
 
     struct DescriptorTypeStruct
     {
-        // todo: add more
         enum DescriptorType
         {
-            DIFFUSE_MAP = 0,
-            SPECULAR_MAP = 1,
-            AMBIENT_MAP = 2 
+            CONSTANTS = 1, // single value diffuse, ambient, specular
+            AMBIENT_MAP = 2,
+            DIFFUSE_MAP = 3,
+            SPECULAR_MAP = 4
         };
     };
 

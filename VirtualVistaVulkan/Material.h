@@ -63,8 +63,8 @@ namespace vv
         std::vector<VkWriteDescriptorSet> write_sets_;
         VkDescriptorSet descriptor_set_;
 
-        std::vector<VulkanBuffer *> uniform_buffers_;
-        std::vector<VulkanImageView *> textures_;
+        std::vector<std::pair<VkDescriptorBufferInfo, VulkanBuffer *> > uniform_buffers_;
+        std::vector<std::pair<VkDescriptorImageInfo, VulkanImageView *> > textures_;
 	};
 }
 

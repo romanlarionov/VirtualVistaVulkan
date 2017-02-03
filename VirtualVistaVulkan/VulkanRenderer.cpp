@@ -75,18 +75,17 @@ namespace vv
 
             // creates shader and pipeline
             std::vector<DescriptorType> descriptor_orderings;
-            descriptor_orderings.push_back(DescriptorType::DIFFUSE_MAP);
+            descriptor_orderings.push_back(DescriptorType::CONSTANTS);
 
             std::vector<VulkanDescriptorSetLayout> descriptor_set_layouts;
-            VulkanDescriptorSetLayout materials_layout;
-            materials_layout.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-            materials_layout.create(physical_devices_[0]);
-            descriptor_set_layouts.push_back(materials_layout);
+            //model_descriptor_set_layout_.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+            model_descriptor_set_layout_.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+            model_descriptor_set_layout_.create(physical_devices_[0]);
+            descriptor_set_layouts.push_back(model_descriptor_set_layout_);
 
-            VulkanDescriptorSetLayout general_layout;
-            general_layout.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
-            general_layout.create(physical_devices_[0]);
-            descriptor_set_layouts.push_back(general_layout);
+            general_descriptor_set_layout_.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
+            general_descriptor_set_layout_.create(physical_devices_[0]);
+            descriptor_set_layouts.push_back(general_descriptor_set_layout_);
 
 			createDescriptorPool();
 
@@ -102,7 +101,8 @@ namespace vv
 			shader_->create(physical_devices_[0], "triangle");
 
             MaterialTemplate material_template;
-            material_template.create(physical_devices_[0], "test", shader_, descriptor_pool_, descriptor_set_layouts, descriptor_orderings, sampler_, render_pass_);
+            // todo: find workaround for material name issue
+            material_template.create(physical_devices_[0], "banner", shader_, descriptor_pool_, descriptor_set_layouts, descriptor_orderings, sampler_, render_pass_);
             material_templates_.push_back(material_template);
 
             Model model;
@@ -110,7 +110,8 @@ namespace vv
 
             asset_manager_ = new AssetManager();
             asset_manager_->create(physical_devices_[0], material_templates_);
-            asset_manager_->loadModel("../assets/Models/OBJ/", "chalet.obj", models_[0]);
+            //asset_manager_->loadModel("OBJ/hammardillo/", "hammardillo.obj", models_[0]);
+            asset_manager_->loadModel("OBJ/sponza/", "banner.obj", models_[0]);
 			
 			createCommandBuffers();
 
@@ -149,50 +150,35 @@ namespace vv
 		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
+        for (auto &t : material_templates_)
+            t.shutDown();
+
         for (auto &m : models_)
             m.shutDown();
 
-		// todo: remove
-		//vertex_buffer_->shutDown(); delete vertex_buffer_;
-		//index_buffer_->shutDown(); delete index_buffer_;
 		uniform_buffer_->shutDown(); delete uniform_buffer_;
 
-		//texture_image_->shutDown(); delete texture_image_;
-		//texture_image_view_->shutDown(); delete texture_image_view_;
-		
-		// For all physical devices
-		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
-		{
-			// Async devices
-			vkDestroySemaphore(physical_devices_[i]->logical_device, image_ready_semaphore_, nullptr);
-			vkDestroySemaphore(physical_devices_[i]->logical_device, rendering_complete_semaphore_, nullptr);
+	  	// Async devices
+	  	vkDestroySemaphore(physical_devices_[0]->logical_device, image_ready_semaphore_, nullptr);
+	  	vkDestroySemaphore(physical_devices_[0]->logical_device, rendering_complete_semaphore_, nullptr);
 
-			// todo: not general. extend to handle more situations.
-			vkDestroyDescriptorPool(physical_devices_[i]->logical_device, descriptor_pool_, nullptr);
+	  	vkDestroyDescriptorPool(physical_devices_[0]->logical_device, descriptor_pool_, nullptr);
+        general_descriptor_set_layout_.shutDown();
+      
+        vkDestroySampler(physical_devices_[0]->logical_device, sampler_, nullptr);
 
-            //descriptor_set_layouts_[1].shutDown(); // todo: change
+	  	// Graphics Pipeline
+	  	shader_->shutDown(); delete shader_;
+	  	render_pass_->shutDown(); delete render_pass_;
 
-			vkDestroySampler(physical_devices_[i]->logical_device, sampler_, nullptr);
+	  	for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
+	  		vkDestroyFramebuffer(physical_devices_[0]->logical_device, frame_buffers_[j], nullptr);
 
-			// Graphics Pipeline
-			//pipeline_->shutDown(); delete pipeline_;
-			shader_->shutDown(); delete shader_;
-			render_pass_->shutDown(); delete render_pass_;
+	  	swap_chain_->shutDown(physical_devices_[0]); delete swap_chain_;
 
-			for (std::size_t j = 0; j < frame_buffers_.size(); ++j)
-				vkDestroyFramebuffer(physical_devices_[i]->logical_device, frame_buffers_[j], nullptr);
-
-			swap_chain_->shutDown(physical_devices_[i]);
-			delete swap_chain_;
-
-			// Physical/Logical devices
-			physical_devices_[i]->shutDown(); // todo: fix deletion errors by adding shutdown functions.
-			delete physical_devices_[i];
-		}
-
-		window_->shutDown(instance_); delete window_;
-
-		// Instance
+	  	// Physical/Logical devices
+	  	physical_devices_[0]->shutDown(); delete physical_devices_[0];
+        window_->shutDown(instance_); delete window_;
 		destroyDebugReportCallbackEXT(instance_, debug_callback_, nullptr);
 		vkDestroyInstance(instance_, nullptr);
 	}
