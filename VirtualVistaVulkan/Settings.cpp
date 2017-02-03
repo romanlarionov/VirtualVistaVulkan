@@ -13,6 +13,8 @@ namespace vv
 		window_height_ = 1080;
 		application_name_ = "VirtualVistaVulkan";
 		engine_name_ = "VirtualVista";
+        shader_directory_ = "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/"; // todo: change!
+        asset_directory_ = "../assets/";
 
 		graphics_required_ = true;
 		compute_required_ = false;
@@ -41,6 +43,18 @@ namespace vv
 	std::string Settings::getEngineName()
 	{
 		return engine_name_;
+	}
+
+
+    std::string Settings::getShaderDirectory()
+	{
+		return shader_directory_;
+	}
+
+
+    std::string Settings::getAssetDirectory()
+	{
+		return asset_directory_;
 	}
 
 

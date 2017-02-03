@@ -19,11 +19,15 @@ namespace vv
 	}
 
 
-	void Shader::create(VulkanDevice *device, std::string path, std::string name)
+	void Shader::create(VulkanDevice *device, std::string name)
 	{
 		device_ = device;
-		vert_path_ = path + name + "_vert" + ".spv";
-		frag_path_ = path + name + "_frag" + ".spv";
+		name_ = name;
+
+        std::string dir = Settings::inst()->getShaderDirectory();
+
+		vert_path_ = dir + name + "_vert" + ".spv";
+		frag_path_ = dir + name + "_frag" + ".spv";
 		vert_binary_data_ = loadSpirVBinary(vert_path_);
 		frag_binary_data_ = loadSpirVBinary(frag_path_);
 
@@ -37,7 +41,7 @@ namespace vv
 		if (vert_module)
 			vkDestroyShaderModule(device_->logical_device, vert_module, nullptr);
 
-		if (frag_module)
+		if (frag_module) // todo: test if pointer checking even helps
 			vkDestroyShaderModule(device_->logical_device, frag_module, nullptr);
 	}
 

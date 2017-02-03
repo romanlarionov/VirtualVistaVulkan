@@ -14,19 +14,21 @@ namespace vv
 	}
 
 
-	void VulkanBuffer::create(VulkanDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize size)
+	void VulkanBuffer::create(VulkanDevice *device, VkBufferUsageFlags usage_flags, size_t range, size_t count)
 	{
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		usage_flags_ = usage_flags;
-		size_ = size;
+        this->range = range;
+        this->count = count;
+		size_ = range * count;
 
 		// Create temporary transfer buffer on CPU 
-		allocateMemory(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		allocateMemory(size_, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer_, staging_memory_);
 
 		// Create storage buffer for GPU
-		allocateMemory(size, usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, buffer_memory_);	
+		allocateMemory(size_, usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, buffer_memory_);	
 	}
 
 

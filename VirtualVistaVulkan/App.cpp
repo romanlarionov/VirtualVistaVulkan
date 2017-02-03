@@ -24,8 +24,8 @@ namespace vv
 	{
 		try
 		{
-			renderer_ = new VulkanRenderer;
-			renderer_->init();
+			renderer_ = new VulkanRenderer();
+			renderer_->create();
 		}
 		catch (const std::runtime_error& e)
 		{

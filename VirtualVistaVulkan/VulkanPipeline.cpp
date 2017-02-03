@@ -14,7 +14,8 @@ namespace vv
 	}
 
 
-	void VulkanPipeline::create(VulkanDevice *device, Shader *shader, std::vector<VkDescriptorSetLayout>& descriptor_set_layouts, VkRenderPass render_pass, bool depth_test_enable, bool depth_write_enable)
+	void VulkanPipeline::create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
+                                VulkanRenderPass *render_pass, bool depth_test_enable, bool depth_write_enable)
 	{
 		VV_ASSERT(device != nullptr, "Vulkan Device is NULL");
 		device_ = device;
@@ -35,12 +36,12 @@ namespace vv
 
 		std::array<VkPipelineShaderStageCreateInfo, 2> shaders = { vert_shader_create_info, frag_shader_create_info };
 
-		/* Fixed Function Pipeline Layout */
+		// Fixed Function Pipeline Layout
 		VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
 		vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertex_input_state_create_info.flags = 0;
 
-		// todo: this is highly specific to the shader I'm using. fix me
+		// todo: this is highly specific to the shader I'm using
 		vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
 		vertex_input_state_create_info.vertexAttributeDescriptionCount = (uint32_t)Vertex::getAttributeDescriptions().size();
 		vertex_input_state_create_info.pVertexBindingDescriptions = &Vertex::getBindingDesciption();
@@ -63,8 +64,8 @@ namespace vv
 
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
-		scissor.extent.width  = (float)Settings::inst()->getWindowWidth();
-		scissor.extent.height = (float)Settings::inst()->getWindowHeight();
+		scissor.extent.width  = (uint32_t)Settings::inst()->getWindowWidth();
+		scissor.extent.height = (uint32_t)Settings::inst()->getWindowHeight();
 
 		VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
 		viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -111,8 +112,8 @@ namespace vv
 		depth_stencil_state_create_info.front = {};
 		depth_stencil_state_create_info.back = {};
 
-		// todo: for some reason, if this is activated the output color is overridden. fix me
-		/* This along with color blend create info specify alpha blending operations */
+		// todo: for some reason, if this is activated the output color is overridden
+		// This along with color blend create info specify alpha blending operations
 		VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
 		color_blend_attachment_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		color_blend_attachment_state.blendEnable = VK_FALSE;
@@ -137,16 +138,6 @@ namespace vv
 		dynamic_state_create_info.dynamicStateCount = (uint32_t)dynamic_pipeline_settings.size();
 		dynamic_state_create_info.pDynamicStates = dynamic_pipeline_settings.data();*/
 
-		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_create_info.flags = 0;
-		pipeline_layout_create_info.setLayoutCount = descriptor_set_layouts.size();
-		pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts.data();
-		pipeline_layout_create_info.pPushConstantRanges = nullptr;
-		pipeline_layout_create_info.pushConstantRangeCount = 0;
-
-		VV_CHECK_SUCCESS(vkCreatePipelineLayout(device_->logical_device, &pipeline_layout_create_info, nullptr, &pipeline_layout));
-
 		VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
 		graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		graphics_pipeline_create_info.flags = 0;
@@ -161,7 +152,7 @@ namespace vv
 		graphics_pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
 		graphics_pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
 		graphics_pipeline_create_info.layout = pipeline_layout;
-		graphics_pipeline_create_info.renderPass = render_pass;
+		graphics_pipeline_create_info.renderPass = render_pass->render_pass;
 		graphics_pipeline_create_info.subpass = 0; // index of framebuffer used for graphics
 		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
 		graphics_pipeline_create_info.basePipelineIndex = -1; // set to nothing for now cuz only single pipeline
@@ -174,9 +165,6 @@ namespace vv
 
 	void VulkanPipeline::shutDown()
 	{
-		if (pipeline_layout != VK_NULL_HANDLE)
-			vkDestroyPipelineLayout(device_->logical_device, pipeline_layout, nullptr);
-
 		if (pipeline != VK_NULL_HANDLE)
 			vkDestroyPipeline(device_->logical_device, pipeline, nullptr);
 	}

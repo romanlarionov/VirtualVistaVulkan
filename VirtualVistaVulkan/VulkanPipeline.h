@@ -5,11 +5,12 @@
 #include <vector>
 
 #include "Shader.h"
+#include "VulkanRenderPass.h"
 #include "VulkanSwapChain.h"
 
 namespace vv
 {
-	struct VulkanPipeline
+	class VulkanPipeline
 	{
 	public:
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -19,9 +20,12 @@ namespace vv
 		~VulkanPipeline();
 
 		/*
-		 * 
+		 * Creates a pipeline abstraction.
+         * note: this is single use pipeline for now. No current way to alter the pipeline
+         *       created outside of shader modules, descriptor set layouts, and push constants.
 		 */
-		void create(VulkanDevice *device, Shader *shader, std::vector<VkDescriptorSetLayout>& descriptor_set_layouts, VkRenderPass render_pass, bool depth_test_enable, bool depth_write_enable);
+		void create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
+                    VulkanRenderPass *render_pass, bool depth_test_enable, bool depth_write_enable);
 
 		/*
 		 *
@@ -29,9 +33,11 @@ namespace vv
 		void shutDown();
 
 		/*
-		 * 
+		 * Activates this pipeline for use during command buffer recording.
 		 */
 		void bind(VkCommandBuffer command_buffer, VkPipelineBindPoint bind_point) const;
+
+        // todo: add functions that add single attachment states
 		
 	private:
 		VulkanDevice *device_;

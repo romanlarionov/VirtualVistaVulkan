@@ -12,6 +12,8 @@
 #include "VulkanRenderPass.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
+#include "Material.h"
+#include "AssetManager.h"
 #include "Mesh.h"
 #include "Shader.h"
 #include "Utils.h"
@@ -27,7 +29,7 @@ namespace vv
 		/*
 		 * Initialize all necessary Vulkan internals.
 		 */
-		void init();
+		void create();
 
 		/*
 		 * Destroy all Vulkan internals in the correct order.
@@ -56,18 +58,31 @@ namespace vv
 
 		std::vector<VkFramebuffer> frame_buffers_;
 
+		VkSemaphore image_ready_semaphore_ = VK_NULL_HANDLE;
+		VkSemaphore rendering_complete_semaphore_ = VK_NULL_HANDLE;
+
+		std::vector<VkCommandBuffer> command_buffers_;
+
 		Shader *shader_;
 		VulkanPipeline *pipeline_;
 		VulkanRenderPass *render_pass_;
 
 		// data for shaders
-		std::vector<VkDescriptorSetLayout> descriptor_set_layouts_;
+        const uint32_t MAX_DESCRIPTOR_SETS = 100;
+        const uint32_t MAX_UNIFORM_BUFFERS = 100;
+        const uint32_t MAX_COMBINED_IMAGE_SAMPLERS = 100;
 		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
-		VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
 
-		std::vector<VkCommandBuffer> command_buffers_;
+		//std::vector<VulkanDescriptorSetLayout> descriptor_set_layouts_;
+        VulkanDescriptorSetLayout model_descriptor_set_layout_;
+        VulkanDescriptorSetLayout general_descriptor_set_layout_;
+		VkDescriptorSet general_descriptor_set_ = VK_NULL_HANDLE;
 
 		// todo: remove as this is not very general
+        std::vector<MaterialTemplate> material_templates_;
+        AssetManager *asset_manager_;
+        std::vector<Model> models_;
+
 		Mesh *mesh_;
 		VulkanBuffer *vertex_buffer_;
 		VulkanBuffer *index_buffer_;
@@ -79,9 +94,6 @@ namespace vv
 		VulkanImageView *texture_image_view_;
 		VkSampler sampler_ = VK_NULL_HANDLE;
 
-		VkSemaphore image_ready_semaphore_ = VK_NULL_HANDLE;
-		VkSemaphore rendering_complete_semaphore_ = VK_NULL_HANDLE;
-
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
@@ -89,6 +101,16 @@ namespace vv
 		 * Creates the main Vulkan instance upon which the renderer rests.
 		 */
 		void createVulkanInstance();
+
+        /*
+		 * Creates device handles for any GPUs found with Vulkan support.
+	 	 */
+		void createVulkanDevices();
+
+        /*
+         *
+         */
+        void createPipelines();
 
 		/*
 		 * Creates a window to render to.
@@ -106,11 +128,6 @@ namespace vv
 		void setupDebugCallback();
 
 		/*
-		 * Creates device handles for any GPUs found with Vulkan support.
-	 	 */
-		void createVulkanDevices();
-
-		/*
 		 * Specify to Vulkan a set of descriptors for global resources that will be used, i.e. uniforms.
 		 * The VkDescriptorSetLayout object is used as a template for a type of descriptor set that can be made.
 		 */
@@ -121,7 +138,8 @@ namespace vv
 		 * This can be a uniform buffer object, a texture, or a texel image view.
 		 * The word "descriptor" refers to the term "binding" in the shader for passing in uniform type information.
 		 */
-		void createDescriptorSet();
+		//void createDescriptorSet();
+        void createGeneralDescriptorSet();
 
 		/*
 		 * The Descriptor Pool manages Descriptor Sets. As a result, no manual deletion for descriptor sets is needed. The pool will handle it.
@@ -141,7 +159,9 @@ namespace vv
 
 		/*
 		 * Creates a list of executable commands that will be sent to a command pool.
-		 * These commands range from memory management calls, to binding framebuffers, to draw commands. 
+		 * These commands range from memory management calls, to binding framebuffers, to draw commands.
+         * note: VkCommandBuffers can be initialized at the beginning of initialization time.
+         *       Simply point them to a range of vertex and index data that update during runtime.
 		 */
 		void createCommandBuffers();
 

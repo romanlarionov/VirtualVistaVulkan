@@ -15,7 +15,6 @@ namespace vv
 
 	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image)
 	{
-		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		image_ = image;
 

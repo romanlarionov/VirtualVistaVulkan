@@ -1,14 +1,5 @@
 
-//#define TINYGLTF_LOADER_IMPLEMENTATION
-//#include "tiny_gltf_loader.h"
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
-
-#include <set>
-
 #include "Mesh.h"
-#include "Utils.h"
 
 namespace vv
 {
@@ -23,66 +14,39 @@ namespace vv
 	}
 
 
-	void Mesh::init(std::string filename)
+	void Mesh::create(VulkanDevice *device, std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices, int material_id)
 	{
-		loadOBJ(filename);
+        vertices_ = vertices;
+        indices_ = indices;
+        this->name_ = name;
+        this->material_id = material_id;
+
+		vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertex), vertices.size());
+		vertex_buffer.updateAndTransfer(vertices.data());
+		index_buffer.create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t), indices.size());
+		index_buffer.updateAndTransfer(indices.data());
 	}
 
 
 	void Mesh::shutDown()
 	{
-
+        vertex_buffer.shutDown();
+        index_buffer.shutDown();
 	}
+
+
+    void Mesh::bindBuffers(VkCommandBuffer command_buffer) const
+    {
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer, 0);
+        vkCmdBindIndexBuffer(command_buffer, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    }
+
+
+    void Mesh::render(VkCommandBuffer command_buffer) const
+    {
+        vkCmdDrawIndexed(command_buffer, (uint32_t)indices_.size(), 1, 0, 0, 0);
+    }
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
-	void Mesh::loadOBJ(std::string filename)
-	{
-		tinyobj::attrib_t attrib;
-		std::vector<tinyobj::shape_t> shapes;
-		std::vector<tinyobj::material_t> materials;
-		std::string err;
-
-		VV_ASSERT(tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename.c_str()), "Model: " + filename + " not loaded correctly");
-
-		std::unordered_map<Vertex, int> vertex_map;
-
-		// Convert all submeshes to single model
-		// todo: hack solution. assumes only single material.
-		// todo: currently not loading texture with geometry.
-		for (const auto& shape : shapes)
-		{
-			for (const auto& index : shape.mesh.indices)
-			{
-				Vertex vertex = {};
-
-				vertex.color = glm::vec3(1.0, 1.0, 1.0);
-				vertex.position = glm::vec3(
-					attrib.vertices[3 * index.vertex_index + 0],
-					attrib.vertices[3 * index.vertex_index + 1],
-					attrib.vertices[3 * index.vertex_index + 2]
-				);
-
-				vertex.texCoord = glm::vec2(
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-				);
-
-				if (vertex_map.count(vertex) == 0)
-				{
-					vertex_map[vertex] = (int)vertices.size();
-					vertices.push_back(vertex);
-				}
-
-				indices.push_back(vertex_map[vertex]);
-			}
-		}
-	}
-
-
-	void Mesh::loadGLTF(std::string filename)
-	{
-
-	}
-
 }

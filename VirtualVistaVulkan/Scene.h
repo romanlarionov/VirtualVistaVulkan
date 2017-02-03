@@ -18,7 +18,6 @@ namespace vv
 	{
 	public:
 		Scene();
-
 		~Scene();
 
 		/*
@@ -53,9 +52,7 @@ namespace vv
 		void destroyModel(Handle handle);
 		void destroyCamera(Handle handle);
 
-		
 	private:
-
 		std::unordered_map<Handle, Light*> lights_;
 		std::unordered_map<Handle, Model*> models_;
 		std::unordered_map<Handle, Camera*> cameras_;

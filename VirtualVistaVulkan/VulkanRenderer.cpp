@@ -48,7 +48,7 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::init()
+	void VulkanRenderer::create()
 	{
 		try
 		{
@@ -71,42 +71,71 @@ namespace vv
 			image_ready_semaphore_ = util::createVulkanSemaphore(this->physical_devices_[0]->logical_device);
 			rendering_complete_semaphore_ = util::createVulkanSemaphore(this->physical_devices_[0]->logical_device);
 
-			//////////////////////////////// All below should be generalized and moved to application file
-			createDescriptorSetLayout();
-			pipeline_ = new VulkanPipeline();
-			shader_ = new Shader();
-			shader_->create(physical_devices_[0], "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/", "triangle");
-			pipeline_->create(physical_devices_[0], shader_, descriptor_set_layouts_, render_pass_->render_pass, true, true);
+			// todo: all below should be generalized and moved to application file
 
-			mesh_ = new Mesh();
-			mesh_->init("../assets/Models/OBJ/chalet.obj");
+            // creates shader and pipeline
+            std::vector<DescriptorType> descriptor_orderings;
+            descriptor_orderings.push_back(DescriptorType::DIFFUSE_MAP);
 
-			texture_image_ = new VulkanImage();
-			texture_image_->createColorAttachment("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
-			texture_image_->transferToDevice();
+            std::vector<VulkanDescriptorSetLayout> descriptor_set_layouts;
+            VulkanDescriptorSetLayout materials_layout;
+            materials_layout.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+            materials_layout.create(physical_devices_[0]);
+            descriptor_set_layouts.push_back(materials_layout);
 
-			texture_image_view_ = new VulkanImageView();
-			texture_image_view_->create(physical_devices_[0], texture_image_);
+            VulkanDescriptorSetLayout general_layout;
+            general_layout.addDescriptorSetBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT);
+            general_layout.create(physical_devices_[0]);
+            descriptor_set_layouts.push_back(general_layout);
+
+			createDescriptorPool();
+
+            ubo_ = { glm::mat4(), glm::mat4(), glm::mat4(), glm::vec3(0.0, 0.0, 1.0) };
+			uniform_buffer_ = new VulkanBuffer();
+			uniform_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ubo_), 1);
+
+            createGeneralDescriptorSet();
 
 			createSampler();
 
-			vertex_buffer_ = new VulkanBuffer();
-			vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(mesh_->vertices[0]) * mesh_->vertices.size());
-			vertex_buffer_->updateAndTransfer(mesh_->vertices.data());
+			shader_ = new Shader();
+			shader_->create(physical_devices_[0], "triangle");
 
-			index_buffer_ = new VulkanBuffer();
-			index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(mesh_->indices[0]) * mesh_->indices.size());
-			index_buffer_->updateAndTransfer(mesh_->indices.data());
+            MaterialTemplate material_template;
+            material_template.create(physical_devices_[0], "test", shader_, descriptor_pool_, descriptor_set_layouts, descriptor_orderings, sampler_, render_pass_);
+            material_templates_.push_back(material_template);
+
+            Model model;
+            models_.push_back(model);
+
+            asset_manager_ = new AssetManager();
+            asset_manager_->create(physical_devices_[0], material_templates_);
+            asset_manager_->loadModel("../assets/Models/OBJ/", "chalet.obj", models_[0]);
+			
+			createCommandBuffers();
+
+            //pipeline_ = new VulkanPipeline();
+			//pipeline_->create(physical_devices_[0], shader_, , render_pass_, true, true);
+
+			//mesh_ = new Mesh();
+			//mesh_->create("../assets/Models/OBJ/chalet.obj");
+
+			//texture_image_ = new VulkanImage();
+			//texture_image_->createColorAttachment("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
+			//texture_image_->transferToDevice();
+
+			//texture_image_view_ = new VulkanImageView();
+			//texture_image_view_->create(physical_devices_[0], texture_image_);
+
+			//vertex_buffer_ = new VulkanBuffer();
+			//vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(mesh_->vertices[0]) * mesh_->vertices.size());
+			//vertex_buffer_->updateAndTransfer(mesh_->vertices.data());
+
+			//index_buffer_ = new VulkanBuffer();
+			//index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(mesh_->indices[0]) * mesh_->indices.size());
+			//index_buffer_->updateAndTransfer(mesh_->indices.data());
 
 			// todo: push constants are a more efficient way of sending constantly changing values to the shader.
-			ubo_ = { glm::mat4(), glm::mat4(), glm::mat4(), glm::vec3(0.0, 0.0, 1.0) };
-			uniform_buffer_ = new VulkanBuffer();
-			uniform_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ubo_));
-
-			createDescriptorPool();
-			createDescriptorSet();
-
-			createCommandBuffers();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -120,13 +149,16 @@ namespace vv
 		// accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
 		vkDeviceWaitIdle(physical_devices_[0]->logical_device);
 
+        for (auto &m : models_)
+            m.shutDown();
+
 		// todo: remove
-		vertex_buffer_->shutDown(); delete vertex_buffer_;
-		index_buffer_->shutDown(); delete index_buffer_;
+		//vertex_buffer_->shutDown(); delete vertex_buffer_;
+		//index_buffer_->shutDown(); delete index_buffer_;
 		uniform_buffer_->shutDown(); delete uniform_buffer_;
 
-		texture_image_->shutDown(); delete texture_image_;
-		texture_image_view_->shutDown(); delete texture_image_view_;
+		//texture_image_->shutDown(); delete texture_image_;
+		//texture_image_view_->shutDown(); delete texture_image_view_;
 		
 		// For all physical devices
 		for (std::size_t i = 0; i < physical_devices_.size(); ++i)
@@ -138,13 +170,12 @@ namespace vv
 			// todo: not general. extend to handle more situations.
 			vkDestroyDescriptorPool(physical_devices_[i]->logical_device, descriptor_pool_, nullptr);
 
-			for (auto &l : descriptor_set_layouts_)
-				vkDestroyDescriptorSetLayout(physical_devices_[i]->logical_device, l, nullptr);
+            //descriptor_set_layouts_[1].shutDown(); // todo: change
 
 			vkDestroySampler(physical_devices_[i]->logical_device, sampler_, nullptr);
 
 			// Graphics Pipeline
-			pipeline_->shutDown(); delete pipeline_;
+			//pipeline_->shutDown(); delete pipeline_;
 			shader_->shutDown(); delete shader_;
 			render_pass_->shutDown(); delete render_pass_;
 
@@ -434,11 +465,54 @@ namespace vv
 	}
 
 
-	// think everything to do with descriptor sets are on a per model basis.
-	// each model has its own requirements when it comes to storing uniform type objects
-	// thus each unique model should create its own layouts and manage its own descriptor pools.
-	// todo: move ^^
-	void VulkanRenderer::createDescriptorSetLayout()
+     void VulkanRenderer::createDescriptorPool()
+	{
+        // global pool
+        std::vector<VkDescriptorPoolSize> pool_sizes;
+        pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_UNIFORM_BUFFERS });
+        pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_COMBINED_IMAGE_SAMPLERS });
+
+		VkDescriptorPoolCreateInfo create_info = {};
+		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		create_info.poolSizeCount = (uint32_t)pool_sizes.size();
+		create_info.pPoolSizes = pool_sizes.data();
+		create_info.maxSets = MAX_DESCRIPTOR_SETS;
+		create_info.flags = 0; // can be: VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+
+        // set up global descriptor pool
+		VV_CHECK_SUCCESS(vkCreateDescriptorPool(physical_devices_[0]->logical_device, &create_info, nullptr, &descriptor_pool_));
+	}
+
+    
+    void VulkanRenderer::createGeneralDescriptorSet()
+	{
+		VkDescriptorSetAllocateInfo alloc_info = {};
+		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		alloc_info.descriptorPool = descriptor_pool_;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &general_descriptor_set_layout_.layout;
+
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(physical_devices_[0]->logical_device, &alloc_info, &general_descriptor_set_));
+
+		VkDescriptorBufferInfo buffer_info = {};
+		buffer_info.buffer = uniform_buffer_->buffer;
+		buffer_info.offset = 0;
+		buffer_info.range = sizeof(UniformBufferObject);
+
+        VkWriteDescriptorSet write_set = {};
+		write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_set.dstSet = general_descriptor_set_;
+		write_set.dstBinding = 0;
+		write_set.dstArrayElement = 0;
+		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write_set.descriptorCount = 1; // how many elements to update
+		write_set.pBufferInfo = &buffer_info;
+
+		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, 1, &write_set, 0, nullptr);
+	}
+
+
+	/*void VulkanRenderer::createDescriptorSetLayout()
 	{
 		VkDescriptorSetLayoutBinding ubo_layout_binding = {};
 		ubo_layout_binding.binding = 0;
@@ -465,13 +539,11 @@ namespace vv
 		VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &layout));
 		descriptor_set_layouts_.push_back(layout);
-	}
+	}*/
 
 
-	void VulkanRenderer::createDescriptorPool()
+	/*void VulkanRenderer::createDescriptorPool()
 	{
-		// Descriptor Pools manage the internal memory of descriptor sets themselves for some reason.
-		// Need to specify how many, what types are used and the pool will create and manage them.
 		std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
 		pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		pool_sizes[0].descriptorCount = 1;
@@ -486,16 +558,16 @@ namespace vv
 		create_info.flags = 0; // can be this => VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
 
 		VV_CHECK_SUCCESS(vkCreateDescriptorPool(physical_devices_[0]->logical_device, &create_info, nullptr, &descriptor_pool_));
-	}
+	}*/
 
-
-	void VulkanRenderer::createDescriptorSet()
+   
+	/*void VulkanRenderer::createDescriptorSet()
 	{
 		VkDescriptorSetAllocateInfo alloc_info = {};
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		alloc_info.descriptorPool = descriptor_pool_;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &descriptor_set_layouts_[0]; // todo: remove. not general
+		alloc_info.pSetLayouts = &descriptor_set_layouts_[0];
 
 		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(physical_devices_[0]->logical_device, &alloc_info, &descriptor_set_));
 
@@ -530,7 +602,7 @@ namespace vv
 
 		// if you want to update uniforms per frame
 		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, (uint32_t)write_sets.size(), write_sets.data(), 0, nullptr);
-	}
+	}*/
 
 
 	void VulkanRenderer::createSampler()
@@ -548,7 +620,7 @@ namespace vv
 		sampler_create_info.anisotropyEnable = VK_TRUE;
 		sampler_create_info.maxAnisotropy = 16; // max value
 
-		sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;// VK_BORDER_COLOR_INT_OPAQUE_BLACK; // black, white, transparent
+		sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE; // black, white, transparent
 		sampler_create_info.unnormalizedCoordinates = VK_FALSE; // [0,1]
 		sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		sampler_create_info.mipLodBias = 0.0f;
@@ -571,7 +643,7 @@ namespace vv
 			frame_buffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			frame_buffer_create_info.flags = 0;
 			frame_buffer_create_info.renderPass = render_pass_->render_pass;
-			frame_buffer_create_info.attachmentCount = attachments.size();
+			frame_buffer_create_info.attachmentCount = (uint32_t)attachments.size();
 			frame_buffer_create_info.pAttachments = attachments.data();
 			frame_buffer_create_info.width = swap_chain_->extent.width;
 			frame_buffer_create_info.height = swap_chain_->extent.height;
@@ -584,48 +656,49 @@ namespace vv
 	
 	void VulkanRenderer::createCommandBuffers()
 	{
-		command_buffers_.resize(frame_buffers_.size());
+        command_buffers_.resize(frame_buffers_.size());
 
-		VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-		command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		command_buffer_allocate_info.commandPool = physical_devices_[0]->command_pools["graphics"];
+        VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        command_buffer_allocate_info.commandPool = physical_devices_[0]->command_pools["graphics"];
 
-		// primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
-		command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
-		command_buffer_allocate_info.commandBufferCount = (uint32_t)command_buffers_.size();
+        // primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
+        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
+        command_buffer_allocate_info.commandBufferCount = (uint32_t)command_buffers_.size();
 
-		VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_devices_[0]->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
+        VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_devices_[0]->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
+
+        std::vector<VkClearValue> clear_values; // todo: offload to settings
+        VkClearValue color_value, depth_value;
+        color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
+        depth_value.depthStencil = {1.0f, 0};
+        clear_values.push_back(color_value);
+        clear_values.push_back(depth_value);
 
 		for (std::size_t i = 0; i < command_buffers_.size(); ++i)
 		{
-			VkCommandBufferBeginInfo command_buffer_begin_info = {};
-			command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
-			command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
-			VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
+            VkCommandBufferBeginInfo command_buffer_begin_info = {};
+            command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
+            command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
+            VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
 
-			std::vector<VkClearValue> clear_values; // todo: offload to settings
-			VkClearValue color_value, depth_value;
-			color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
-			depth_value.depthStencil = {1.0f, 0};
-			clear_values.push_back(color_value);
-			clear_values.push_back(depth_value);
+            render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
+            //pipeline_->bind(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS);
 
-			render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
-			pipeline_->bind(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS);
+            //std::array<VkDeviceSize, 1> offsets = { 0 };
+            for (auto &m : models_)
+                m.renderByMaterial(command_buffers_[i], general_descriptor_set_);
 
-			std::array<VkDeviceSize, 1> offsets = { 0 };
+            // todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
+            //vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
+            //vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
+            //vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_->pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);
 
-			// todo: remove from single vertex buffer here
-			// todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
-			vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
-			vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_->pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);
+            //vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0); // VERY instance specific! change!
 
-			vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0); // VERY instance specific! change!
-
-			render_pass_->endRenderPass(command_buffers_[i]);
-			VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
+            render_pass_->endRenderPass(command_buffers_[i]);
+            VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
 		}
 	}
 }

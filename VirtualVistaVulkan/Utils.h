@@ -45,7 +45,6 @@ namespace vv
 
 #endif
 
-	// todo: rework this horrible atrocity
 	struct Vertex
 	{
 	public:
@@ -142,6 +141,11 @@ namespace vv
 
 			VV_CHECK_SUCCESS(vkCreateSemaphore(device, &semaphore_create_info, nullptr, &semaphore));
 			return semaphore;
+		}
+
+		static void destroyVulkanSemaphore(VkDevice device, VkSemaphore semaphore)
+		{
+			vkDestroySemaphore(device, semaphore, nullptr);
 		}
 	}
 }

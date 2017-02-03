@@ -15,6 +15,8 @@ namespace vv
 	{
 	public:
 		VkBuffer buffer;
+        size_t range;
+        size_t count;
 
 		VulkanBuffer();
 		~VulkanBuffer();
@@ -23,7 +25,11 @@ namespace vv
 		 * Creates two VkBuffers. One as a transfer buffer located on CPU memory and one as a storage buffer on GPU memory.
 		 * Use along with update() and transferToDevice().
 		 */
-		void create(VulkanDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize size);
+		void create(VulkanDevice *device, VkBufferUsageFlags usage_flags, size_t range, size_t count);
+
+        /*
+         *
+         */
 		void shutDown();
 
 		/*

@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 
+#include "VulkanDevice.h"
 #include "VulkanBuffer.h"
 
 namespace vv
@@ -12,33 +13,41 @@ namespace vv
 	class Mesh
 	{
 	public:
-
-		std::vector<Vertex> vertices;
-		std::vector<uint32_t> indices;
-
-		// todo: prob don't want to have per mesh buffers. Important optimization is to batch together all geometry to single buffer prior to rendering.
-		VulkanBuffer vertex_buffer;  
+		// todo: prob don't want to have per mesh buffers. important optimization
+        //       is to batch together all geometry to single buffer prior to rendering.
+		VulkanBuffer vertex_buffer;
 		VulkanBuffer index_buffer;
+        int material_id;
 
 		Mesh();
 		~Mesh();
 
 		/*
-		 * Creates an object with all geometric and material properties needed for rendering.
-		 * todo: replace with proper model loading class. need to detach ability of loading assets from the actual entity itself.
-		 * note: can load different types of 3d models. ASSUMING ONLY GLTF TYPES FOR NOW!!
+		 * Stores all geometry information for a submesh within a model hierarchy.
+         * Called from Model wrapper class. Should not be called outside of this context.
 		 */
-		void init(std::string filename);
+		void create(VulkanDevice *device, std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices, int material_id);
 
 		/*
 		 * 
 		 */
 		void shutDown();
 
-	private:
+        /*
+         *
+         */
+        void bindBuffers(VkCommandBuffer command_buffer) const;
 
-		void loadOBJ(std::string filename);
-		void loadGLTF(std::string filename);
+
+        /*
+         *
+         */
+        void render(VkCommandBuffer command_buffer) const;
+
+	private:
+        std::string name_;
+		std::vector<Vertex> vertices_;
+		std::vector<uint32_t> indices_;
 
 	};
 }

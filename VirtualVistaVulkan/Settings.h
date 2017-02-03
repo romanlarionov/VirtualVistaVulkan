@@ -13,31 +13,36 @@ namespace vv
     {
     public:
         static Settings* inst();
-		void setDefault();
+        void setDefault();
 
-	int getWindowWidth();
-	int getWindowHeight();
-	std::string getApplicationName();
-	std::string getEngineName();
-	bool isGraphicsRequired();
-	bool isComputeRequired();
-	bool isOnScreenRenderingRequired();
+        int getWindowWidth();
+        int getWindowHeight();
+        std::string getApplicationName();
+        std::string getEngineName();
+        std::string getShaderDirectory();
+        std::string getAssetDirectory();
 
-	void setWindowWidth(int width);
-	void setWindowHeight(int height);
+        bool isGraphicsRequired();
+        bool isComputeRequired();
+        bool isOnScreenRenderingRequired();
+
+        void setWindowWidth(int width);
+        void setWindowHeight(int height);
 
     private:
-	static Settings* instance_;
+        static Settings* instance_;
 
-	bool default_;
-	int window_width_;
-	int window_height_;
-	std::string application_name_;
-	std::string engine_name_;
+        bool default_;
+        int window_width_;
+        int window_height_;
+        std::string application_name_;
+        std::string engine_name_;
+        std::string shader_directory_;
+        std::string asset_directory_;
 
-	bool graphics_required_;
-	bool compute_required_;
-	bool on_screen_rendering_required_;
+        bool graphics_required_;
+        bool compute_required_;
+        bool on_screen_rendering_required_;
 
         Settings() {};
         Settings(const Settings& s) {};
