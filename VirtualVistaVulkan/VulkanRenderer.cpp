@@ -31,9 +31,11 @@ namespace vv
 
 	void destroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator)
 	{
+#ifdef _DEBUG
 		auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
 		if (func != nullptr)
 			func(instance, callback, pAllocator);
+#endif
 	}
 
 
@@ -114,29 +116,6 @@ namespace vv
             asset_manager_->loadModel("OBJ/sponza/", "banner.obj", models_[0]);
 			
 			createCommandBuffers();
-
-            //pipeline_ = new VulkanPipeline();
-			//pipeline_->create(physical_devices_[0], shader_, , render_pass_, true, true);
-
-			//mesh_ = new Mesh();
-			//mesh_->create("../assets/Models/OBJ/chalet.obj");
-
-			//texture_image_ = new VulkanImage();
-			//texture_image_->createColorAttachment("../assets/Textures/chalet.jpg", physical_devices_[0], VK_FORMAT_R8G8B8A8_UNORM); // todo: filename varies based on debug method
-			//texture_image_->transferToDevice();
-
-			//texture_image_view_ = new VulkanImageView();
-			//texture_image_view_->create(physical_devices_[0], texture_image_);
-
-			//vertex_buffer_ = new VulkanBuffer();
-			//vertex_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(mesh_->vertices[0]) * mesh_->vertices.size());
-			//vertex_buffer_->updateAndTransfer(mesh_->vertices.data());
-
-			//index_buffer_ = new VulkanBuffer();
-			//index_buffer_->create(physical_devices_[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(mesh_->indices[0]) * mesh_->indices.size());
-			//index_buffer_->updateAndTransfer(mesh_->indices.data());
-
-			// todo: push constants are a more efficient way of sending constantly changing values to the shader.
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -203,7 +182,6 @@ namespace vv
 		uniform_buffer_->updateAndTransfer(&ubo_);
 
 		// Draw Frame
-
 		/// Acquire an image from the swap chain
 		uint32_t image_index = 0;
 		swap_chain_->acquireNextImage(physical_devices_[0], image_ready_semaphore_, image_index);
@@ -498,99 +476,6 @@ namespace vv
 	}
 
 
-	/*void VulkanRenderer::createDescriptorSetLayout()
-	{
-		VkDescriptorSetLayoutBinding ubo_layout_binding = {};
-		ubo_layout_binding.binding = 0;
-		ubo_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		ubo_layout_binding.descriptorCount = 1;
-
-		ubo_layout_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // tells Vulkan where the uniform will be used. make general!!
-		ubo_layout_binding.pImmutableSamplers = nullptr; // for image samplers
-
-		VkDescriptorSetLayoutBinding sampler_layout_binding = {};
-		sampler_layout_binding.binding = 1;
-		sampler_layout_binding.descriptorCount = 1;
-		sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		sampler_layout_binding.pImmutableSamplers = nullptr;
-		sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // todo: make general. you dont always want texture in fragment
-
-		std::vector<VkDescriptorSetLayoutBinding> layouts = { ubo_layout_binding, sampler_layout_binding };
-
-		VkDescriptorSetLayoutCreateInfo layout_create_info = {};
-		layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layout_create_info.bindingCount = (uint32_t)layouts.size();
-		layout_create_info.pBindings = layouts.data();
-
-		VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-		VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(physical_devices_[0]->logical_device, &layout_create_info, nullptr, &layout));
-		descriptor_set_layouts_.push_back(layout);
-	}*/
-
-
-	/*void VulkanRenderer::createDescriptorPool()
-	{
-		std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
-		pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		pool_sizes[0].descriptorCount = 1;
-		pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		pool_sizes[1].descriptorCount = 1;
-
-		VkDescriptorPoolCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		create_info.poolSizeCount = (uint32_t)pool_sizes.size();
-		create_info.pPoolSizes = pool_sizes.data();
-		create_info.maxSets = 1; // max # of descriptor sets allocated
-		create_info.flags = 0; // can be this => VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
-
-		VV_CHECK_SUCCESS(vkCreateDescriptorPool(physical_devices_[0]->logical_device, &create_info, nullptr, &descriptor_pool_));
-	}*/
-
-   
-	/*void VulkanRenderer::createDescriptorSet()
-	{
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		alloc_info.descriptorPool = descriptor_pool_;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &descriptor_set_layouts_[0];
-
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(physical_devices_[0]->logical_device, &alloc_info, &descriptor_set_));
-
-		// to describe the uniform buffer
-		VkDescriptorBufferInfo buffer_info = {};
-		buffer_info.buffer = uniform_buffer_->buffer;
-		buffer_info.offset = 0;
-		buffer_info.range = sizeof(UniformBufferObject);
-
-		VkDescriptorImageInfo image_info = {};
-		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		image_info.imageView = texture_image_view_->image_view;
-		image_info.sampler = sampler_;
-
-		std::array<VkWriteDescriptorSet, 2> write_sets = {};
-
-		write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_sets[0].dstSet = descriptor_set_;
-		write_sets[0].dstBinding = 0;
-		write_sets[0].dstArrayElement = 0;
-		write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_sets[0].descriptorCount = 1; // how many elements to update
-		write_sets[0].pBufferInfo = &buffer_info;
-
-		write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_sets[1].dstSet = descriptor_set_;
-		write_sets[1].dstBinding = 1; // location in layout
-		write_sets[1].dstArrayElement = 0; // if sending array of uniforms
-		write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write_sets[1].descriptorCount = 1; // how many elements to update
-		write_sets[1].pImageInfo = &image_info;
-
-		// if you want to update uniforms per frame
-		vkUpdateDescriptorSets(physical_devices_[0]->logical_device, (uint32_t)write_sets.size(), write_sets.data(), 0, nullptr);
-	}*/
-
-
 	void VulkanRenderer::createSampler()
 	{
 		VkSamplerCreateInfo sampler_create_info = {};
@@ -670,18 +555,9 @@ namespace vv
             VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
 
             render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
-            //pipeline_->bind(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS);
 
-            //std::array<VkDeviceSize, 1> offsets = { 0 };
             for (auto &m : models_)
                 m.renderByMaterial(command_buffers_[i], general_descriptor_set_);
-
-            // todo: its recommended that you bind a single VkBuffer that contains both vertex and index data to improve cache hits
-            //vkCmdBindVertexBuffers(command_buffers_[i], 0, 1, &vertex_buffer_->buffer, offsets.data());
-            //vkCmdBindIndexBuffer(command_buffers_[i], index_buffer_->buffer, 0, VK_INDEX_TYPE_UINT32);
-            //vkCmdBindDescriptorSets(command_buffers_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_->pipeline_layout, 0, 1, &descriptor_set_, 0, nullptr);
-
-            //vkCmdDrawIndexed(command_buffers_[i], (uint32_t)mesh_->indices.size(), 1, 0, 0, 0); // VERY instance specific! change!
 
             render_pass_->endRenderPass(command_buffers_[i]);
             VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));

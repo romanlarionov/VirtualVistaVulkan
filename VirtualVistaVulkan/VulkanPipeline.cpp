@@ -17,7 +17,6 @@ namespace vv
 	void VulkanPipeline::create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
                                 VulkanRenderPass *render_pass, bool depth_test_enable, bool depth_write_enable)
 	{
-		VV_ASSERT(device != nullptr, "Vulkan Device is NULL");
 		device_ = device;
 
 		VkPipelineShaderStageCreateInfo vert_shader_create_info = {};
@@ -154,7 +153,6 @@ namespace vv
 		graphics_pipeline_create_info.renderPass = render_pass->render_pass;
 		graphics_pipeline_create_info.subpass = 0; // index of render_pass that this pipeline will be used with
 		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
-		graphics_pipeline_create_info.basePipelineIndex = -1; // set to nothing for now cuz only single pipeline
 
 		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
