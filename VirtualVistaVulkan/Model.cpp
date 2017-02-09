@@ -15,45 +15,47 @@ namespace vv
 	}
 
 
-	void Model::create(std::string name, std::vector<Mesh> &meshes, std::vector<Material> &materials)
+	//void Model::create(std::string name, std::vector<Mesh *> &meshes, std::vector<Material *> &materials)
+	void Model::create(std::string name, std::string data_handle, std::string material_id_set, MaterialTemplate *material_template)
 	{
-        name_ = name;
-        meshes_ = meshes;
-        material_instances_ = materials;
+        this->name = name;
+        this->material_template = material_template;
+        _data_handle = data_handle;
+        _material_id_set = material_id_set;
 
-        std::sort(meshes_.begin(), meshes_.end(), [](const Mesh &l, const Mesh &r) {
-            return l.material_id < r.material_id;
-        });
+        /*std::sort(_meshes.begin(), _meshes.end(), [](const Mesh *l, const Mesh *r) {
+            return l->material_id < r->material_id;
+        });*/
 	}
 
 
 	void Model::shutDown()
 	{
-        for (auto &mesh : meshes_)
-            mesh.shutDown();
+        /*for (auto &mesh : _meshes)
+            mesh->shutDown();
 
-        for (auto &mat : material_instances_)
-            mat.shutDown();
+        for (auto &mat : _material_instances)
+            mat->shutDown();*/
 	}
 
 
-    void Model::renderByMaterial(VkCommandBuffer command_buffer, VkDescriptorSet general_descriptor_set)
+    /*void Model::renderByMaterial(VkCommandBuffer command_buffer, std::vector<VkDescriptorSet> descriptor_sets)
     {
         int curr_material_id = -1;
-        for (auto &mesh : meshes_)
+        for (auto &mesh : _meshes)
         {
-            Material material = material_instances_[mesh.material_id];
-            if (mesh.material_id != curr_material_id) // minimize pipeline context switches
+            Material *material = _material_instances[mesh->material_id];
+            if (mesh->material_id != curr_material_id) // minimize pipeline context switches
             {
-                curr_material_id = mesh.material_id;
-                material.material_template->bindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
+                curr_material_id = mesh->material_id;
+                material->material_template->bindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
             }
 
-            material.bindDescriptorSets(command_buffer, general_descriptor_set);
-            mesh.bindBuffers(command_buffer);
-            mesh.render(command_buffer);
+            material->bindDescriptorSets(command_buffer, descriptor_sets);
+            mesh->bindBuffers(command_buffer);
+            mesh->render(command_buffer);
         }
-    }
+    }*/
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private

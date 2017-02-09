@@ -12,8 +12,9 @@
 #include "VulkanRenderPass.h"
 #include "VulkanBuffer.h"
 #include "VulkanDevice.h"
+#include "Scene.h"
 #include "Material.h"
-#include "AssetManager.h"
+#include "ModelManager.h"
 #include "Mesh.h"
 #include "Shader.h"
 #include "Utils.h"
@@ -44,55 +45,67 @@ namespace vv
 		 */
 		void run();
 
+        /*
+         *
+         */
+        Scene* getScene() const;
+
 		/*
 		 * Returns whether the renderer should stop execution.
 		 */
 		bool shouldStop();
 
 	private:
-		GLFWWindow *window_						 = nullptr;
-		VkInstance instance_					 = VK_NULL_HANDLE;
-		VkDebugReportCallbackEXT debug_callback_ = VK_NULL_HANDLE;
-		std::vector<VulkanDevice*> physical_devices_;
+		GLFWWindow *window_						    = nullptr;
+		VkInstance instance_					    = VK_NULL_HANDLE;
+		VkDebugReportCallbackEXT debug_callback_    = VK_NULL_HANDLE;
+		VulkanDevice* physical_device_              = nullptr;
 		VulkanSwapChain *swap_chain_;
 
 		std::vector<VkFramebuffer> frame_buffers_;
 
-		VkSemaphore image_ready_semaphore_ = VK_NULL_HANDLE;
-		VkSemaphore rendering_complete_semaphore_ = VK_NULL_HANDLE;
+		VkSemaphore image_ready_semaphore_          = VK_NULL_HANDLE;
+		VkSemaphore rendering_complete_semaphore_   = VK_NULL_HANDLE;
 
 		std::vector<VkCommandBuffer> command_buffers_;
 
 		Shader *shader_;
 		VulkanPipeline *pipeline_;
-		VulkanRenderPass *render_pass_;
+		VulkanRenderPass *render_pass_              = nullptr;
 
-		// data for shaders
-        const uint32_t MAX_DESCRIPTOR_SETS = 100;
-        const uint32_t MAX_UNIFORM_BUFFERS = 100;
-        const uint32_t MAX_COMBINED_IMAGE_SAMPLERS = 100;
-		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
+		// global setting data for shaders
+        const uint32_t MAX_DESCRIPTOR_SETS          = 100;
+        const uint32_t MAX_UNIFORM_BUFFERS          = 100;
+        const uint32_t MAX_COMBINED_IMAGE_SAMPLERS  = 100;
+		VkDescriptorPool descriptor_pool_           = VK_NULL_HANDLE;
 
-		//std::vector<VulkanDescriptorSetLayout> descriptor_set_layouts_;
+        // todo: remove
         VulkanDescriptorSetLayout model_descriptor_set_layout_;
+
+        // stores info every shader is required to use (i.e. matrices)
         VulkanDescriptorSetLayout general_descriptor_set_layout_;
 		VkDescriptorSet general_descriptor_set_ = VK_NULL_HANDLE;
 
-		// todo: remove as this is not very general
-        std::vector<MaterialTemplate> material_templates_;
-        AssetManager *asset_manager_;
-        std::vector<Model> models_;
+        // stores light info every shader is required to use
+        VulkanDescriptorSetLayout light_descriptor_set_layout_;
 
-		Mesh *mesh_;
-		VulkanBuffer *vertex_buffer_;
-		VulkanBuffer *index_buffer_;
-		UniformBufferObject ubo_;
+        std::vector<MaterialTemplate *> material_templates_;
+
+        Scene *scene_;
+        //ModelManager *model_manager_;
+        //std::vector<Model> models_;
+
+        UniformBufferObject ubo_;
 		VulkanBuffer *uniform_buffer_;
+		VkSampler sampler_ = VK_NULL_HANDLE;
+
+		//Mesh *mesh_;
+		//VulkanBuffer *vertex_buffer_;
+		//VulkanBuffer *index_buffer_;
 
 		// texture aka remove
-		VulkanImage *texture_image_;
-		VulkanImageView *texture_image_view_;
-		VkSampler sampler_ = VK_NULL_HANDLE;
+		//VulkanImage *texture_image_;
+		//VulkanImageView *texture_image_view_;
 
 		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
@@ -108,9 +121,10 @@ namespace vv
 		void createVulkanDevices();
 
         /*
-         *
+         * Loads possible material types from file, parses descriptor set requirements from it's shader,
+         * and allocates unique shader/pipeline per template.
          */
-        void createPipelines();
+        void createMaterialTemplates();
 
 		/*
 		 * Creates a window to render to.

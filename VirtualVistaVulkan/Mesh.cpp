@@ -16,9 +16,9 @@ namespace vv
 
 	void Mesh::create(VulkanDevice *device, std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices, int material_id)
 	{
-        vertices_ = vertices;
-        indices_ = indices;
-        this->name_ = name;
+        _vertices = vertices;
+        _indices = indices;
+        _name = name;
         this->material_id = material_id;
 
 		vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertex), vertices.size());
@@ -45,7 +45,7 @@ namespace vv
 
     void Mesh::render(VkCommandBuffer command_buffer) const
     {
-        vkCmdDrawIndexed(command_buffer, (uint32_t)indices_.size(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
     }
 
 

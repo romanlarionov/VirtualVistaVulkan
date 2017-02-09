@@ -52,8 +52,8 @@ namespace vv
 
 		// todo: viewport should be dynamic. figure out how to update pipeline when needed. probably has to do with dynamic state settings.
 		VkViewport viewport = {};
-		viewport.width = (float)Settings::inst()->getWindowWidth();
-		viewport.height = (float)Settings::inst()->getWindowHeight();
+		viewport.width = static_cast<float>(Settings::inst()->getWindowWidth());
+		viewport.height = static_cast<float>(Settings::inst()->getWindowHeight());
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
 		viewport.minDepth = 0.0f;
@@ -61,8 +61,8 @@ namespace vv
 
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
-		scissor.extent.width  = (uint32_t)Settings::inst()->getWindowWidth();
-		scissor.extent.height = (uint32_t)Settings::inst()->getWindowHeight();
+		scissor.extent.width  = static_cast<uint32_t>(Settings::inst()->getWindowWidth());
+		scissor.extent.height = static_cast<uint32_t>(Settings::inst()->getWindowHeight());
 
 		VkPipelineViewportStateCreateInfo viewport_state_create_info = {};
 		viewport_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

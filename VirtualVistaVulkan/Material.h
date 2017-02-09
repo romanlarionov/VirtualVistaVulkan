@@ -13,8 +13,6 @@ namespace vv
 {
 	class Material
 	{
-        friend class MaterialTemplate;
-
 	public:
         MaterialTemplate *material_template;
 
@@ -27,7 +25,7 @@ namespace vv
          *
          * note: this should only be called from within MaterialTemplate, which manages all such material instances.
 		 */
-        void create(MaterialTemplate *material_template);
+        void create(VulkanDevice *device, MaterialTemplate *material_template, VkDescriptorPool descriptor_pool);
 
 		/*
 		 *
@@ -42,7 +40,7 @@ namespace vv
         /*
          *
          */
-        void addTexture(VulkanImage *texture, int binding);
+        void addTexture(VulkanImage *texture, int binding, VkSampler sampler);
 
         /*
          *
@@ -52,19 +50,15 @@ namespace vv
         /*
          *
          */
-        void bindDescriptorSets(VkCommandBuffer command_buffer, VkDescriptorSet descriptor_set) const;
-
-        /*
-         *
-         */
-        std::vector<DescriptorType> getDescriptorOrdering() const;
+        void bindDescriptorSets(VkCommandBuffer command_buffer, std::vector<VkDescriptorSet> descriptor_sets) const;
 
 	private:
-        std::vector<VkWriteDescriptorSet> write_sets_;
-        VkDescriptorSet descriptor_set_;
+        VulkanDevice *_device;
+        std::vector<VkWriteDescriptorSet> _write_sets;
+        VkDescriptorSet _descriptor_set;
 
-        std::vector<std::pair<VkDescriptorBufferInfo, VulkanBuffer *> > uniform_buffers_;
-        std::vector<std::pair<VkDescriptorImageInfo, VulkanImageView *> > textures_;
+        std::vector<std::pair<VkDescriptorBufferInfo, VulkanBuffer *> > _uniform_buffers;
+        std::vector<std::pair<VkDescriptorImageInfo, VulkanImageView *> > _textures;
 	};
 }
 

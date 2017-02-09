@@ -13,9 +13,9 @@ namespace vv
 		window_height_ = 1080;
 		application_name_ = "VirtualVistaVulkan";
 		engine_name_ = "VirtualVista";
-        shader_directory_ = "D:/Developer/VirtualVistaVulkan/VirtualVistaVulkan/"; // todo: change!
         asset_directory_ = "../assets/";
         model_directory_ = asset_directory_ + "models/";
+        shader_directory_ = asset_directory_ + "shaders/";
 
 		graphics_required_ = true;
 		compute_required_ = false;

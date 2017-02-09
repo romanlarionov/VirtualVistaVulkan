@@ -14,26 +14,27 @@ namespace vv
 	}
 
 	
-    void Material::create(MaterialTemplate *material_template)
+    void Material::create(VulkanDevice *device, MaterialTemplate *material_template, VkDescriptorPool descriptor_pool)
     {
         this->material_template = material_template;
+        _device = device;
 
         VkDescriptorSetAllocateInfo alloc_info = {};
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		alloc_info.descriptorPool = material_template->descriptor_pool_;
+		alloc_info.descriptorPool = descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &material_template->descriptor_set_layouts_[0].layout; // todo: change
+        alloc_info.pSetLayouts = &material_template->descriptor_set_layout;
 
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(material_template->device_->logical_device, &alloc_info, &descriptor_set_));
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(device->logical_device, &alloc_info, &_descriptor_set));
     }
 
 
 	void Material::shutDown()
 	{
-        for (auto &ubo : uniform_buffers_)
+        for (auto &ubo : _uniform_buffers)
             ubo.second->shutDown();
 
-        for (auto &tex : textures_)
+        for (auto &tex : _textures)
             tex.second->shutDown();
 	}
 
@@ -45,67 +46,62 @@ namespace vv
 		buffer_info.offset = 0;
 		buffer_info.range = uniform_buffer->range;
 
-        auto position = uniform_buffers_.size();
-        uniform_buffers_.push_back(std::pair<VkDescriptorBufferInfo, VulkanBuffer *>(buffer_info, uniform_buffer));
+        auto position = _uniform_buffers.size();
+        _uniform_buffers.push_back(std::pair<VkDescriptorBufferInfo, VulkanBuffer *>(buffer_info, uniform_buffer));
 
         VkWriteDescriptorSet write_set = {};
 
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = descriptor_set_;
+		write_set.dstSet = _descriptor_set;
 		write_set.dstBinding = binding;
 		write_set.dstArrayElement = 0;
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pBufferInfo = &uniform_buffers_[position].first;
+		write_set.pBufferInfo = &_uniform_buffers[position].first;
 
-        write_sets_.push_back(write_set);
+        _write_sets.push_back(write_set);
     }
 
 
-    void Material::addTexture(VulkanImage *texture, int binding)
+    void Material::addTexture(VulkanImage *texture, int binding, VkSampler sampler)
     {
         VulkanImageView *texture_image_view = new VulkanImageView();
-        texture_image_view->create(material_template->device_, texture);
+        texture_image_view->create(_device, texture);
 
 		VkDescriptorImageInfo image_info = {};
 		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		image_info.imageView = texture_image_view->image_view;
-		image_info.sampler = material_template->sampler_;
+		image_info.sampler = sampler;
 
-        textures_.push_back(std::pair<VkDescriptorImageInfo, VulkanImageView *>(image_info, texture_image_view));
+        _textures.push_back(std::pair<VkDescriptorImageInfo, VulkanImageView *>(image_info, texture_image_view));
 
         VkWriteDescriptorSet write_set = {};
         
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = descriptor_set_;
+		write_set.dstSet = _descriptor_set;
 		write_set.dstBinding = binding; // location in layout
 		write_set.dstArrayElement = 0; // if sending array of uniforms
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write_set.descriptorCount = 1; // how many elements to update
 		write_set.pImageInfo = &image_info;
 
-        write_sets_.push_back(write_set);
+        _write_sets.push_back(write_set);
     }
 
 
     void Material::updateDescriptorSets() const
     {
         // called by AssetManager initially upon upon creation. needs update whenever data has changed
-		vkUpdateDescriptorSets(material_template->device_->logical_device, (uint32_t)write_sets_.size(), write_sets_.data(), 0, nullptr);
+		vkUpdateDescriptorSets(_device->logical_device, static_cast<uint32_t>(_write_sets.size()), _write_sets.data(), 0, nullptr);
     }
 
 
-    void Material::bindDescriptorSets(VkCommandBuffer command_buffer, VkDescriptorSet general_descriptor_set) const
+    void Material::bindDescriptorSets(VkCommandBuffer command_buffer, std::vector<VkDescriptorSet> descriptor_sets) const
     {
-        std::array<VkDescriptorSet, 2> descriptor_sets = { descriptor_set_, general_descriptor_set };
+        //std::array<VkDescriptorSet, 2> descriptor_sets = { _descriptor_set, general_descriptor_set };
+        descriptor_sets.push_back(_descriptor_set);
         vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_template->pipeline_layout, 0,
-                                (uint32_t)descriptor_sets.size(), descriptor_sets.data(), 0, nullptr);
-    }
-
-
-    std::vector<DescriptorType> Material::getDescriptorOrdering() const
-    {
-        return material_template->descriptor_orderings_;
+                                static_cast<uint32_t>(descriptor_sets.size()), descriptor_sets.data(), 0, nullptr);
     }
 
 

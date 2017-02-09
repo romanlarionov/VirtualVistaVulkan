@@ -45,9 +45,9 @@ namespace vv
         void render(VkCommandBuffer command_buffer) const;
 
 	private:
-        std::string name_;
-		std::vector<Vertex> vertices_;
-		std::vector<uint32_t> indices_;
+        std::string _name;
+		std::vector<Vertex> _vertices;
+		std::vector<uint32_t> _indices;
 
 	};
 }

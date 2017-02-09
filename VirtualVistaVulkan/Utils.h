@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <vector>
 #include <string>
 #include <functional>
 #include <array>
@@ -156,6 +157,24 @@ namespace vv
 		{
 			vkDestroySemaphore(device, semaphore, nullptr);
 		}
+
+        static VkDescriptorSetLayout createVulkanDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings)
+        {
+            VkDescriptorSetLayout layout = {};
+
+            VkDescriptorSetLayoutCreateInfo layout_create_info = {};
+		    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		    layout_create_info.bindingCount = static_cast<uint32_t>(bindings.size());
+		    layout_create_info.pBindings = bindings.data();
+
+		    VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(device, &layout_create_info, nullptr, &layout));
+            return layout;
+        }
+
+        static void destroyVulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout)
+        {
+		    vkDestroyDescriptorSetLayout(device, layout, nullptr);
+        }
 	}
 }
 

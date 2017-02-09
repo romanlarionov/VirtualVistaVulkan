@@ -15,18 +15,20 @@
 
 namespace vv
 {
-	class AssetManager
+	class ModelManager
 	{
+        friend class Scene;
+
 	public:
         int material_instance_count;
 
-		AssetManager();
-		~AssetManager();
+		ModelManager();
+		~ModelManager();
 
 		/*
 		 * High level class that handles all asset loading, initialization, and management.
 		 */
-		void create(VulkanDevice *device, std::vector<MaterialTemplate> material_templates);
+		void create(VulkanDevice *device, MaterialTemplate *dummy_template, VkDescriptorPool descriptor_pool, VkSampler sampler);
 
 		/*
 		 *
@@ -40,23 +42,28 @@ namespace vv
          * note: This returns (by address) a COPY of the constructed model. This eliminates a lot of hassle from the
          *       creation process even though it could theoretically be sped up through a more complex caching design.
          */
-        bool loadModel(std::string path, std::string name, Model &model);
+        bool loadModel(std::string path, std::string name, MaterialTemplate *material_template, Model *model);
 
     private:
-		VulkanDevice *device_;
+		VulkanDevice *_device;
+        MaterialTemplate *_dummy_template;
+        VkDescriptorPool _descriptor_pool;
+        VkSampler _sampler;
 
         // todo: consider using smart pointers for reference counting.
-        std::unordered_map<std::string, Model> cached_models_;
+        //std::unordered_map<std::string, Model *> _cached_models;
+        std::unordered_map<std::string, std::vector<Mesh *> > _loaded_meshes;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Material *> > > _loaded_materials;
 
         // note: assumes these have been pre-initialized. That way the actual asset loading can be looped through once.
-        std::vector<MaterialTemplate> material_templates_;
+        //std::vector<MaterialTemplate> material_templates_;
 
         // todo: can have global array of geometry and material data that constantly updates.
 
         /*
         *
         */
-        bool loadOBJ(std::string path, std::string name, Model &model);
+        bool loadOBJ(std::string path, std::string name, bool load_geometry, MaterialTemplate *material_template, Model *model);
 
         /*
          *

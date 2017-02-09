@@ -202,7 +202,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="AssetManager.cpp" />
+    <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="GLFWWindow.cpp" />
     <ClCompile Include="Light.cpp" />
@@ -226,7 +226,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
-    <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="ModelManager.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="GLFWWindow.h" />
     <ClInclude Include="Light.h" />
@@ -254,12 +254,8 @@
     <ClInclude Include="VulkanSwapChain.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="triangle.frag" />
-    <None Include="triangle.vert" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\assets\Textures\chalet.jpg" />
-    <Image Include="..\assets\Textures\statue.jpg" />
+    <None Include="..\assets\shaders\triangle.frag" />
+    <None Include="..\assets\shaders\triangle.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
