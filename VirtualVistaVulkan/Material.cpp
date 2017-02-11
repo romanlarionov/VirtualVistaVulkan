@@ -44,7 +44,7 @@ namespace vv
         VkDescriptorBufferInfo buffer_info = {};
 		buffer_info.buffer = uniform_buffer->buffer;
 		buffer_info.offset = 0;
-		buffer_info.range = uniform_buffer->range;
+        buffer_info.range = VK_WHOLE_SIZE;
 
         auto position = _uniform_buffers.size();
         _uniform_buffers.push_back(std::pair<VkDescriptorBufferInfo, VulkanBuffer *>(buffer_info, uniform_buffer));
@@ -73,6 +73,7 @@ namespace vv
 		image_info.imageView = texture_image_view->image_view;
 		image_info.sampler = sampler;
 
+        auto position = _textures.size();
         _textures.push_back(std::pair<VkDescriptorImageInfo, VulkanImageView *>(image_info, texture_image_view));
 
         VkWriteDescriptorSet write_set = {};
@@ -83,7 +84,7 @@ namespace vv
 		write_set.dstArrayElement = 0; // if sending array of uniforms
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pImageInfo = &image_info;
+		write_set.pImageInfo = &_textures[position].first;
 
         _write_sets.push_back(write_set);
     }

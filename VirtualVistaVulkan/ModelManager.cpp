@@ -99,6 +99,7 @@ namespace vv
 			{
 				Vertex vertex = {};
 
+				vertex.color = glm::vec3(1.0, 1.0, 1.0);
 				vertex.position = glm::vec3(
 					attrib.vertices[3 * index.vertex_index + 0],
 					attrib.vertices[3 * index.vertex_index + 1],
@@ -120,8 +121,6 @@ namespace vv
 					vertex_map[vertex] = (int)vertices.size();
 					vertices.push_back(vertex);
 				}
-
-				vertex.color = glm::vec3(1.0, 1.0, 1.0);
 
 				indices.push_back(vertex_map[vertex]);
 			}
@@ -155,7 +154,7 @@ namespace vv
                     MaterialConstants constants = { amb, dif, spec, m.shininess }; // todo: these are probably being deallocated at the end of this function scope. prob main rendering problem
 
                     VulkanBuffer *buffer = new VulkanBuffer();
-                    buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(MaterialConstants), 1);
+                    buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
                     buffer->updateAndTransfer(&constants);
 
                     material->addUniformBuffer(buffer, static_cast<int>(i));

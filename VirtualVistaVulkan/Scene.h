@@ -47,12 +47,17 @@ namespace vv
         /*
          *
          */
-        Model* addModel(std::string path, std::string name, MaterialTemplate *material_template);
+        Model* addModel(std::string path, std::string name, std::string material_template);// MaterialTemplate *material_template);
 
         /*
          *
          */
         void addCamera();
+
+        /*
+         *
+         */
+        void updateSceneUniforms(VkExtent2D extent);
 
         /*
          * 
@@ -63,6 +68,7 @@ namespace vv
         VulkanDevice *_device                       = nullptr;
         VulkanRenderPass *_render_pass              = nullptr;
         ModelManager *_model_manager                = nullptr;
+        bool _initialized                           = false;
 
 		VkSampler _sampler                          = VK_NULL_HANDLE;
 
@@ -83,6 +89,11 @@ namespace vv
         VkDescriptorSet _lights_descriptor_set      = VK_NULL_HANDLE;
         VulkanBuffer *_lights_uniform_buffer        = nullptr;
 
+        std::vector<Vertex> _temp_vertex_array;
+        std::vector<uint32_t> _temp_index_array;
+        VulkanBuffer *_temp_model_vertex_buffer = nullptr;
+        VulkanBuffer *_temp_model_index_buffer = nullptr;
+
         //std::unordered_map<Handle, Light*> lights_;
 		std::vector<Model*> _models; // todo: think of better data structure. maybe something to help with culling
 		//std::unordered_map<Handle, Camera*> cameras_;
@@ -96,6 +107,8 @@ namespace vv
         void createSceneUniforms();
 
         void createSampler();
+
+        void createVulkanDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout &layout);
 
         VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding(uint32_t binding, VkDescriptorType descriptor_type, uint32_t count, VkShaderStageFlags shader_stage) const;
 	};

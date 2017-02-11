@@ -21,10 +21,10 @@ namespace vv
         _name = name;
         this->material_id = material_id;
 
-		vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertex), vertices.size());
-		vertex_buffer.updateAndTransfer(vertices.data());
-		index_buffer.create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(uint32_t), indices.size());
-		index_buffer.updateAndTransfer(indices.data());
+		//vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]), vertices.size());
+		//vertex_buffer.updateAndTransfer(vertices.data());
+		//index_buffer.create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(indices[0]), indices.size());
+		//index_buffer.updateAndTransfer(indices.data());
 	}
 
 
@@ -35,7 +35,7 @@ namespace vv
 	}
 
 
-    void Mesh::bindBuffers(VkCommandBuffer command_buffer) const
+    void Mesh::bindBuffers(VkCommandBuffer command_buffer)
     {
         std::array<VkDeviceSize, 1> offsets = { 0 };
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer, offsets.data());
@@ -43,9 +43,9 @@ namespace vv
     }
 
 
-    void Mesh::render(VkCommandBuffer command_buffer) const
+    void Mesh::render(VkCommandBuffer command_buffer)
     {
-        vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(command_buffer, (uint32_t)_indices.size(), 1, 0, 0, 0);
     }
 
 

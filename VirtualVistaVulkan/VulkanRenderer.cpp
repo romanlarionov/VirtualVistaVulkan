@@ -100,6 +100,9 @@ namespace vv
 
             scene_ = new Scene();
             scene_->create(physical_device_, render_pass_);
+            //scene_->addModel("hammardillo/", "hammardillo.obj", "triangle");
+            scene_->addModel("chalet/", "chalet.obj", "triangle");
+            //scene_->addModel("sponza/", "sponza.obj", "triangle");
 
 			//shader_ = new Shader();
 			//shader_->create(physical_device_, "triangle");
@@ -139,7 +142,7 @@ namespace vv
 
         scene_->shutDown();
 
-		uniform_buffer_->shutDown(); delete uniform_buffer_;
+		//uniform_buffer_->shutDown(); delete uniform_buffer_;
 
 	  	// Async devices
 	  	vkDestroySemaphore(physical_device_->logical_device, image_ready_semaphore_, nullptr);
@@ -172,9 +175,11 @@ namespace vv
 		// Poll window specific updates and input.
 		window_->run();
 
+        scene_->updateSceneUniforms(swap_chain_->extent);
+
 		// Update uniforms
 		// todo: remove
-		static auto start_time = std::chrono::high_resolution_clock::now();
+		/*static auto start_time = std::chrono::high_resolution_clock::now();
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count() / 1000.0f;
 
@@ -183,7 +188,7 @@ namespace vv
 		ubo_.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo_.proj = glm::perspective(glm::radians(45.0f), swap_chain_->extent.width / (float) swap_chain_->extent.height, 0.1f, 10.0f);
 		ubo_.normal = glm::vec3(glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		uniform_buffer_->updateAndTransfer(&ubo_);
+		uniform_buffer_->updateAndTransfer(&ubo_);*/
 
 		// Draw Frame
 		/// Acquire an image from the swap chain

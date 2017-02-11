@@ -17,6 +17,9 @@ namespace vv
         //       is to batch together all geometry to single buffer prior to rendering.
 		VulkanBuffer vertex_buffer;
 		VulkanBuffer index_buffer;
+
+		std::vector<Vertex> _vertices;
+		std::vector<uint32_t> _indices;
         int material_id;
 
 		Mesh();
@@ -36,18 +39,16 @@ namespace vv
         /*
          *
          */
-        void bindBuffers(VkCommandBuffer command_buffer) const;
+        void bindBuffers(VkCommandBuffer command_buffer);
 
 
         /*
          *
          */
-        void render(VkCommandBuffer command_buffer) const;
+        void render(VkCommandBuffer command_buffer);
 
 	private:
         std::string _name;
-		std::vector<Vertex> _vertices;
-		std::vector<uint32_t> _indices;
 
 	};
 }
