@@ -15,6 +15,7 @@ namespace vv
 	{
 	public:
 		VkBuffer buffer;
+        VkDeviceSize size;
 
 		VulkanBuffer();
 		~VulkanBuffer();
@@ -51,7 +52,6 @@ namespace vv
 		VkDeviceMemory staging_memory_ = VK_NULL_HANDLE;
 		VkDeviceMemory buffer_memory_;
 		VkBufferUsageFlags usage_flags_;
-		VkDeviceSize size_;
 
 		/*
 		 * Creates the Vulkan abstraction for a data buffer with the given specifications.

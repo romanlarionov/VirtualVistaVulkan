@@ -5,6 +5,10 @@
 #include <vector>
 #include <array>
 
+#ifdef _DEBUG
+    #define ENABLE_VULKAN_RENDERDOC_CAPTURE 1
+#endif
+
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
 #include "VulkanImageView.h"
@@ -92,22 +96,12 @@ namespace vv
         std::vector<MaterialTemplate *> material_templates_;
 
         Scene *scene_;
-        //ModelManager *model_manager_;
-        //std::vector<Model> models_;
 
         UniformBufferObject ubo_;
 		VulkanBuffer *uniform_buffer_;
 		VkSampler sampler_ = VK_NULL_HANDLE;
 
-		//Mesh *mesh_;
-		//VulkanBuffer *vertex_buffer_;
-		//VulkanBuffer *index_buffer_;
-
-		// texture aka remove
-		//VulkanImage *texture_image_;
-		//VulkanImageView *texture_image_view_;
-
-		const std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
+        std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation", "VK_LAYER_RENDERDOC_Capture" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
 		/*

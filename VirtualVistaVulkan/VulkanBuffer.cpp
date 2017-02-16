@@ -19,7 +19,7 @@ namespace vv
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
 		device_ = device;
 		usage_flags_ = usage_flags;
-        size_ = size;
+        this->size = size;
 
 		// Create temporary transfer buffer on CPU 
 		allocateMemory(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -53,8 +53,8 @@ namespace vv
 	{
 		// Move raw data to staging Vulkan buffer.
 		void *mapped_data;
-		vkMapMemory(device_->logical_device, staging_memory_, 0, size_, 0, &mapped_data);
-		memcpy(mapped_data, data, size_);
+		vkMapMemory(device_->logical_device, staging_memory_, 0, size, 0, &mapped_data);
+		memcpy(mapped_data, data, size);
 		vkUnmapMemory(device_->logical_device, staging_memory_);
 	}
 
@@ -63,14 +63,22 @@ namespace vv
 	{
 		VV_ASSERT(staging_buffer_ && buffer, "Buffers not allocated correctly. Perhaps create() wasn't called.");
 
-		auto command_pool_used = device_->command_pools["transfer"];
+		auto command_pool_used = device_->command_pools["graphics"];
+
+        // use transfer queue if available
+        if (device_->command_pools.count("transfer") > 0)
+            command_pool_used = device_->command_pools["transfer"];
+
 		auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 		VkBufferCopy buffer_copy = {};
-		buffer_copy.size = size_;
+		buffer_copy.size = size;
 		vkCmdCopyBuffer(command_buffer, staging_buffer_, buffer, 1, &buffer_copy);
 
-		util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        if (device_->transfer_family_index != -1)
+		    util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        else
+		    util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->graphics_queue);
 	}
 
 
@@ -80,13 +88,25 @@ namespace vv
 		// Create the Vulkan abstraction for a vertex buffer.
 		VkBufferCreateInfo buffer_create_info = {};
 		buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buffer_create_info.flags = 0; // can be used to specify this stores sparse data
 		buffer_create_info.size = size;
 		buffer_create_info.usage = usage; // use this as a vertex/index buffer
-		buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT; // buffers can be used in queues. choice between exclusive or shared
-		buffer_create_info.queueFamilyIndexCount = 2;
-		std::array<uint32_t, 2> queue_family_indices = { device_->graphics_family_index, device_->transfer_family_index };
-		buffer_create_info.pQueueFamilyIndices = queue_family_indices.data();
-		buffer_create_info.flags = 0; // can be used to specify this stores sparse data
+
+        // use transfer queue if available
+        if (device_->transfer_family_index != -1)
+        {
+            buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+            buffer_create_info.queueFamilyIndexCount = 2;
+            std::array<uint32_t, 2> queue_family_indices = { device_->graphics_family_index, device_->transfer_family_index };
+            buffer_create_info.pQueueFamilyIndices = queue_family_indices.data();
+        }
+        else
+        {
+            buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            buffer_create_info.queueFamilyIndexCount = 1;
+            uint32_t queue_index = static_cast<uint32_t>(device_->graphics_family_index);
+            buffer_create_info.pQueueFamilyIndices = &queue_index;
+        }
 
 		VV_CHECK_SUCCESS(vkCreateBuffer(device_->logical_device, &buffer_create_info, nullptr, &buffer));
 

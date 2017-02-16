@@ -31,6 +31,7 @@ namespace vv
 		vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_properties_count, queue_family_properties.data());
 
 		queryQueueFamilies();
+        VV_ASSERT(graphics_family_index != -1, "Could not find required graphics queue index for rendering");
 	}
 
 
@@ -39,7 +40,6 @@ namespace vv
 		if (logical_device != VK_NULL_HANDLE)
 		{
 			// Command Pool/Buffers
-
 			for (auto &pool : command_pools)
 				vkDestroyCommandPool(logical_device, pool.second, nullptr);
 
@@ -80,7 +80,7 @@ namespace vv
 		}
 
 		// todo: adding the compute section causes a crash.
-		if (queue_types & VK_QUEUE_COMPUTE_BIT)
+		if (queue_types & VK_QUEUE_COMPUTE_BIT && compute_family_index != -1)
 		{
 			VkDeviceQueueCreateInfo queue_create_info = {};
 			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -90,7 +90,7 @@ namespace vv
 			device_queue_create_infos.push_back(queue_create_info);
 		}
 
-		if (queue_types & VK_QUEUE_TRANSFER_BIT)
+		if (queue_types & VK_QUEUE_TRANSFER_BIT && transfer_family_index != -1)
 		{
 			VkDeviceQueueCreateInfo queue_create_info = {};
 			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -120,30 +120,20 @@ namespace vv
 		else
 			device_create_info.enabledExtensionCount = 0;
 
-#ifdef _DEBUG
-		// todo: currently using the same layers for the device that I do for the instance level. might
-		// need to diverge here (but it's my understanding that device layers are becoming deprecated).
-		device_create_info.enabledLayerCount = static_cast<uint32_t>(used_validation_layers_.size());
-		device_create_info.ppEnabledLayerNames = used_validation_layers_.data();
-#else
-		device_create_info.enabledLayerCount = 0;
-#endif
-
 		VV_CHECK_SUCCESS(vkCreateDevice(physical_device, &device_create_info, nullptr, &logical_device));
 
 		// Set up queue handles.
-		if (graphics_family_index >= 0)
-			vkGetDeviceQueue(logical_device, graphics_family_index, 0, &graphics_queue);
+        vkGetDeviceQueue(logical_device, graphics_family_index, 0, &graphics_queue);
+		createCommandPool("graphics", graphics_family_index, 0);
 
-		if (compute_family_index >= 0)
+		if (compute_family_index != -1)
 			vkGetDeviceQueue(logical_device, compute_family_index, 0, &compute_queue);
 
-		if (transfer_family_index >= 0)
-			vkGetDeviceQueue(logical_device, transfer_family_index, 0, &transfer_queue);
-
-		// Set up default command pools.
-		createCommandPool("graphics", graphics_family_index, 0);
-		createCommandPool("transfer", transfer_family_index, 0);
+        if (transfer_family_index != -1)
+        {
+            vkGetDeviceQueue(logical_device, transfer_family_index, 0, &transfer_queue);
+            createCommandPool("transfer", transfer_family_index, 0);
+        }
 	}
 
 	

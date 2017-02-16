@@ -125,7 +125,12 @@ namespace vv
 		transformImageLayout(staging_image_, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 		transformImageLayout(image, format, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		auto command_pool_used = device_->command_pools["transfer"];
+        auto command_pool_used = device_->command_pools["graphics"];
+
+        // use transfer queue if available
+        if (device_->command_pools.count("transfer") > 0)
+            command_pool_used = device_->command_pools["transfer"];
+
 		auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 		VkImageSubresourceLayers sub_resource = {};
@@ -146,7 +151,10 @@ namespace vv
 		vkCmdCopyImage(command_buffer, staging_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-		util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        if (device_->transfer_family_index != -1)
+            util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        else
+		    util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->graphics_queue);
 
 		transformImageLayout(image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
@@ -163,6 +171,7 @@ namespace vv
 	{
 		VkImageCreateInfo image_create_info = {};
 		image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		image_create_info.flags = 0;
 		image_create_info.imageType = image_type;
 		image_create_info.extent.width = width_;
 		image_create_info.extent.height = height_;
@@ -173,12 +182,22 @@ namespace vv
 		image_create_info.tiling = tiling;
 		image_create_info.usage = usage;
 		image_create_info.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED; // VK_IMAGE_LAYOUT_UNDEFINED <- good for color/depth buffers
-		image_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-		image_create_info.queueFamilyIndexCount = 2;
-		std::array<uint32_t, 2> queue_family_indices = { device_->graphics_family_index, device_->transfer_family_index };
-		image_create_info.pQueueFamilyIndices = queue_family_indices.data();
 		image_create_info.samples = VK_SAMPLE_COUNT_1_BIT; // other options can be used to help with sparse 3d texture data
-		image_create_info.flags = 0;
+
+        if (device_->transfer_family_index != -1)
+        {
+            image_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
+            image_create_info.queueFamilyIndexCount = 2;
+            std::array<uint32_t, 2> queue_family_indices = { device_->graphics_family_index, device_->transfer_family_index };
+            image_create_info.pQueueFamilyIndices = queue_family_indices.data();
+        }
+        else
+        {
+            image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            image_create_info.queueFamilyIndexCount = 1;
+            uint32_t queue_index = static_cast<uint32_t>(device_->graphics_family_index);
+            image_create_info.pQueueFamilyIndices = &queue_index;
+        }
 
 		VV_CHECK_SUCCESS(vkCreateImage(device_->logical_device, &image_create_info, nullptr, &image));
 
@@ -200,7 +219,12 @@ namespace vv
 
 	void VulkanImage::transformImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
 	{
-		auto command_pool_used = device_->command_pools["transfer"];
+        auto command_pool_used = device_->command_pools["graphics"];
+
+        // use transfer queue if available
+        if (device_->command_pools.count("transfer") > 0)
+            command_pool_used = device_->command_pools["transfer"];
+
 		auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
 
 		// using this ensures that writing is completed before reading.
@@ -239,6 +263,9 @@ namespace vv
 		vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			0, 0, nullptr, 0, nullptr, 1, &memory_barrier);
 
-		util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        if (device_->transfer_family_index != -1)
+            util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        else
+		    util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->graphics_queue);
 	}
 }
