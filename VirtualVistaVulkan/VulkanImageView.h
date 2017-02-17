@@ -19,8 +19,9 @@ namespace vv
 
 		/*
 		 * Creates an image view for the application to interact with.
-		 * todo: consider adding functionality of getting image settings here and constructing the image from this class.
-		 * todo: consider removing this class and place this code along with image creation to texture class along with sampler.
+         *
+         * note: This class does not maintain ownership over VulkanImages.
+         *       They must be manually deleted outside of this class.
 		 */
 		void create(VulkanDevice *device, VulkanImage *image);
 

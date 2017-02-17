@@ -5,9 +5,9 @@
 #include <vector>
 #include <array>
 
-#ifdef _DEBUG
-    #define ENABLE_VULKAN_RENDERDOC_CAPTURE 1
-#endif
+//#ifdef _DEBUG
+//    #define ENABLE_VULKAN_RENDERDOC_CAPTURE 1
+//#endif
 
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
@@ -50,7 +50,7 @@ namespace vv
 		void run();
 
         /*
-         *
+         * Returns a scene object used to store entities with physical presence.
          */
         Scene* getScene() const;
 
@@ -77,31 +77,9 @@ namespace vv
 		VulkanPipeline *pipeline_;
 		VulkanRenderPass *render_pass_              = nullptr;
 
-		// global setting data for shaders
-        const uint32_t MAX_DESCRIPTOR_SETS          = 100;
-        const uint32_t MAX_UNIFORM_BUFFERS          = 100;
-        const uint32_t MAX_COMBINED_IMAGE_SAMPLERS  = 100;
-		VkDescriptorPool descriptor_pool_           = VK_NULL_HANDLE;
-
-        // todo: remove
-        VulkanDescriptorSetLayout model_descriptor_set_layout_;
-
-        // stores info every shader is required to use (i.e. matrices)
-        VulkanDescriptorSetLayout general_descriptor_set_layout_;
-		VkDescriptorSet general_descriptor_set_ = VK_NULL_HANDLE;
-
-        // stores light info every shader is required to use
-        VulkanDescriptorSetLayout light_descriptor_set_layout_;
-
-        std::vector<MaterialTemplate *> material_templates_;
-
         Scene *scene_;
 
-        UniformBufferObject ubo_;
-		VulkanBuffer *uniform_buffer_;
-		VkSampler sampler_ = VK_NULL_HANDLE;
-
-        std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation", "VK_LAYER_RENDERDOC_Capture" };
+        std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
 		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
 		/*
@@ -114,17 +92,6 @@ namespace vv
 	 	 */
 		void createVulkanDevices();
 
-        /*
-         * Loads possible material types from file, parses descriptor set requirements from it's shader,
-         * and allocates unique shader/pipeline per template.
-         */
-        void createMaterialTemplates();
-
-		/*
-		 * Creates a window to render to.
-		 */	
-		void createWindow();
-
 		/*
 		 * Creates a Vulkan surface for generically communicating between Vulkan and the system window api.
 		 */
@@ -134,31 +101,6 @@ namespace vv
 		 * Sets up all debug callbacks that handle accepting and printing validation layer reports.
 		 */
 		void setupDebugCallback();
-
-		/*
-		 * Specify to Vulkan a set of descriptors for global resources that will be used, i.e. uniforms.
-		 * The VkDescriptorSetLayout object is used as a template for a type of descriptor set that can be made.
-		 */
-		void createDescriptorSetLayout();
-
-		/*
-		 * The Descriptor Set stores all info of a particular descriptor set in use.
-		 * This can be a uniform buffer object, a texture, or a texel image view.
-		 * The word "descriptor" refers to the term "binding" in the shader for passing in uniform type information.
-		 */
-		//void createDescriptorSet();
-        void createGeneralDescriptorSet();
-
-		/*
-		 * The Descriptor Pool manages Descriptor Sets. As a result, no manual deletion for descriptor sets is needed. The pool will handle it.
-		 */
-		void createDescriptorPool();
-
-		/*
-		 * Sampler is what allows for interpolation of texture data on the GPU.
-		 * Doesn't hold texture data, just the processes that should be acted on it.
-		 */
-		void createSampler();
 
 		/*
 		 * Creates Vulkan FrameBuffer objects that encapsulate all of the Vulkan image textures in the swap chain for storing rendered frames.

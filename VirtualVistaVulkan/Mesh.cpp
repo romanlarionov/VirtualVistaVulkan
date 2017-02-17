@@ -21,25 +21,26 @@ namespace vv
         _name = name;
         this->material_id = material_id;
 
-		//vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertices[0]), vertices.size());
-		//vertex_buffer.updateAndTransfer(vertices.data());
-		//index_buffer.create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(indices[0]), indices.size());
-		//index_buffer.updateAndTransfer(indices.data());
+        _vertex_buffer.create(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(_vertices[0]) * _vertices.size());
+		_vertex_buffer.updateAndTransfer(_vertices.data());
+
+		_index_buffer.create(device, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(_indices[0]) * _indices.size());
+		_index_buffer.updateAndTransfer(_indices.data());
 	}
 
 
 	void Mesh::shutDown()
 	{
-        vertex_buffer.shutDown();
-        index_buffer.shutDown();
+        _vertex_buffer.shutDown();
+        _index_buffer.shutDown();
 	}
 
 
     void Mesh::bindBuffers(VkCommandBuffer command_buffer)
     {
         std::array<VkDeviceSize, 1> offsets = { 0 };
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer.buffer, offsets.data());
-        vkCmdBindIndexBuffer(command_buffer, index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, &_vertex_buffer.buffer, offsets.data());
+        vkCmdBindIndexBuffer(command_buffer, _index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 
 

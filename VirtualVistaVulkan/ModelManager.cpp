@@ -2,6 +2,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#include <cstring>
+
 #include "ModelManager.h"
 
 namespace vv
@@ -17,12 +19,11 @@ namespace vv
 	}
 
 
-	void ModelManager::create(VulkanDevice *device, MaterialTemplate *dummy_template, VkDescriptorPool descriptor_pool, VkSampler sampler)
+	void ModelManager::create(VulkanDevice *device, VkDescriptorPool descriptor_pool, VkSampler sampler)
 	{
 		_device = device;
-        _dummy_template = dummy_template;
         _descriptor_pool = descriptor_pool;
-        _sampler = sampler; // todo: remove
+        _sampler = sampler;
 
         // todo: construct primative geometry
 	}
@@ -30,11 +31,27 @@ namespace vv
 
 	void ModelManager::shutDown()
 	{
+        for (auto &m : _loaded_meshes)
+            for (auto &mesh : m.second)
+            {
+                mesh->shutDown();
+                delete mesh;
+            }
+
+        for (auto &m : _loaded_materials)
+            for (auto &mat : m.second)
+                for (auto & material : mat.second)
+                {
+                    material->shutDown();
+                    delete material;
+                }
 	}
 
 
     bool ModelManager::loadModel(std::string path, std::string name, MaterialTemplate *material_template, Model *model)
     {
+        // todo: should pass descriptor sets that are general to model and pass those to model class.
+
         bool load_geometry = true;
         path = Settings::inst()->getModelDirectory() + path;
         std::string file_type = name.substr(name.find_first_of('.') + 1);
@@ -129,7 +146,7 @@ namespace vv
 
             // todo: construct mesh from parsed data
             Mesh *mesh = new Mesh();
-            mesh->create(_device, shape.name, vertices, indices, curr_material_id);
+            mesh->create(_device, shape.name, vertices, indices, ((curr_material_id < 0) ? 0 : curr_material_id));
             meshes.push_back(mesh);
 		}
 
@@ -146,12 +163,13 @@ namespace vv
             for (size_t i = 0; i < orderings.size(); ++i)
             {
                 auto o = orderings[i];
-                if (o == DescriptorType::CONSTANTS) // todo: check if these are always present. for now assuming they are.
+                if (o == DescriptorType::CONSTANTS)
                 {
-                    glm::vec3 amb(m.ambient[0], m.ambient[1], m.ambient[2]);
-                    glm::vec3 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2]);
-                    glm::vec3 spec(m.specular[0], m.specular[1], m.specular[2]);
-                    MaterialConstants constants = { amb, dif, spec, m.shininess }; // todo: these are probably being deallocated at the end of this function scope. prob main rendering problem
+                    // todo: check if these are always present. for now assuming they are.
+                    glm::vec4 amb(m.ambient[0], m.ambient[1], m.ambient[2], 0.0);
+                    glm::vec4 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2], 0.0);
+                    glm::vec4 spec(m.specular[0], m.specular[1], m.specular[2], 0.0);
+                    MaterialConstants constants = { amb, dif, spec, m.shininess };
 
                     VulkanBuffer *buffer = new VulkanBuffer();
                     buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
@@ -159,26 +177,42 @@ namespace vv
 
                     material->addUniformBuffer(buffer, static_cast<int>(i));
                 }
-                else if (o == DescriptorType::AMBIENT_MAP && m.ambient_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
+                else if (o == DescriptorType::AMBIENT_MAP)
                 {
                     VulkanImage *texture = new VulkanImage();
-                    texture->createColorAttachment(path + m.ambient_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    if (m.ambient_texname != "")
+                        texture->createColorAttachment(path + m.ambient_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    else
+                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+
+                    texture->transferToDevice();
                     material->addTexture(texture, static_cast<int>(i), _sampler);
                 }
-                else if (o == DescriptorType::DIFFUSE_MAP && m.diffuse_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
+                else if (o == DescriptorType::DIFFUSE_MAP)
                 {
                     VulkanImage *texture = new VulkanImage();
-                    texture->createColorAttachment(path + m.diffuse_texname, _device, VK_FORMAT_R8G8B8A8_UNORM); // todo: test texname. what value will it be?
+                    if (m.diffuse_texname != "")
+                        texture->createColorAttachment(path + m.diffuse_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    else
+                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+
+                    texture->transferToDevice();
                     material->addTexture(texture, static_cast<int>(i), _sampler);
                 }
-                else if (o == DescriptorType::SPECULAR_MAP && m.specular_texopt.type != tinyobj::texture_type_t::TEXTURE_TYPE_NONE)
+                else if (o == DescriptorType::SPECULAR_MAP)
                 {
                     VulkanImage *texture = new VulkanImage();
-                    texture->createColorAttachment(path + m.specular_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    if (m.specular_texname != "")
+                        texture->createColorAttachment(path + m.specular_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    else
+                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+                    
+                    texture->transferToDevice();
                     material->addTexture(texture, static_cast<int>(i), _sampler);
                 }
                 else // descriptor type not populated
                 {
+                    // todo: remove and fill with dummy data as opposed to using different material template
                     std::cerr << "ERROR: Descriptor Type not populated for model: " << name << ". Using dummy material.\n";
                     success = false;
                     break;
@@ -186,14 +220,16 @@ namespace vv
             }
 
             material->updateDescriptorSets();
+            materials.push_back(material);
+        }
 
-            if (!success)
-            {
-                // load dummy material, log error
-                material->shutDown();
-                delete material;
-            }
+        // if no mtl file was found
+        if (tiny_materials.empty())
+        {
+            Material *material = new Material();
+            material->create(_device, material_template, _descriptor_pool);
 
+            // todo: this should loop over all non-standard descriptors provided
             materials.push_back(material);
         }
 

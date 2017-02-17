@@ -254,6 +254,10 @@
     <ClInclude Include="VulkanSwapChain.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\assets\shaders\dummy.frag" />
+    <None Include="..\assets\shaders\dummy.vert" />
+    <None Include="..\assets\shaders\texture.frag" />
+    <None Include="..\assets\shaders\texture.vert" />
     <None Include="..\assets\shaders\triangle.frag" />
     <None Include="..\assets\shaders\triangle.vert" />
   </ItemGroup>

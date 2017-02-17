@@ -16,7 +16,7 @@
 
 namespace vv
 {
-	struct Scene
+	class Scene
 	{
 	public:
         std::unordered_map<std::string, MaterialTemplate *> material_templates;
@@ -25,7 +25,7 @@ namespace vv
 		~Scene();
 
 		/*
-		 * 
+		 * Loads all resources and templates needed for model loading and descriptor set updating.
 		 */
 		void create(VulkanDevice *device, VulkanRenderPass *render_pass);
 
@@ -45,9 +45,11 @@ namespace vv
         void addLight();
 
         /*
+         * Requests that a model be loaded using the ModelManger and stored for rendering/updates.
          *
+         * note: material_template will be applied to all submeshes for the model found.
          */
-        Model* addModel(std::string path, std::string name, std::string material_template);// MaterialTemplate *material_template);
+        Model* addModel(std::string path, std::string name, std::string material_template);
 
         /*
          *
@@ -55,12 +57,14 @@ namespace vv
         void addCamera();
 
         /*
-         *
+         * Updates the global scene descriptor sets with newly updates data.
          */
         void updateSceneUniforms(VkExtent2D extent);
 
         /*
-         * 
+         * Recursively renders each model.
+         *
+         * note: This will be automatically called within VulkanRenderer. There is no need in calling it from here.
          */
         void render(VkCommandBuffer command_buffer);
 
@@ -89,27 +93,46 @@ namespace vv
         VkDescriptorSet _lights_descriptor_set      = VK_NULL_HANDLE;
         VulkanBuffer *_lights_uniform_buffer        = nullptr;
 
-        std::vector<Vertex> _temp_vertex_array;
-        std::vector<uint32_t> _temp_index_array;
-        VulkanBuffer *_temp_model_vertex_buffer = nullptr;
-        VulkanBuffer *_temp_model_index_buffer = nullptr;
-
         //std::unordered_map<Handle, Light*> lights_;
 		std::vector<Model*> _models; // todo: think of better data structure. maybe something to help with culling
 		//std::unordered_map<Handle, Camera*> cameras_;
 
+        /*
+         * Reads required shaders from file and creates all possible MaterialTemplates that can be used during execution.
+         * These MaterialTemplates can be referenced by the name provided in the shader info file.
+         */
         void createMaterialTemplates();
 
+        /*
+         *
+         */
         void createPipelines();
 
+        /*
+         * Creates global descriptor pool from which all descriptor sets will be allocated from.
+         */
         void createDescriptorPool();
 
+        /*
+         * Creates everything necessary for scene global uniforms.
+         *
+         * note: Each shader needs to accept these required uniform in its own descriptor set at set = 0.
+         */
         void createSceneUniforms();
 
+        /*
+         * Creates single 16x anisotropic sampler used for all texture sampling.
+         */
         void createSampler();
 
+        /*
+         * Utility function for creating descriptor set layouts.
+         */
         void createVulkanDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout &layout);
 
+        /*
+         * Utility function for defining descriptor set bindings.
+         */
         VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding(uint32_t binding, VkDescriptorType descriptor_type, uint32_t count, VkShaderStageFlags shader_stage) const;
 	};
 }

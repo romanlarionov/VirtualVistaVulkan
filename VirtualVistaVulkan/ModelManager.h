@@ -28,7 +28,7 @@ namespace vv
 		/*
 		 * High level class that handles all asset loading, initialization, and management.
 		 */
-		void create(VulkanDevice *device, MaterialTemplate *dummy_template, VkDescriptorPool descriptor_pool, VkSampler sampler);
+		void create(VulkanDevice *device, VkDescriptorPool descriptor_pool, VkSampler sampler);
 
 		/*
 		 *
@@ -37,36 +37,28 @@ namespace vv
 
         /*
          * Creates a model using the appropriate model loader based on file extension.
-         * This override allows the specification of a custom shader to be used during construction.
-         *
-         * note: This returns (by address) a COPY of the constructed model. This eliminates a lot of hassle from the
-         *       creation process even though it could theoretically be sped up through a more complex caching design.
+         * The provided MaterialTemplate will be used to load the required descriptors with data found in the path.
          */
         bool loadModel(std::string path, std::string name, MaterialTemplate *material_template, Model *model);
 
     private:
 		VulkanDevice *_device;
-        MaterialTemplate *_dummy_template;
         VkDescriptorPool _descriptor_pool;
         VkSampler _sampler;
 
         // todo: consider using smart pointers for reference counting.
-        //std::unordered_map<std::string, Model *> _cached_models;
         std::unordered_map<std::string, std::vector<Mesh *> > _loaded_meshes;
         std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Material *> > > _loaded_materials;
-
-        // note: assumes these have been pre-initialized. That way the actual asset loading can be looped through once.
-        //std::vector<MaterialTemplate> material_templates_;
 
         // todo: can have global array of geometry and material data that constantly updates.
 
         /*
-        *
-        */
+         * Loads obj + mtl files for a single model. Returns a model abstraction with references to raw loaded geometry + material data.
+         */
         bool loadOBJ(std::string path, std::string name, bool load_geometry, MaterialTemplate *material_template, Model *model);
 
         /*
-         *
+         * todo: add support for glTF
          */
         bool loadGLTF();
 	};

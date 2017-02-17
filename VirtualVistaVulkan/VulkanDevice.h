@@ -52,12 +52,13 @@ namespace vv
 
 		/*
 		 * Returns if this physical device will be suitable for all compute and rendering purposes.
+         *
 		 * todo: fill out more.
 		 */
 		bool isSuitable(VkSurfaceKHR surface, VulkanSurfaceDetailsHandle &surface_details);
 
         /*
-         *
+         * Creates the logical abstraction Vulkan needs to perform all of its functionality.
          */
 		void createLogicalDevice(bool swap_chain_support = true, VkQueueFlags queue_types = VK_QUEUE_GRAPHICS_BIT);
 
@@ -79,6 +80,7 @@ namespace vv
 
 		/*
 		 * Parses Vulkan acquired property data for this physical device and stores any important info.
+         *
 		 * todo: store more data that might prove valuable.
 		 */
 		void queryQueueFamilies();

@@ -19,23 +19,39 @@ namespace vv
         this->material_template = material_template;
         _device = device;
 
-        VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		alloc_info.descriptorPool = descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &material_template->descriptor_set_layout;
+        // certain material templates dont take descriptor sets
+        if (material_template->descriptor_set_layout)
+        {
+            VkDescriptorSetAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            alloc_info.descriptorPool = descriptor_pool;
+            alloc_info.descriptorSetCount = 1;
+            alloc_info.pSetLayouts = &material_template->descriptor_set_layout;
 
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(device->logical_device, &alloc_info, &_descriptor_set));
+            VV_CHECK_SUCCESS(vkAllocateDescriptorSets(device->logical_device, &alloc_info, &_descriptor_set));
+        }
     }
 
 
 	void Material::shutDown()
 	{
         for (auto &ubo : _uniform_buffers)
+        {
             ubo.second->shutDown();
+            delete ubo.second;
+        }
+
+        for (auto &i : _image_store)
+        {
+            i->shutDown();
+            delete i;
+        }
 
         for (auto &tex : _textures)
+        {
             tex.second->shutDown();
+            delete tex.second;
+        }
 	}
 
 
@@ -65,6 +81,7 @@ namespace vv
 
     void Material::addTexture(VulkanImage *texture, int binding, VkSampler sampler)
     {
+        _image_store.push_back(texture);
         VulkanImageView *texture_image_view = new VulkanImageView();
         texture_image_view->create(_device, texture);
 
@@ -92,17 +109,17 @@ namespace vv
 
     void Material::updateDescriptorSets() const
     {
-        // called by AssetManager initially upon upon creation. needs update whenever data has changed
 		vkUpdateDescriptorSets(_device->logical_device, static_cast<uint32_t>(_write_sets.size()), _write_sets.data(), 0, nullptr);
     }
 
 
-    void Material::bindDescriptorSets(VkCommandBuffer command_buffer, std::vector<VkDescriptorSet> descriptor_sets) const
+    void Material::bindDescriptorSets(VkCommandBuffer command_buffer) const
     {
-        //std::array<VkDescriptorSet, 2> descriptor_sets = { _descriptor_set, general_descriptor_set };
-        descriptor_sets.push_back(_descriptor_set);
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_template->pipeline_layout, 0,
-                                static_cast<uint32_t>(descriptor_sets.size()), descriptor_sets.data(), 0, nullptr);
+        if (material_template->descriptor_set_layout)
+        {
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_template->pipeline_layout, 1,
+                1, &_descriptor_set, 0, nullptr);
+        }
     }
 
 

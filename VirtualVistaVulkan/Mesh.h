@@ -13,13 +13,6 @@ namespace vv
 	class Mesh
 	{
 	public:
-		// todo: prob don't want to have per mesh buffers. important optimization
-        //       is to batch together all geometry to single buffer prior to rendering.
-		VulkanBuffer vertex_buffer;
-		VulkanBuffer index_buffer;
-
-		std::vector<Vertex> _vertices;
-		std::vector<uint32_t> _indices;
         int material_id;
 
 		Mesh();
@@ -50,6 +43,13 @@ namespace vv
 	private:
         std::string _name;
 
+		// todo: prob don't want to have per mesh buffers. important optimization
+        //       is to batch together all geometry to single buffer prior to rendering.
+		VulkanBuffer _vertex_buffer;
+		VulkanBuffer _index_buffer;
+
+		std::vector<Vertex> _vertices;
+		std::vector<uint32_t> _indices;
 	};
 }
 

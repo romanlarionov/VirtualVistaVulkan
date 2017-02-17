@@ -43,14 +43,6 @@ namespace vv
 
 	void VulkanImageView::shutDown()
 	{
-		// todo: see if this screws anything up. shouldn't cause any issues.
-		// still dont know if VulkanImageViews should maintain ownership over VulkanImages or not...
-		/*if (image_) 
-		{
-			image_->shutDown();
-			delete image_;
-		}*/
-		if (image_view)
-			vkDestroyImageView(device_->logical_device, image_view, nullptr);
+        vkDestroyImageView(device_->logical_device, image_view, nullptr);
 	}
 }

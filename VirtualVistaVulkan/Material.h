@@ -33,24 +33,24 @@ namespace vv
 		void shutDown();
 		
         /*
-         *
+         * Instructs this instance to support a uniform buffer binding and maintains owndership over the data.
          */
-        void addUniformBuffer(VulkanBuffer *texture, int binding);
+        void addUniformBuffer(VulkanBuffer *uniform_buffer, int binding);
 
         /*
-         *
+         * Instructs this instance to support a texture binding and maintains owndership over the data.
          */
         void addTexture(VulkanImage *texture, int binding, VkSampler sampler);
 
         /*
-         *
+         * Updates the contents of the descriptor set with the uniform + samplers provided via addUniformBuffer and addTexture.
          */
         void updateDescriptorSets() const;
 
         /*
-         *
+         * Binds all descriptor sets this instance has ownership over. Should be called at render time.
          */
-        void bindDescriptorSets(VkCommandBuffer command_buffer, std::vector<VkDescriptorSet> descriptor_sets) const;
+        void bindDescriptorSets(VkCommandBuffer command_buffer) const;
 
 	private:
         VulkanDevice *_device;
@@ -59,6 +59,8 @@ namespace vv
 
         std::vector<std::pair<VkDescriptorBufferInfo, VulkanBuffer *> > _uniform_buffers;
         std::vector<std::pair<VkDescriptorImageInfo, VulkanImageView *> > _textures;
+
+        std::vector<VulkanImage *> _image_store;
 	};
 }
 
