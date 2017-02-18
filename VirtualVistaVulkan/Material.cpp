@@ -20,13 +20,13 @@ namespace vv
         _device = device;
 
         // certain material templates dont take descriptor sets
-        if (material_template->descriptor_set_layout)
+        if (material_template->material_descriptor_set_layout)
         {
             VkDescriptorSetAllocateInfo alloc_info = {};
             alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             alloc_info.descriptorPool = descriptor_pool;
             alloc_info.descriptorSetCount = 1;
-            alloc_info.pSetLayouts = &material_template->descriptor_set_layout;
+            alloc_info.pSetLayouts = &material_template->material_descriptor_set_layout;
 
             VV_CHECK_SUCCESS(vkAllocateDescriptorSets(device->logical_device, &alloc_info, &_descriptor_set));
         }
@@ -115,7 +115,7 @@ namespace vv
 
     void Material::bindDescriptorSets(VkCommandBuffer command_buffer) const
     {
-        if (material_template->descriptor_set_layout)
+        if (material_template->material_descriptor_set_layout)
         {
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_template->pipeline_layout, 1,
                 1, &_descriptor_set, 0, nullptr);

@@ -188,7 +188,10 @@ namespace vv
         {
             image_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
             image_create_info.queueFamilyIndexCount = 2;
-            std::array<uint32_t, 2> queue_family_indices = { device_->graphics_family_index, device_->transfer_family_index };
+            std::array<uint32_t, 2> queue_family_indices = {
+                static_cast<uint32_t>(device_->graphics_family_index),
+                static_cast<uint32_t>(device_->transfer_family_index)
+            };
             image_create_info.pQueueFamilyIndices = queue_family_indices.data();
         }
         else

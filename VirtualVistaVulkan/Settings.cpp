@@ -13,14 +13,19 @@ namespace vv
 		window_height_ = 1080;
 		application_name_ = "VirtualVistaVulkan";
 		engine_name_ = "VirtualVista";
-        //asset_directory_ = "../assets/";
-        asset_directory_ = "../../assets/";
+        asset_directory_ = "../assets/";
+        //asset_directory_ = "../../assets/";
         model_directory_ = asset_directory_ + "models/";
         shader_directory_ = asset_directory_ + "shaders/";
 
 		graphics_required_ = true;
 		compute_required_ = false;
 		on_screen_rendering_required_ = true;
+
+        _max_descriptor_sets = 100;
+        _max_uniform_buffers = 100;
+        _max_combined_image_samplers = 100;
+        _max_lights = 10;
 	}
 
 
@@ -65,6 +70,29 @@ namespace vv
 		return model_directory_;
 	}
 
+
+    uint32_t Settings::getMaxDescriptorSets() const
+    {
+        return _max_descriptor_sets;
+    }
+
+
+    uint32_t Settings::getMaxUniformBuffers() const
+    {
+        return _max_uniform_buffers;
+    }
+
+
+    uint32_t Settings::getMaxCombinedImageSamplers() const
+    {
+        return _max_combined_image_samplers;
+    }
+
+
+    uint32_t Settings::getMaxLights() const
+    {
+        return _max_lights;
+    }
 
 	bool Settings::isGraphicsRequired() const
 	{

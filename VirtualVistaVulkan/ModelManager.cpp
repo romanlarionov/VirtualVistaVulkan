@@ -159,17 +159,18 @@ namespace vv
             material->create(_device, material_template, _descriptor_pool);
 
             // store required descriptor set data in correct binding order
-            auto orderings = material_template->descriptor_orderings;
+            //auto orderings = material_template->descriptor_orderings;
+            auto orderings = material_template->shader->standard_material_descriptor_orderings;
             for (size_t i = 0; i < orderings.size(); ++i)
             {
                 auto o = orderings[i];
-                if (o == DescriptorType::CONSTANTS)
+                if (o.name == "constants")
                 {
                     // todo: check if these are always present. for now assuming they are.
                     glm::vec4 amb(m.ambient[0], m.ambient[1], m.ambient[2], 0.0);
                     glm::vec4 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2], 0.0);
                     glm::vec4 spec(m.specular[0], m.specular[1], m.specular[2], 0.0);
-                    MaterialConstants constants = { amb, dif, spec, m.shininess };
+                    MaterialConstants constants = { amb, dif, spec, static_cast<int>(m.shininess) };
 
                     VulkanBuffer *buffer = new VulkanBuffer();
                     buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
@@ -177,7 +178,7 @@ namespace vv
 
                     material->addUniformBuffer(buffer, static_cast<int>(i));
                 }
-                else if (o == DescriptorType::AMBIENT_MAP)
+                else if (o.name == "ambient_texture")
                 {
                     VulkanImage *texture = new VulkanImage();
                     if (m.ambient_texname != "")
@@ -188,7 +189,7 @@ namespace vv
                     texture->transferToDevice();
                     material->addTexture(texture, static_cast<int>(i), _sampler);
                 }
-                else if (o == DescriptorType::DIFFUSE_MAP)
+                else if (o.name == "diffuse_texture")
                 {
                     VulkanImage *texture = new VulkanImage();
                     if (m.diffuse_texname != "")
@@ -199,7 +200,7 @@ namespace vv
                     texture->transferToDevice();
                     material->addTexture(texture, static_cast<int>(i), _sampler);
                 }
-                else if (o == DescriptorType::SPECULAR_MAP)
+                else if (o.name == "specular_texture")
                 {
                     VulkanImage *texture = new VulkanImage();
                     if (m.specular_texname != "")

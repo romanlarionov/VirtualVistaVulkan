@@ -16,6 +16,13 @@
 
 namespace vv
 {
+    struct SceneUniformBufferObject
+    {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
+
 	class Scene
 	{
 	public:
@@ -33,11 +40,6 @@ namespace vv
 		 *
 		 */
 		void shutDown();
-
-        /*
-         * 
-         */
-        void signalAllLightsAdded();
 
         /*
         *
@@ -75,17 +77,12 @@ namespace vv
         bool _initialized                           = false;
 
 		VkSampler _sampler                          = VK_NULL_HANDLE;
-
-        // global setting data for shaders
-        const uint32_t MAX_DESCRIPTOR_SETS          = 100;
-        const uint32_t MAX_UNIFORM_BUFFERS          = 100;
-        const uint32_t MAX_COMBINED_IMAGE_SAMPLERS  = 100;
 		VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
 
         // General scene uniform
         VkDescriptorSetLayout _scene_descriptor_set_layout;
         VkDescriptorSet _scene_descriptor_set       = VK_NULL_HANDLE;
-        UniformBufferObject _ubo;
+        SceneUniformBufferObject _scene_ubo;
 		VulkanBuffer *_scene_uniform_buffer         = nullptr;
 
         // Lights uniform
@@ -102,11 +99,6 @@ namespace vv
          * These MaterialTemplates can be referenced by the name provided in the shader info file.
          */
         void createMaterialTemplates();
-
-        /*
-         *
-         */
-        void createPipelines();
 
         /*
          * Creates global descriptor pool from which all descriptor sets will be allocated from.

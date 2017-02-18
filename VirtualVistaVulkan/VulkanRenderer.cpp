@@ -77,9 +77,9 @@ namespace vv
 
             scene_ = new Scene();
             scene_->create(physical_device_, render_pass_);
-            scene_->addModel("hammardillo/", "hammardillo.obj", "triangle");
+            //scene_->addModel("hammardillo/", "hammardillo.obj", "triangle");
             //scene_->addModel("chalet/", "chalet.obj", "dummy");
-            //scene_->addModel("sponza/", "sponza.obj", "texture");
+            scene_->addModel("sponza/", "sponza.obj", "texture");
 
 			createCommandBuffers();
 		}

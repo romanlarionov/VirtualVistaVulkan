@@ -1,6 +1,8 @@
 
 #include "Scene.h"
 
+#include <string>
+#include <fstream>
 #include <chrono>
 
 #include "Settings.h"
@@ -43,7 +45,9 @@ namespace vv
 
         for (auto &t : material_templates)
         {
-            vkDestroyDescriptorSetLayout(_device->logical_device, t.second->descriptor_set_layout, nullptr);
+            vkDestroyDescriptorSetLayout(_device->logical_device, t.second->material_descriptor_set_layout, nullptr);
+            if (t.second->non_standard_descriptor_set_layout)
+                vkDestroyDescriptorSetLayout(_device->logical_device, t.second->material_descriptor_set_layout, nullptr);
             t.second->shader->shutDown(); delete t.second->shader;
             
             vkDestroyPipelineLayout(_device->logical_device, t.second->pipeline_layout, nullptr);
@@ -64,14 +68,6 @@ namespace vv
 	  	vkDestroyDescriptorPool(_device->logical_device, _descriptor_pool, nullptr);
         _model_manager->shutDown(); delete _model_manager;
 	}
-
-
-    void Scene::signalAllLightsAdded()
-    {
-        // todo: initialize lights descriptor info
-
-        createPipelines();
-    }
 
 
     void Scene::addLight()
@@ -103,20 +99,20 @@ namespace vv
 		auto curr_time = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count() / 1000.0f;
 
-		//_ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		//_ubo.model = glm::rotate(_ubo.model, time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _ubo.model = glm::translate(glm::mat4(), glm::vec3(0.0, 0.0, 200.0));
-        _ubo.model = glm::rotate(_ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _ubo.model = glm::rotate(_ubo.model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		//_scene_ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		//_scene_ubo.model = glm::rotate(_ubo.model, time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        _scene_ubo.model = glm::translate(glm::mat4(), glm::vec3(0.0, 0.0, 200.0));
+        _scene_ubo.model = glm::rotate(_scene_ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        _scene_ubo.model = glm::rotate(_scene_ubo.model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        //_ubo.model = glm::scale(_ubo.model, glm::vec3(0.01, 0.01, 0.01));
-        _ubo.model = glm::scale(_ubo.model, glm::vec3(0.5, 0.5, 0.5));
+        _scene_ubo.model = glm::scale(_scene_ubo.model, glm::vec3(0.01, 0.01, 0.01));
+        //_scene_ubo.model = glm::scale(_scene_ubo.model, glm::vec3(0.5, 0.5, 0.5));
 
-		_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//_ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _ubo.view = glm::translate(glm::mat4(), glm::vec3(0.0, 2.0, -200.0));
-		_ubo.proj = glm::perspective(glm::radians(90.0f), extent.width / static_cast<float>(extent.height), 0.1f, 1000.0f);
-        _scene_uniform_buffer->updateAndTransfer(&_ubo);
+		//_scene_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		_scene_ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        _scene_ubo.view = glm::translate(glm::mat4(), glm::vec3(0.0, 2.0, -200.0));
+		_scene_ubo.proj = glm::perspective(glm::radians(90.0f), extent.width / static_cast<float>(extent.height), 0.1f, 1000.0f);
+        _scene_uniform_buffer->updateAndTransfer(&_scene_ubo);
     }
 
 
@@ -157,68 +153,71 @@ namespace vv
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
     void Scene::createMaterialTemplates()
     {
-        // note: apply name to template based on name assigned to spriv shader
+        std::string shader_file = Settings::inst()->getShaderDirectory() + "shader_info.txt";
+        std::ifstream file(shader_file);
 
-        // for:
-        //     load shader file and parse using spirv-cross
-        //     generate unique pipeline/shader classes based on file
-        //     store template in vector? whatever would be best for getting it by name at initialization time.
+        VV_ASSERT(file.is_open(), "Failed to open shader_info.txt. Was it moved or renamed?");
 
-        MaterialTemplate *material_template = new MaterialTemplate();
-        //material_template->name = "dummy";
-        material_template->name = "triangle";
-        //material_template->name = "texture";
+        // loop through required shaders in info file and initialize them.
+        std::string curr_shader_name;
+        while (std::getline(file, curr_shader_name))
+        {
+            MaterialTemplate *material_template = new MaterialTemplate();
+            material_template->name = curr_shader_name; // note: apply name to template based on name assigned to spriv shader
 
-        // note: for now manually loading single template
-        std::vector<DescriptorType> descriptor_orderings;
-        descriptor_orderings.push_back(DescriptorType::CONSTANTS);
-        //descriptor_orderings.push_back(DescriptorType::DIFFUSE_MAP);
-        material_template->descriptor_orderings = descriptor_orderings;
+            // Shader
+            Shader *shader = new Shader();
+            shader->create(_device, material_template->name);
+            material_template->shader = shader;
 
-        // Descriptor Set Layouts
-        std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
-        std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
+            // Descriptor Set Layouts
+            std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
 
-        /// general scene layout
-        descriptor_set_layouts.push_back(_scene_descriptor_set_layout);
+            /// Scene descriptor set layout
+            descriptor_set_layouts.push_back(_scene_descriptor_set_layout);
 
-        /// Material template descriptor layouts
-        temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
-        //temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
-        createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template->descriptor_set_layout);
-        descriptor_set_layouts.push_back(material_template->descriptor_set_layout);
+            /// standard material descriptor layout
+            std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
+            for (auto &o : shader->standard_material_descriptor_orderings)
+                temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(o.binding, o.type, 1, o.shader_stage));
 
-        /// non-standard descriptor set types (i.e. not associated with lights, scene, or standard uniform types
+            createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template->material_descriptor_set_layout);
+            descriptor_set_layouts.push_back(material_template->material_descriptor_set_layout);
 
-        // Shader
-        Shader *shader = new Shader();
-        shader->create(_device, material_template->name);
-        material_template->shader = shader;
+            /// non-standard descriptor layout (i.e. not associated with lights, scene, or standard uniform types)
+            if (!shader->non_standard_descriptor_orderings.empty())
+            {
+                temp_bindings_buffer.clear();
+                for (auto &o : shader->non_standard_descriptor_orderings)
+                    temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(o.binding, o.type, 1, o.shader_stage));
 
-        // Pipeline
-        VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_create_info.flags = 0;
-        pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
-		pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts.data();
-		pipeline_layout_create_info.pPushConstantRanges = nullptr; // todo: add push constants
-		pipeline_layout_create_info.pushConstantRangeCount = 0;
+                createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template->non_standard_descriptor_set_layout);
+                descriptor_set_layouts.push_back(material_template->non_standard_descriptor_set_layout);
+            }
 
-		VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template->pipeline_layout));
+            // Pipeline
+            VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
+		    pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		    pipeline_layout_create_info.flags = 0;
+            pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
+		    pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts.data();
+		    pipeline_layout_create_info.pPushConstantRanges = nullptr; // todo: add push constants
+		    pipeline_layout_create_info.pushConstantRangeCount = 0;
 
-        VulkanPipeline *pipeline = new VulkanPipeline();
+		    VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template->pipeline_layout));
 
-        // todo: all pipelines should be created via single call to vkCreateGraphicsPipelines
-		pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, true, true); // todo: add option for settings passed.
-        material_template->pipeline = pipeline;
+            VulkanPipeline *pipeline = new VulkanPipeline();
 
-        material_templates[material_template->name] = material_template;
-    }
+            // todo: all pipelines should be created via single call to vkCreateGraphicsPipelines
+		    pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, true, true); // todo: add option for settings passed.
+            material_template->pipeline = pipeline;
 
+            material_templates[material_template->name] = material_template;
+        }
 
-    void Scene::createPipelines()
-    {
-        // todo: figure out how to report light descriptor info to pipeline creation properly
+        // todo: bind all created pipelines at once to be more efficient.
+
+        file.close();
     }
 
 
@@ -226,15 +225,15 @@ namespace vv
 	{
         std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
 		pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		pool_sizes[0].descriptorCount = 100;
+		pool_sizes[0].descriptorCount = Settings::inst()->getMaxUniformBuffers();
 		pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		pool_sizes[1].descriptorCount = 100;
+        pool_sizes[1].descriptorCount = Settings::inst()->getMaxCombinedImageSamplers();
 
 		VkDescriptorPoolCreateInfo create_info = {};
 		create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		create_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
 		create_info.pPoolSizes = pool_sizes.data();
-		create_info.maxSets = MAX_DESCRIPTOR_SETS;
+		create_info.maxSets = Settings::inst()->getMaxDescriptorSets();
 		create_info.flags = 0; // can be: VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
 
         // set up global descriptor pool
@@ -244,10 +243,12 @@ namespace vv
     
     void Scene::createSceneUniforms()
 	{
-        // Vulkan Buffer
-        _ubo = { glm::mat4(), glm::mat4(), glm::mat4() };
+        // MVP matrix data
+
+        /// Vulkan Buffer
+        _scene_ubo = { glm::mat4(), glm::mat4(), glm::mat4() };
         _scene_uniform_buffer = new VulkanBuffer();
-        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_ubo));
+        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_scene_ubo));
 
         // Layout
         std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
@@ -266,7 +267,7 @@ namespace vv
 		VkDescriptorBufferInfo buffer_info = {};
 		buffer_info.buffer = _scene_uniform_buffer->buffer;
 		buffer_info.offset = 0;
-		buffer_info.range = sizeof(UniformBufferObject);
+		buffer_info.range = sizeof(_scene_ubo);
 
         VkWriteDescriptorSet write_set = {};
 		write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -278,6 +279,9 @@ namespace vv
 		write_set.pBufferInfo = &buffer_info;
 
 		vkUpdateDescriptorSets(_device->logical_device, 1, &write_set, 0, nullptr);
+
+        // todo: Lights data
+        
 	}
 
 

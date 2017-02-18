@@ -11,13 +11,13 @@ layout(set = 1, binding = 0) uniform MaterialConstants {
     int shininess;
 } constants;
 
-layout(set = 1, binding = 1) uniform sampler2D diffuseMap;
+layout(set = 1, binding = 1) uniform sampler2D ambient_texture;
+layout(set = 1, binding = 2) uniform sampler2D diffuse_texture;
 
 layout(location = 0) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    outColor = texture(diffuseMap, fragTexCoord);
-    //outColor = vec4(constants.diffuse.xyz, 1.0);
+    outColor = texture(ambient_texture, fragTexCoord);
 }

@@ -25,7 +25,7 @@ Goals
 
 - [x] Renderable OBJ models
 - [ ] Light support
-- [ ] Renderable OBJ models with multiple submeshes w/ distinct materials
-- [ ] Render multiple distinct models
+- [X] Renderable OBJ models with multiple submeshes w/ distinct materials
+- [X] Render multiple distinct models
 - [ ] Support physically plausible, BRDF based materials
 - [ ] Support for area lights with Linearly Transformed Cosines

@@ -1,1 +1,3 @@
 triangle
+texture
+dummy

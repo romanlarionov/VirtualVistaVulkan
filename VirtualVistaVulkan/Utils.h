@@ -90,13 +90,6 @@ namespace vv
 		}
 	};
 
-	struct UniformBufferObject
-    {
-		glm::mat4 model;
-		glm::mat4 view;
-		glm::mat4 proj;
-	};
-
     struct MaterialConstants
     {
         glm::vec4 ambient;
@@ -104,6 +97,26 @@ namespace vv
         glm::vec4 specular;
         int shininess;
     };
+
+    struct DescriptorInfo
+    {
+        unsigned binding;
+        std::string name;
+        VkShaderStageFlagBits shader_stage;
+        VkDescriptorType type;
+
+        /*enum DescriptorType
+        {
+            CONSTANTS = 1, // single value diffuse, ambient, specular
+            AMBIENT_MAP = 2,
+            DIFFUSE_MAP = 3,
+            SPECULAR_MAP = 4,
+            GENERAL_UNIFORM_BUFFER = 5,
+            GENERAL_SAMPLER = 6
+        };*/
+    };
+
+    //typedef DescriptorTypeStruct::DescriptorType DescriptorType;
 
 	namespace util
 	{
