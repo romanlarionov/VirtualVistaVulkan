@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "InputManager.h"
+
 namespace vv 
 {
 	struct VulkanDevice;
@@ -21,6 +23,7 @@ namespace vv
 
     class GLFWWindow
     {
+        friend class InputManager;
     public:
 		GLFWwindow *window; // GLFW typedef
 		VkSurfaceKHR surface;
@@ -33,6 +36,8 @@ namespace vv
 
 		/*
 		 * Initializes GLFW and creates the window wrapper.
+         *
+         * todo: add resizing event handler. requires manually updating framebuffer
 		 */
 		void create();
 
@@ -68,6 +73,9 @@ namespace vv
 
 	private:
 
+        static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+        static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     };
 }
 

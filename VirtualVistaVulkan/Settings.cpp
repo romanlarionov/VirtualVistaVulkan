@@ -6,6 +6,17 @@ namespace vv
 	Settings* Settings::instance_ = nullptr;
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
+    Settings* Settings::inst()
+	{
+		if (!instance_)
+		{
+			instance_ = new Settings;
+			instance_->setDefault();
+		}
+		return instance_;
+	}
+
+
 	void Settings::setDefault()
 	{
 		default_ = true;
@@ -125,13 +136,4 @@ namespace vv
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
-	Settings* Settings::inst()
-	{
-		if (!instance_)
-		{
-			instance_ = new Settings;
-			instance_->setDefault();
-		}
-		return instance_;
-	}
 }

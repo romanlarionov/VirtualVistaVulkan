@@ -202,6 +202,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="ModelManager.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="GLFWWindow.cpp" />
@@ -229,6 +230,7 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="GLSL.std.450.h" />
+    <ClInclude Include="InputManager.h" />
     <ClInclude Include="ModelManager.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="GLFWWindow.h" />

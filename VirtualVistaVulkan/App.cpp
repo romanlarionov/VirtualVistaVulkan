@@ -9,8 +9,8 @@ namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	App::App(int argc, char **argv) :
-		argc_(argc),
-		argv_(argv)
+		_argc(argc),
+		_argv(argv)
 	{
 	}
 
@@ -20,12 +20,12 @@ namespace vv
 	}
 
 
-	void App::init()
+	void App::create()
 	{
 		try
 		{
-			renderer_ = new VulkanRenderer();
-			renderer_->create();
+			_renderer = new VulkanRenderer();
+			_renderer->create();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -36,16 +36,16 @@ namespace vv
 
 	void App::shutDown()
 	{
-		renderer_->shutDown();
+		_renderer->shutDown();
 	}
 
 
 	void App::mainLoop()
 	{
 		// todo: add other conditionals for stopping execution
-		while (!renderer_->shouldStop())
+		while (!_renderer->shouldStop())
 		{
-			renderer_->run();
+			_renderer->run();
 		}
 	}
 

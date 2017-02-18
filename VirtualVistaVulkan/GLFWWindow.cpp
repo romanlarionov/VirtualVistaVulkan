@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "GLFWWindow.h"
+#include "InputManager.h"
 #include "Settings.h"
 #include "Utils.h"
 
@@ -17,15 +18,15 @@ namespace vv
 	{
 	}
 
-	
+
+    
 	void GLFWWindow::create()
 	{
 		VV_ASSERT(glfwInit() != 0, "GLFW failed to init");
 
-		// Don't use OpenGL
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Don't use OpenGL
 
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // todo: replace later (for tutorial purposes only)
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 		std::string application_name = Settings::inst()->getApplicationName();
 		window = glfwCreateWindow(Settings::inst()->getWindowWidth(),
 								  Settings::inst()->getWindowHeight(),
@@ -33,6 +34,8 @@ namespace vv
 								  nullptr, nullptr);
 
 		glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
+        glfwSetKeyCallback(window, keyCallback);
+        glfwSetCursorPosCallback(window, cursorPositionCallback);
 	}
 
 
@@ -54,7 +57,6 @@ namespace vv
 	void GLFWWindow::run()
 	{
 		glfwPollEvents();
-		// fill the rest in here
 	}
 
 
@@ -68,6 +70,17 @@ namespace vv
 	{
 		
 	}
-	///////////////////////////////////////////////////////////////////////////////////////////// Private
 
+
+	///////////////////////////////////////////////////////////////////////////////////////////// Private
+    void GLFWWindow::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+    {
+        InputManager::inst()->keyboardEventsCallback(window, key, scancode, action, mods);
+    }
+
+
+    void GLFWWindow::cursorPositionCallback(GLFWwindow* window, double xpos, double ypos)
+    {
+        InputManager::inst()->mouseEventsCallback(window, xpos, ypos);
+    }
 }

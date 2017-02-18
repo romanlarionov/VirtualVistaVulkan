@@ -59,12 +59,7 @@ namespace vv
         /*
          * Uses SPIRV-Cross to perform runtime reflection of the spriv shader to analyze descriptor binding info.
          */
-        void reflectDescriptorTypes(std::vector<uint32_t> spirv_binar, VkShaderStageFlagBits shader_stagey);
-
-        /*
-         * Converts a descriptor type from Spirv-Cross's format to Vulkan's.
-         */
-        VkDescriptorType convertSpirvCrossToVulkanTypes(spirv_cross::SPIRType type) const;
+        void reflectDescriptorTypes(std::vector<uint32_t> spirv_binar, VkShaderStageFlagBits shader_stage);
 	};
 }
 

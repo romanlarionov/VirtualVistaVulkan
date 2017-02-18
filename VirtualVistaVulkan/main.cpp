@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 	App app(argc, argv);
 	try
 	{
-		app.init();
+		app.create();
 		app.mainLoop();
 	}
 	catch (const std::runtime_error& e)

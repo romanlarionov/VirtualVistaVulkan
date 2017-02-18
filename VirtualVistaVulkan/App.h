@@ -15,15 +15,15 @@ namespace vv
 		App(int argc, char **argv);
 		~App();
 
-		void init();
+		void create();
 		void shutDown();
 		void mainLoop();
 
 	private:
-		int argc_;
-		char **argv_;
+		int _argc;
+		char **_argv;
 
-		VulkanRenderer *renderer_;
+		VulkanRenderer *_renderer;
 
 	};
 }
