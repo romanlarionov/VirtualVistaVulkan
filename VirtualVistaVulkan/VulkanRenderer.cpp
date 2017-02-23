@@ -13,8 +13,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 #ifdef _WIN32
-#define NOMINMAX  
-#include <Windows.h>
+    #define NOMINMAX  
+    #include <Windows.h>
 #endif
 
 namespace vv
@@ -54,7 +54,6 @@ namespace vv
 	{
 		try
 		{
-			// Note: this is a very specific order and is not to be messed with.
 	        window_ = new GLFWWindow;
             window_->create();
 
@@ -77,11 +76,6 @@ namespace vv
 
             scene_ = new Scene();
             scene_->create(physical_device_, render_pass_);
-            //scene_->addModel("hammardillo/", "hammardillo.obj", "triangle");
-            //scene_->addModel("chalet/", "chalet.obj", "dummy");
-            scene_->addModel("sponza/", "sponza.obj", "texture");
-
-			createCommandBuffers();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -114,12 +108,12 @@ namespace vv
 	}
 
 
-	void VulkanRenderer::run()
+	void VulkanRenderer::run(float delta_time)
 	{
 		// Poll window specific updates and input.
 		window_->run();
 
-        scene_->updateSceneUniforms(swap_chain_->extent);
+        scene_->updateSceneUniforms(swap_chain_->extent, delta_time);
 
 		// Draw Frame
 		/// Acquire an image from the swap chain
@@ -147,6 +141,45 @@ namespace vv
 		VV_CHECK_SUCCESS(vkQueueSubmit(physical_device_->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
 		swap_chain_->queuePresent(physical_device_->graphics_queue, image_index, rendering_complete_semaphore_);
 	}
+
+
+    void VulkanRenderer::recordCommandBuffers()
+    {
+        command_buffers_.resize(frame_buffers_.size());
+
+        VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        command_buffer_allocate_info.commandPool = physical_device_->command_pools["graphics"];
+
+        // primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
+        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
+        command_buffer_allocate_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
+
+        VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_device_->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
+
+        std::vector<VkClearValue> clear_values; // todo: offload to settings
+        VkClearValue color_value, depth_value;
+        color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
+        depth_value.depthStencil = {1.0f, 0};
+        clear_values.push_back(color_value);
+        clear_values.push_back(depth_value);
+
+		for (std::size_t i = 0; i < command_buffers_.size(); ++i)
+		{
+            VkCommandBufferBeginInfo command_buffer_begin_info = {};
+            command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
+            command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
+            VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
+
+            render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
+
+            scene_->render(command_buffers_[i]);
+
+            render_pass_->endRenderPass(command_buffers_[i]);
+            VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
+		}
+    }
 
 
     Scene* VulkanRenderer::getScene() const
@@ -188,7 +221,7 @@ namespace vv
 		instance_create_info.pApplicationInfo = &app_info;
 
 		auto required_extensions = getRequiredExtensions();
-		instance_create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
+        instance_create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
 		instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
@@ -267,12 +300,6 @@ namespace vv
 		}
 
 		return true;
-	}
-
-
-	void VulkanRenderer::createVulkanSurface()
-	{
-		window_->createSurface(instance_);
 	}
 
 
@@ -387,45 +414,6 @@ namespace vv
 			frame_buffer_create_info.layers = 1;
 
 			VV_CHECK_SUCCESS(vkCreateFramebuffer(physical_device_->logical_device, &frame_buffer_create_info, nullptr, &frame_buffers_[i]));
-		}
-	}
-
-	
-	void VulkanRenderer::createCommandBuffers()
-	{
-        command_buffers_.resize(frame_buffers_.size());
-
-        VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
-        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        command_buffer_allocate_info.commandPool = physical_device_->command_pools["graphics"];
-
-        // primary can be sent to pool for execution, but cant be called from other buffers. secondary cant be sent to pool, but can be called from other buffers.
-        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; 
-        command_buffer_allocate_info.commandBufferCount = static_cast<uint32_t>(command_buffers_.size());
-
-        VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_device_->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
-
-        std::vector<VkClearValue> clear_values; // todo: offload to settings
-        VkClearValue color_value, depth_value;
-        color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
-        depth_value.depthStencil = {1.0f, 0};
-        clear_values.push_back(color_value);
-        clear_values.push_back(depth_value);
-
-		for (std::size_t i = 0; i < command_buffers_.size(); ++i)
-		{
-            VkCommandBufferBeginInfo command_buffer_begin_info = {};
-            command_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            command_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // <- tells how long this buffer will be executed
-            command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
-            VV_CHECK_SUCCESS(vkBeginCommandBuffer(command_buffers_[i], &command_buffer_begin_info));
-
-            render_pass_->beginRenderPass(command_buffers_[i], VK_SUBPASS_CONTENTS_INLINE, frame_buffers_[i], swap_chain_->extent, clear_values);
-
-            scene_->render(command_buffers_[i]);
-
-            render_pass_->endRenderPass(command_buffers_[i]);
-            VV_CHECK_SUCCESS(vkEndCommandBuffer(command_buffers_[i]));
 		}
 	}
 }

@@ -15,13 +15,17 @@ namespace vv
     public:
         static InputManager* inst();
 
-        bool keyIsPressed(int key);
-        void getMouseValues(double &x, double &y);
+        bool keyIsPressed(int key) const;
+        void getCursorGradient(double &delta_x, double &delta_y);
+        void getCursorCoordinates(double &x, double &y) const;
 
     private:
         static InputManager *_instance;
         double _curr_x;
         double _curr_y;
+        double _delta_x;
+        double _delta_y;
+        bool _first_input;
         std::vector<bool> _key_pressed_tracker;
 
         InputManager();

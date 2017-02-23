@@ -5,12 +5,13 @@
 #include <string>
 
 #include "VulkanDevice.h"
+#include "Entity.h"
 #include "Mesh.h"
 #include "Material.h"
 
 namespace vv
 {
-	class Model 
+	class Model : public Entity
 	{
         friend class Scene;
 
@@ -31,6 +32,11 @@ namespace vv
 		 *
 		 */
 		void shutDown();
+
+        /*
+         * Used for update of model matrix at render time.
+         */
+        glm::mat4 getModelMatrix() const;
 		
 	private:
         // note: acts as hash key for ModelManager's data caches. this is used by scene during render-time.

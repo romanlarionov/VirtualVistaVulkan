@@ -62,6 +62,12 @@ namespace vv
             delete m;
         }
 
+        for (auto &c : _cameras)
+        {
+            c->shutDown();
+            delete c;
+        }
+
         _scene_uniform_buffer->shutDown(); delete _scene_uniform_buffer;
         vkDestroyDescriptorSetLayout(_device->logical_device, _scene_descriptor_set_layout, nullptr);
 
@@ -78,7 +84,7 @@ namespace vv
 
     Model* Scene::addModel(std::string path, std::string name, std::string material_template)
     {
-        VV_ASSERT(_initialized, "ERROR: you need to properly initialize scene before adding models");
+        VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding models");
         Model *model = new Model();
         _model_manager->loadModel(path, name, material_templates[material_template], model);
         _models.push_back(model);
@@ -86,32 +92,35 @@ namespace vv
     }
 
 
-    void Scene::addCamera()
+    Camera* Scene::addCamera(float fov_y, float near_plane, float far_plane)
     {
-
+        VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding cameras");
+        Camera *camera = new Camera();
+        camera->create(fov_y, near_plane, far_plane);
+        _cameras.push_back(camera);
+        return camera;
     }
 
 
-    void Scene::updateSceneUniforms(VkExtent2D extent)
+    Camera* Scene::getActiveCamera() const
     {
-        // update scene uniforms
-        static auto start_time = std::chrono::high_resolution_clock::now();
-		auto curr_time = std::chrono::high_resolution_clock::now();
-		float time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - start_time).count() / 1000.0f;
+        return _active_camera;
+    }
 
-		//_scene_ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		//_scene_ubo.model = glm::rotate(_ubo.model, time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _scene_ubo.model = glm::translate(glm::mat4(), glm::vec3(0.0, 0.0, 200.0));
-        _scene_ubo.model = glm::rotate(_scene_ubo.model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _scene_ubo.model = glm::rotate(_scene_ubo.model, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        _scene_ubo.model = glm::scale(_scene_ubo.model, glm::vec3(0.01, 0.01, 0.01));
-        //_scene_ubo.model = glm::scale(_scene_ubo.model, glm::vec3(0.5, 0.5, 0.5));
+    void Scene::setActiveCamera(Camera *camera)
+    {
+        _active_camera = camera;
+    }
 
-		//_scene_ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		_scene_ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        _scene_ubo.view = glm::translate(glm::mat4(), glm::vec3(0.0, 2.0, -200.0));
-		_scene_ubo.proj = glm::perspective(glm::radians(90.0f), extent.width / static_cast<float>(extent.height), 0.1f, 1000.0f);
+
+    void Scene::updateSceneUniforms(VkExtent2D extent, float delta_time)
+    {
+        VV_ASSERT(_active_camera != nullptr, "ERROR: main camera has not been initialized");
+
+        _scene_ubo.view = _active_camera->getViewMatrix();
+        _scene_ubo.projection = _active_camera->getProjectionMatrix(extent.width / static_cast<float>(extent.height));
+        _scene_ubo.camera_position = glm::vec4(_active_camera->getPosition(), 1.0);
         _scene_uniform_buffer->updateAndTransfer(&_scene_ubo);
     }
 
@@ -139,6 +148,10 @@ namespace vv
             std::vector<Mesh *> meshes = _model_manager->_loaded_meshes[model->_data_handle];
             std::vector<Material *> materials = _model_manager->_loaded_materials[model->_data_handle][model->_material_id_set];
 
+            // Update scene descriptor sets
+            _scene_ubo.model = model->getModelMatrix();
+
+            // Render all submeshes within this model
             for (auto &mesh : meshes)
             {
                 Material *material = materials[mesh->material_id];
@@ -246,7 +259,7 @@ namespace vv
         // MVP matrix data
 
         /// Vulkan Buffer
-        _scene_ubo = { glm::mat4(), glm::mat4(), glm::mat4() };
+        _scene_ubo = { glm::mat4(), glm::mat4(), glm::mat4(), glm::vec4() };
         _scene_uniform_buffer = new VulkanBuffer();
         _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_scene_ubo));
 

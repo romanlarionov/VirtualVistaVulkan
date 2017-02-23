@@ -159,7 +159,6 @@ namespace vv
             material->create(_device, material_template, _descriptor_pool);
 
             // store required descriptor set data in correct binding order
-            //auto orderings = material_template->descriptor_orderings;
             auto orderings = material_template->shader->standard_material_descriptor_orderings;
             for (size_t i = 0; i < orderings.size(); ++i)
             {
@@ -176,7 +175,7 @@ namespace vv
                     buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
                     buffer->updateAndTransfer(&constants);
 
-                    material->addUniformBuffer(buffer, static_cast<int>(i));
+                    material->addUniformBuffer(buffer, o.binding);
                 }
                 else if (o.name == "ambient_texture")
                 {
@@ -187,7 +186,7 @@ namespace vv
                         texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
 
                     texture->transferToDevice();
-                    material->addTexture(texture, static_cast<int>(i), _sampler);
+                    material->addTexture(texture, o.binding, _sampler);
                 }
                 else if (o.name == "diffuse_texture")
                 {
@@ -198,7 +197,7 @@ namespace vv
                         texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
 
                     texture->transferToDevice();
-                    material->addTexture(texture, static_cast<int>(i), _sampler);
+                    material->addTexture(texture, o.binding, _sampler);
                 }
                 else if (o.name == "specular_texture")
                 {
@@ -209,7 +208,7 @@ namespace vv
                         texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
                     
                     texture->transferToDevice();
-                    material->addTexture(texture, static_cast<int>(i), _sampler);
+                    material->addTexture(texture, o.binding, _sampler);
                 }
                 else // descriptor type not populated
                 {

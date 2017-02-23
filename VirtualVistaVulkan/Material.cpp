@@ -37,8 +37,9 @@ namespace vv
 	{
         for (auto &ubo : _uniform_buffers)
         {
-            ubo.second->shutDown();
-            delete ubo.second;
+            ubo->buffer->shutDown();
+            delete ubo->buffer;
+            delete ubo;
         }
 
         for (auto &i : _image_store)
@@ -49,8 +50,9 @@ namespace vv
 
         for (auto &tex : _textures)
         {
-            tex.second->shutDown();
-            delete tex.second;
+            tex->view->shutDown();
+            delete tex->view;
+            delete tex;
         }
 	}
 
@@ -62,8 +64,12 @@ namespace vv
 		buffer_info.offset = 0;
         buffer_info.range = VK_WHOLE_SIZE;
 
+        UBOStore *store = new UBOStore;
+        store->info = buffer_info;
+        store->buffer = uniform_buffer;
+
         auto position = _uniform_buffers.size();
-        _uniform_buffers.push_back(std::pair<VkDescriptorBufferInfo, VulkanBuffer *>(buffer_info, uniform_buffer));
+        _uniform_buffers.push_back(store);
 
         VkWriteDescriptorSet write_set = {};
 
@@ -73,7 +79,7 @@ namespace vv
 		write_set.dstArrayElement = 0;
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pBufferInfo = &_uniform_buffers[position].first;
+        write_set.pBufferInfo = &_uniform_buffers[position]->info;
 
         _write_sets.push_back(write_set);
     }
@@ -90,8 +96,12 @@ namespace vv
 		image_info.imageView = texture_image_view->image_view;
 		image_info.sampler = sampler;
 
+        TextureStore *store = new TextureStore();
+        store->info = image_info;
+        store->view = texture_image_view;
+
         auto position = _textures.size();
-        _textures.push_back(std::pair<VkDescriptorImageInfo, VulkanImageView *>(image_info, texture_image_view));
+        _textures.push_back(store);
 
         VkWriteDescriptorSet write_set = {};
         
@@ -101,7 +111,7 @@ namespace vv
 		write_set.dstArrayElement = 0; // if sending array of uniforms
 		write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pImageInfo = &_textures[position].first;
+        write_set.pImageInfo = &_textures[position]->info;
 
         _write_sets.push_back(write_set);
     }

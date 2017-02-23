@@ -20,7 +20,8 @@ namespace vv
     {
 		glm::mat4 model;
 		glm::mat4 view;
-		glm::mat4 proj;
+		glm::mat4 projection;
+        glm::vec4 camera_position;
 	};
 
 	class Scene
@@ -54,19 +55,29 @@ namespace vv
         Model* addModel(std::string path, std::string name, std::string material_template);
 
         /*
-         *
+         * Requests that a perspective camera be created.
          */
-        void addCamera();
+        Camera* addCamera(float fov_y, float near_plane, float far_plane);
+
+        /*
+         * Returns the currently marked "main" camera.
+         */
+        Camera* getActiveCamera() const;
+
+        /*
+         * Sets the specified camera as the active render viewpoint.
+         */
+        void setActiveCamera(Camera *camera);
 
         /*
          * Updates the global scene descriptor sets with newly updates data.
          */
-        void updateSceneUniforms(VkExtent2D extent);
+        void updateSceneUniforms(VkExtent2D extent, float time);
 
         /*
          * Recursively renders each model.
          *
-         * note: This will be automatically called within VulkanRenderer. There is no need in calling it from here.
+         * note: This will be automatically called within VulkanRenderer. There is no need in calling manually.
          */
         void render(VkCommandBuffer command_buffer);
 
@@ -90,9 +101,12 @@ namespace vv
         VkDescriptorSet _lights_descriptor_set      = VK_NULL_HANDLE;
         VulkanBuffer *_lights_uniform_buffer        = nullptr;
 
-        //std::unordered_map<Handle, Light*> lights_;
-		std::vector<Model*> _models; // todo: think of better data structure. maybe something to help with culling
-		//std::unordered_map<Handle, Camera*> cameras_;
+        // todo: think of better data structure. maybe something to help with culling
+		std::vector<Light *> _lights;
+		std::vector<Model *> _models;
+		std::vector<Camera *> _cameras;
+
+        Camera *_active_camera;
 
         /*
          * Reads required shaders from file and creates all possible MaterialTemplates that can be used during execution.

@@ -17,15 +17,15 @@ namespace vv
 
         int getWindowWidth() const;
         int getWindowHeight() const;
+        float getAspect() const;
+
         std::string getApplicationName() const;
         std::string getEngineName() const;
         std::string getShaderDirectory() const;
         std::string getAssetDirectory() const;
         std::string getModelDirectory() const;
 
-        bool isGraphicsRequired() const;
         bool isComputeRequired() const;
-        bool isOnScreenRenderingRequired() const;
 
         uint32_t getMaxDescriptorSets() const;
         uint32_t getMaxUniformBuffers() const;
@@ -38,18 +38,17 @@ namespace vv
     private:
         static Settings* instance_;
 
-        bool default_;
-        int window_width_;
-        int window_height_;
-        std::string application_name_;
-        std::string engine_name_;
-        std::string shader_directory_;
-        std::string asset_directory_;
-        std::string model_directory_;
+        bool _default;
+        int _window_width;
+        int _window_height;
+        float _aspect;
+        std::string _application_name;
+        std::string _engine_name;
+        std::string _shader_directory;
+        std::string _asset_directory;
+        std::string _model_directory;
 
-        bool graphics_required_;
-        bool compute_required_;
-        bool on_screen_rendering_required_;
+        bool _compute_required;
 
         uint32_t _max_descriptor_sets;
         uint32_t _max_uniform_buffers;

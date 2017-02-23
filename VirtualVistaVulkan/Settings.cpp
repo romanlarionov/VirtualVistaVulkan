@@ -19,19 +19,19 @@ namespace vv
 
 	void Settings::setDefault()
 	{
-		default_ = true;
-		window_width_ = 1920;
-		window_height_ = 1080;
-		application_name_ = "VirtualVistaVulkan";
-		engine_name_ = "VirtualVista";
-        asset_directory_ = "../assets/";
-        //asset_directory_ = "../../assets/";
-        model_directory_ = asset_directory_ + "models/";
-        shader_directory_ = asset_directory_ + "shaders/";
+		_default = true;
+		_window_width = 1920;
+		_window_height = 1080;
+        _aspect = _window_width / static_cast<float>(_window_height);
+        
+		_application_name = "VirtualVistaVulkan";
+		_engine_name = "VirtualVista";
+        _asset_directory = "../assets/";
+        //_asset_directory = "../../assets/";
+        _model_directory = _asset_directory + "models/";
+        _shader_directory = _asset_directory + "shaders/";
 
-		graphics_required_ = true;
-		compute_required_ = false;
-		on_screen_rendering_required_ = true;
+		_compute_required = false;
 
         _max_descriptor_sets = 100;
         _max_uniform_buffers = 100;
@@ -42,43 +42,49 @@ namespace vv
 
 	int Settings::getWindowWidth() const
 	{
-		return window_width_;
+		return _window_width;
 	}
 
 
 	int Settings::getWindowHeight() const
 	{
-		return window_height_;
+		return _window_height;
 	}
+
+
+    float Settings::getAspect() const
+    {
+        return _aspect;
+    }
 
 
 	std::string Settings::getApplicationName() const
 	{
-		return application_name_;
+		return _application_name;
 	}
 
 
 	std::string Settings::getEngineName() const
 	{
-		return engine_name_;
+		return _engine_name;
 	}
 
 
     std::string Settings::getShaderDirectory() const
 	{
-		return shader_directory_;
+		return _shader_directory;
 	}
 
 
     std::string Settings::getAssetDirectory() const
 	{
-		return asset_directory_;
+		return _asset_directory;
 	}
 
 
     std::string Settings::getModelDirectory() const
 	{
-		return model_directory_;
+		return _model_directory;
 	}
 
 
@@ -105,33 +111,22 @@ namespace vv
         return _max_lights;
     }
 
-	bool Settings::isGraphicsRequired() const
-	{
-		return graphics_required_;
-	}
-
 
 	bool Settings::isComputeRequired() const
 	{
-		return compute_required_;
-	}
-
-
-	bool Settings::isOnScreenRenderingRequired() const
-	{
-		return on_screen_rendering_required_;
+		return _compute_required;
 	}
 
 
 	void Settings::setWindowWidth(int width)
 	{
-		window_width_ = width;
+		_window_width = width;
 	}
 
 
 	void Settings::setWindowHeight(int height)
 	{
-		window_height_ = height;
+		_window_height = height;
 	}
 
 

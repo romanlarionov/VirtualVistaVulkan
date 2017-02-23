@@ -16,26 +16,47 @@
 		else { delete p; p = NULL; } \
 	}
 
+#ifdef _WIN32
+    #define NOMINMAX  
+    #include <Windows.h>
+#endif
+
 namespace vv
 {
 #ifdef _DEBUG
 
 	inline void VV_CHECK_SUCCESS(VkResult success)
 	{
-		if (success != VK_SUCCESS)
-			throw std::runtime_error(std::to_string(__LINE__) + " " + __FILE__);
+        if (success != VK_SUCCESS)
+        {
+            std::string err = "Vulkan API error code: " + std::to_string(success);
+#ifdef _WIN32
+			MessageBox(NULL, err.c_str(), "Vulkan API Error", 0);
+#endif
+            throw std::runtime_error(err);
+        }
 	}
 
 	inline void VV_ASSERT(bool condition, std::string message)
 	{
-		if (!condition)
-			throw std::runtime_error(message + std::to_string(__LINE__) + " " + __FILE__);
+        if (!condition)
+        {
+#ifdef _WIN32
+			MessageBox(NULL, message.c_str(), "Vulkan API Error", 0);
+#endif
+            throw std::runtime_error(message);
+        }
 	}
 
 	inline void VV_ASSERT(VkResult condition, std::string message)
 	{
-		if (condition != VK_SUCCESS)
-			throw std::runtime_error(message + std::to_string(__LINE__) + " " + __FILE__);
+        if (condition != VK_SUCCESS)
+        {
+#ifdef _WIN32
+			MessageBox(NULL, message.c_str(), "Vulkan API Error", 0);
+#endif
+            throw std::runtime_error(message);
+        }
 	}
 
 #else
@@ -104,19 +125,7 @@ namespace vv
         std::string name;
         VkShaderStageFlagBits shader_stage;
         VkDescriptorType type;
-
-        /*enum DescriptorType
-        {
-            CONSTANTS = 1, // single value diffuse, ambient, specular
-            AMBIENT_MAP = 2,
-            DIFFUSE_MAP = 3,
-            SPECULAR_MAP = 4,
-            GENERAL_UNIFORM_BUFFER = 5,
-            GENERAL_SAMPLER = 6
-        };*/
     };
-
-    //typedef DescriptorTypeStruct::DescriptorType DescriptorType;
 
 	namespace util
 	{

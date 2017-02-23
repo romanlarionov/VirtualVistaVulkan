@@ -30,5 +30,11 @@ namespace vv
 	}
 
 
+    glm::mat4 Model::getModelMatrix() const
+    {
+        return _pose;
+    }
+
+
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
 }

@@ -51,16 +51,13 @@ namespace vv
 	bool VulkanDevice::isSuitable(VkSurfaceKHR surface, VulkanSurfaceDetailsHandle &surface_details)
 	{
 		if (surface == VK_NULL_HANDLE) return false;
-		bool result = true;
-		
-		if (Settings::inst()->isGraphicsRequired() && graphics_family_index < 0)
-			result = false;
-		if (Settings::inst()->isComputeRequired() && compute_family_index < 0)
-			result = false;
-		if (Settings::inst()->isOnScreenRenderingRequired() && !querySwapChainSupport(surface, surface_details))
-			result = false;
+
+        // graphics queue is a requirement. only fail on lack of compute queue when explicitly requested.
+        if (graphics_family_index < 0 || !querySwapChainSupport(surface, surface_details) ||
+            (Settings::inst()->isComputeRequired() && compute_family_index < 0))
+            return false;
 	
-		return result;
+		return true;
 	}
 
 

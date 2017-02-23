@@ -1,8 +1,10 @@
 
 #include <stdexcept>
+#include <chrono>
 
 #include "App.h"
 #include "VulkanRenderer.h"
+#include "InputManager.h"
 #include "Settings.h"
 
 namespace vv
@@ -26,6 +28,7 @@ namespace vv
 		{
 			_renderer = new VulkanRenderer();
 			_renderer->create();
+            _scene = _renderer->getScene();
 		}
 		catch (const std::runtime_error& e)
 		{
@@ -40,12 +43,26 @@ namespace vv
 	}
 
 
-	void App::mainLoop()
+    Scene* App::getScene() const
+    {
+        return _scene;
+    }
+
+
+	void App::beginMainLoop(std::function<void(Scene*, float)> input_handler)
 	{
-		// todo: add other conditionals for stopping execution
+        _renderer->recordCommandBuffers();
+
+        auto last_time = glfwGetTime();
+
 		while (!_renderer->shouldStop())
 		{
-			_renderer->run();
+            auto curr_time = glfwGetTime();
+            float delta_time = curr_time - last_time;
+            last_time = curr_time;
+
+            input_handler(_scene, delta_time);
+			_renderer->run(delta_time);
 		}
 	}
 

@@ -5,10 +5,6 @@
 #include <vector>
 #include <array>
 
-//#ifdef _DEBUG
-//    #define ENABLE_VULKAN_RENDERDOC_CAPTURE 1
-//#endif
-
 #include "GLFWWindow.h"
 #include "VulkanSwapChain.h"
 #include "VulkanImageView.h"
@@ -39,15 +35,20 @@ namespace vv
 		/*
 		 * Destroy all Vulkan internals in the correct order.
 		 * 
-		 * This needs to be called at application termination to ensure that all corresponding Vulkan
-		 * pieces are destroyed in the proper order. This is needed because of C++'s lack of destructor guarantees.
+		 * note: this needs to be called at application termination to ensure that all corresponding Vulkan pieces
+         *       are destroyed in the proper order. This is needed because of C++'s lack of destructor guarantees.
 		 */
 		void shutDown();
 
 		/*
-		 * Render pass function. Executed in engine main loop.
+		 * Submits all command buffers to the various vulkan queues for execution.
 		 */
-		void run();
+		void run(float delta_time);
+
+        /*
+         * Signals the renderer to start recording vulkan command buffers once the scene has been properly populated.
+         */
+        void recordCommandBuffers();
 
         /*
          * Returns a scene object used to store entities with physical presence.
@@ -64,18 +65,15 @@ namespace vv
 		VkInstance instance_					    = VK_NULL_HANDLE;
 		VkDebugReportCallbackEXT debug_callback_    = VK_NULL_HANDLE;
 		VulkanDevice* physical_device_              = nullptr;
-		VulkanSwapChain *swap_chain_;
-
+		
+        VulkanSwapChain *swap_chain_;
 		std::vector<VkFramebuffer> frame_buffers_;
 
 		VkSemaphore image_ready_semaphore_          = VK_NULL_HANDLE;
 		VkSemaphore rendering_complete_semaphore_   = VK_NULL_HANDLE;
 
-		std::vector<VkCommandBuffer> command_buffers_;
-
-		Shader *shader_;
-		VulkanPipeline *pipeline_;
 		VulkanRenderPass *render_pass_              = nullptr;
+		std::vector<VkCommandBuffer> command_buffers_;
 
         Scene *scene_;
 
@@ -93,11 +91,6 @@ namespace vv
 		void createVulkanDevices();
 
 		/*
-		 * Creates a Vulkan surface for generically communicating between Vulkan and the system window api.
-		 */
-		void createVulkanSurface();
-
-		/*
 		 * Sets up all debug callbacks that handle accepting and printing validation layer reports.
 		 */
 		void setupDebugCallback();
@@ -106,14 +99,6 @@ namespace vv
 		 * Creates Vulkan FrameBuffer objects that encapsulate all of the Vulkan image textures in the swap chain for storing rendered frames.
 		 */
 		void createFrameBuffers();
-
-		/*
-		 * Creates a list of executable commands that will be sent to a command pool.
-		 * These commands range from memory management calls, to binding framebuffers, to draw commands.
-         * note: VkCommandBuffers can be initialized at the beginning of initialization time.
-         *       Simply point them to a range of vertex and index data that update during runtime.
-		 */
-		void createCommandBuffers();
 
 		/*
 		 * Returns back a formatted list of all extensions used by the system.

@@ -3,6 +3,7 @@
 #define VIRTUALVISTA_MATERIAL_H
 
 #include <vector>
+#include <utility>
 
 #include "VulkanDevice.h"
 #include "VulkanBuffer.h"
@@ -11,6 +12,18 @@
 
 namespace vv
 {
+    struct UBOStore
+    {
+        VkDescriptorBufferInfo info;
+        VulkanBuffer *buffer;
+    };
+
+    struct TextureStore
+    {
+        VkDescriptorImageInfo info;
+        VulkanImageView *view;
+    };
+
 	class Material
 	{
 	public:
@@ -33,12 +46,12 @@ namespace vv
 		void shutDown();
 		
         /*
-         * Instructs this instance to support a uniform buffer binding and maintains owndership over the data.
+         * Instructs this instance to support a uniform buffer binding and maintains ownership over the data.
          */
         void addUniformBuffer(VulkanBuffer *uniform_buffer, int binding);
 
         /*
-         * Instructs this instance to support a texture binding and maintains owndership over the data.
+         * Instructs this instance to support a texture binding and maintains ownership over the data.
          */
         void addTexture(VulkanImage *texture, int binding, VkSampler sampler);
 
@@ -57,8 +70,8 @@ namespace vv
         std::vector<VkWriteDescriptorSet> _write_sets;
         VkDescriptorSet _descriptor_set;
 
-        std::vector<std::pair<VkDescriptorBufferInfo, VulkanBuffer *> > _uniform_buffers;
-        std::vector<std::pair<VkDescriptorImageInfo, VulkanImageView *> > _textures;
+        std::vector<UBOStore *> _uniform_buffers;
+        std::vector<TextureStore *> _textures;
 
         std::vector<VulkanImage *> _image_store;
 	};

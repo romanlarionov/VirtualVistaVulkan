@@ -1,17 +1,17 @@
 
-
 #ifndef VIRTUALVISTA_LIGHT_H
 #define VIRTUALVISTA_LIGHT_H
 
 #include <vector>
 
+#include "Entity.h"
+
 namespace vv
 {
-	struct Light
+	class Light : public Entity
 	{
 	public:
 		Light();
-
 		~Light();
 
 		/*

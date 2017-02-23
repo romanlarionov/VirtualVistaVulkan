@@ -6,12 +6,11 @@
 #include <string>
 
 #include "VulkanDevice.h"
-#include "Resource.h"
 #include "spirv_glsl.hpp"
 
 namespace vv
 {
-	class Shader : public Resource
+	class Shader
 	{
 	public:
 		VkShaderModule vert_module = VK_NULL_HANDLE;
