@@ -11,13 +11,16 @@ namespace vv
 	class Light : public Entity
 	{
 	public:
+        glm::vec4 irradiance;
+        float radius;
+
 		Light();
 		~Light();
 
 		/*
-		 * 
+		 * Creates a point light.
 		 */
-		void create();
+		void create(glm::vec4 irradiance, float radius);
 
 		/*
 		 *

@@ -36,7 +36,6 @@ namespace vv
         _max_descriptor_sets = 100;
         _max_uniform_buffers = 100;
         _max_combined_image_samplers = 100;
-        _max_lights = 10;
 	}
 
 
@@ -103,12 +102,6 @@ namespace vv
     uint32_t Settings::getMaxCombinedImageSamplers() const
     {
         return _max_combined_image_samplers;
-    }
-
-
-    uint32_t Settings::getMaxLights() const
-    {
-        return _max_lights;
     }
 
 

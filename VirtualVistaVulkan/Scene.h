@@ -16,11 +16,25 @@
 
 namespace vv
 {
+    struct LightData
+    {
+        glm::vec4 position;
+        glm::vec4 irradiance;
+        float radius;
+        glm::vec3 pad;
+    };
+
+    struct LightUniformBufferObject
+    {
+        LightData lights[VV_MAX_LIGHTS];
+    };
+
     struct SceneUniformBufferObject
     {
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 projection;
+        glm::mat4 normalMat;
         glm::vec4 camera_position;
 	};
 
@@ -43,9 +57,9 @@ namespace vv
 		void shutDown();
 
         /*
-        *
-        */
-        void addLight();
+         * Requests that a point light be created.
+         */
+        Light* addLight(glm::vec4 irradiance, float radius);
 
         /*
          * Requests that a model be loaded using the ModelManger and stored for rendering/updates.
@@ -96,10 +110,9 @@ namespace vv
         SceneUniformBufferObject _scene_ubo;
 		VulkanBuffer *_scene_uniform_buffer         = nullptr;
 
-        // Lights uniform
-        VkDescriptorSetLayout _lights_descriptor_set_layout;
-        VkDescriptorSet _lights_descriptor_set      = VK_NULL_HANDLE;
-        VulkanBuffer *_lights_uniform_buffer        = nullptr;
+        // Light uniforms
+        LightUniformBufferObject _lights_ubo;
+		VulkanBuffer *_lights_uniform_buffer         = nullptr;
 
         // todo: think of better data structure. maybe something to help with culling
 		std::vector<Light *> _lights;

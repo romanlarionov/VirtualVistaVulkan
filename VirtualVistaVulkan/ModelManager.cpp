@@ -25,7 +25,7 @@ namespace vv
         _descriptor_pool = descriptor_pool;
         _sampler = sampler;
 
-        // todo: construct primative geometry
+        // todo: construct primitive geometry
 	}
 
 

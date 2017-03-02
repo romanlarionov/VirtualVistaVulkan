@@ -3,6 +3,19 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+#define MAX_LIGHTS 5
+
+struct Light
+{
+    vec4 position;
+    vec4 irradiance;
+};
+
+layout(set = 0, binding = 1) uniform LightData
+{
+    Light lights[MAX_LIGHTS];
+} lights;
+
 layout(set = 1, binding = 0) uniform MaterialConstants
 {
     vec4 ambient;

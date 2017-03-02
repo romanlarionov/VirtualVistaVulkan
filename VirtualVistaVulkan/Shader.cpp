@@ -103,8 +103,12 @@ namespace vv
 
             // todo: this is interesting -> glsl.get_declared_struct_size. can use to create dynamic ubo with correct offsets.
 
-            // todo: extend for PBR
-            if (set == 1)
+            if (set == 0)
+            {
+                if (name != "lights")
+                    throw std::runtime_error("Descriptor set 0 is reserved: " + name);
+            }
+            else if (set == 1)
             {
                 if (name == "constants")
                     standard_material_descriptor_orderings.push_back(descriptor_info);
@@ -126,8 +130,12 @@ namespace vv
 
             DescriptorInfo descriptor_info = { binding, name, shader_stage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
 
-            // todo: extend for PBR
-            if (set == 1)
+            if (set == 0)
+            {
+                if (name != "lights")
+                    throw std::runtime_error("Descriptor set 0 is reserved: " + name);
+            }
+            else if (set == 1)
             {
                 if (name == "ambient_texture")
                     standard_material_descriptor_orderings.push_back(descriptor_info);

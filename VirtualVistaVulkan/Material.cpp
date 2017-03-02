@@ -19,7 +19,7 @@ namespace vv
         this->material_template = material_template;
         _device = device;
 
-        // certain material templates dont take descriptor sets
+        // certain material templates don't take descriptor sets
         if (material_template->material_descriptor_set_layout)
         {
             VkDescriptorSetAllocateInfo alloc_info = {};

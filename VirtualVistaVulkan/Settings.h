@@ -4,6 +4,8 @@
 
 #include <string>
 
+#define VV_MAX_LIGHTS 5
+
 #include "Utils.h"
 
 namespace vv 
@@ -30,7 +32,6 @@ namespace vv
         uint32_t getMaxDescriptorSets() const;
         uint32_t getMaxUniformBuffers() const;
         uint32_t getMaxCombinedImageSamplers() const;
-        uint32_t getMaxLights() const;
 
         void setWindowWidth(int width);
         void setWindowHeight(int height);
@@ -53,7 +54,6 @@ namespace vv
         uint32_t _max_descriptor_sets;
         uint32_t _max_uniform_buffers;
         uint32_t _max_combined_image_samplers;
-        uint32_t _max_lights;
 
         Settings() {};
         Settings(const Settings& s) {};
