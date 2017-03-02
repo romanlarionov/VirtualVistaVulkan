@@ -2,30 +2,21 @@
 VirtualVistaVulkan
 ==================
 
-Personal implimentation of a rendering engine written with exclusive support for the Vulkan graphics/compute api. 
+Personal implementation of a rendering engine written with exclusive support for the Vulkan graphics/compute api. 
+
+Installing
+-----
+
+```
+git clone --recursive https://github.com/romanlarionov/VirtualVistaVulkan.git
+```
 
 Dependencies
 ------------
 
-* This uses the stb image loading library: https://github.com/nothings/stb
-I include stb_image.h
-
-* I also use https://github.com/syoyo/tinygltfloader
-for asset importing
-
-Build
------
-
-Currently only support Windows.
-
-I have exclusively been writing and testing this on Windows 10 with Visual Studio 15. One day I'll extend it to support Linux/OS X and GCC.
-
-Goals
------
-
-- [x] Renderable OBJ models
-- [ ] Light support
-- [X] Renderable OBJ models with multiple submeshes w/ distinct materials
-- [X] Render multiple distinct models
-- [ ] Support physically plausible, BRDF based materials
-- [ ] Support for area lights with Linearly Transformed Cosines
+* LunarG Vulkan SDK - all Vulkan API support
+* GLFW - surface and input 
+* GLM - linear algebra
+* SPIRV-Cross - runtime shader reflection
+* stb_image (included) - texture loading
+* tiny_obj_loader (included) - OBJ + MTL loading

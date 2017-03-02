@@ -3,17 +3,17 @@
 
 namespace vv
 {
-	///////////////////////////////////////////////////////////////////////////////////////////// Public
-	Material::Material()
-	{
-	}
+    ///////////////////////////////////////////////////////////////////////////////////////////// Public
+    Material::Material()
+    {
+    }
 
 
-	Material::~Material()
-	{
-	}
+    Material::~Material()
+    {
+    }
 
-	
+
     void Material::create(VulkanDevice *device, MaterialTemplate *material_template, VkDescriptorPool descriptor_pool)
     {
         this->material_template = material_template;
@@ -33,8 +33,8 @@ namespace vv
     }
 
 
-	void Material::shutDown()
-	{
+    void Material::shutDown()
+    {
         for (auto &ubo : _uniform_buffers)
         {
             ubo->buffer->shutDown();
@@ -54,14 +54,14 @@ namespace vv
             delete tex->view;
             delete tex;
         }
-	}
+    }
 
 
     void Material::addUniformBuffer(VulkanBuffer *uniform_buffer, int binding)
     {
         VkDescriptorBufferInfo buffer_info = {};
-		buffer_info.buffer = uniform_buffer->buffer;
-		buffer_info.offset = 0;
+    	buffer_info.buffer = uniform_buffer->buffer;
+    	buffer_info.offset = 0;
         buffer_info.range = VK_WHOLE_SIZE;
 
         UBOStore *store = new UBOStore;
@@ -74,11 +74,11 @@ namespace vv
         VkWriteDescriptorSet write_set = {};
 
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = _descriptor_set;
-		write_set.dstBinding = binding;
-		write_set.dstArrayElement = 0;
-		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_set.descriptorCount = 1; // how many elements to update
+    	write_set.dstSet = _descriptor_set;
+    	write_set.dstBinding = binding;
+    	write_set.dstArrayElement = 0;
+    	write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    	write_set.descriptorCount = 1; // how many elements to update
         write_set.pBufferInfo = &_uniform_buffers[position]->info;
 
         _write_sets.push_back(write_set);
@@ -91,10 +91,10 @@ namespace vv
         VulkanImageView *texture_image_view = new VulkanImageView();
         texture_image_view->create(_device, texture);
 
-		VkDescriptorImageInfo image_info = {};
-		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		image_info.imageView = texture_image_view->image_view;
-		image_info.sampler = sampler;
+    	VkDescriptorImageInfo image_info = {};
+    	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    	image_info.imageView = texture_image_view->image_view;
+    	image_info.sampler = sampler;
 
         TextureStore *store = new TextureStore();
         store->info = image_info;
@@ -106,11 +106,11 @@ namespace vv
         VkWriteDescriptorSet write_set = {};
         
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = _descriptor_set;
-		write_set.dstBinding = binding; // location in layout
-		write_set.dstArrayElement = 0; // if sending array of uniforms
-		write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write_set.descriptorCount = 1; // how many elements to update
+    	write_set.dstSet = _descriptor_set;
+    	write_set.dstBinding = binding; // location in layout
+    	write_set.dstArrayElement = 0; // if sending array of uniforms
+    	write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    	write_set.descriptorCount = 1; // how many elements to update
         write_set.pImageInfo = &_textures[position]->info;
 
         _write_sets.push_back(write_set);
@@ -119,7 +119,7 @@ namespace vv
 
     void Material::updateDescriptorSets() const
     {
-		vkUpdateDescriptorSets(_device->logical_device, static_cast<uint32_t>(_write_sets.size()), _write_sets.data(), 0, nullptr);
+    	vkUpdateDescriptorSets(_device->logical_device, static_cast<uint32_t>(_write_sets.size()), _write_sets.data(), 0, nullptr);
     }
 
 
@@ -133,5 +133,5 @@ namespace vv
     }
 
 
-	///////////////////////////////////////////////////////////////////////////////////////////// Private
+    ///////////////////////////////////////////////////////////////////////////////////////////// Private
 }
