@@ -5,6 +5,8 @@ x64/*
 VirtualVistaVulkan/x64*
 .vs/*
 
+build/*
+
 *.VC.*
 *.user
 *.vcxproj

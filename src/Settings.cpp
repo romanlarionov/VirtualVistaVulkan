@@ -26,8 +26,8 @@ namespace vv
         
 		_application_name = "VirtualVistaVulkan";
 		_engine_name = "VirtualVista";
-        _asset_directory = "../assets/";
-        //_asset_directory = "../../assets/";
+        //_asset_directory = "../assets/";
+        _asset_directory = "../../assets/";
         _model_directory = _asset_directory + "models/";
         _shader_directory = _asset_directory + "shaders/";
 
