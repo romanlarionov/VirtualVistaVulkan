@@ -29,7 +29,7 @@ namespace vv
 		/*
 		 * High level class that handles all asset loading, initialization, and management.
 		 */
-		void create(VulkanDevice *device, TextureManager *texture_manager, VkDescriptorPool descriptor_pool);
+		void create(VulkanDevice *device, VkDescriptorPool descriptor_pool);
 
 		/*
 		 *
@@ -45,7 +45,7 @@ namespace vv
     private:
 		VulkanDevice *_device;
         VkDescriptorPool _descriptor_pool;
-        TextureManager *_texture_manager;
+        VkSampler _sampler;
 
         // todo: consider using smart pointers for reference counting.
         std::unordered_map<std::string, std::vector<Mesh *> > _loaded_meshes;

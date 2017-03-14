@@ -2,7 +2,7 @@
 Debug/*
 Release/*
 x64/*
-VirtualVistaVulkan/x64*
+VirtualVistaVulkan/
 .vs/*
 
 build/*

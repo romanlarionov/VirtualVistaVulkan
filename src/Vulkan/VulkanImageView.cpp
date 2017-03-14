@@ -13,16 +13,17 @@ namespace vv
 	{
 	}
 
-	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image)
+	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type)
 	{
-		device_ = device;
-		image_ = image;
+		_device = device;
+		_image = image;
+        type = image_view_type;
 
 		VkImageViewCreateInfo image_view_create_info = {};
 		image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		image_view_create_info.flags = VK_NULL_HANDLE;
 		image_view_create_info.image = image->image;
-		image_view_create_info.viewType = image->image_view_type;
+		image_view_create_info.viewType = image_view_type;
 		image_view_create_info.format = image->format;
 
 		// todo: make general
@@ -32,10 +33,10 @@ namespace vv
 		image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
 		image_view_create_info.subresourceRange.aspectMask = image->aspect_flags;
-		image_view_create_info.subresourceRange.baseMipLevel = 0;
-		image_view_create_info.subresourceRange.levelCount = 1;
+		image_view_create_info.subresourceRange.baseMipLevel = 0; // todo: this might not always be the case?
+		image_view_create_info.subresourceRange.levelCount = image->mip_levels;
 		image_view_create_info.subresourceRange.baseArrayLayer = 0;
-		image_view_create_info.subresourceRange.layerCount = 1;
+		image_view_create_info.subresourceRange.layerCount = image->array_layers;
 
 		VV_CHECK_SUCCESS(vkCreateImageView(device->logical_device, &image_view_create_info, nullptr, &image_view));
 	}
@@ -43,6 +44,6 @@ namespace vv
 
 	void VulkanImageView::shutDown()
 	{
-        vkDestroyImageView(device_->logical_device, image_view, nullptr);
+        vkDestroyImageView(_device->logical_device, image_view, nullptr);
 	}
 }

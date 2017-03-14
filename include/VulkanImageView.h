@@ -2,8 +2,6 @@
 #ifndef VIRTUALVISTA_VULKANIMAGEVIEW_H
 #define VIRTUALVISTA_VULKANIMAGEVIEW_H
 
-#include <vulkan\vulkan.h>
-
 #include "VulkanDevice.h"
 #include "VulkanImage.h"
 
@@ -13,6 +11,7 @@ namespace vv
 	{
 	public:
 		VkImageView image_view;
+        VkImageViewType type;
 
 		VulkanImageView();
 		~VulkanImageView();
@@ -23,7 +22,7 @@ namespace vv
          * note: This class does not maintain ownership over VulkanImages.
          *       They must be manually deleted outside of this class.
 		 */
-		void create(VulkanDevice *device, VulkanImage *image);
+		void create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type);
 
 		/*
 		 *
@@ -31,8 +30,8 @@ namespace vv
 		void shutDown();
 
 	private:
-		VulkanDevice *device_;
-		VulkanImage *image_;
+		VulkanDevice *_device;
+		VulkanImage *_image;
 
 	};
 }

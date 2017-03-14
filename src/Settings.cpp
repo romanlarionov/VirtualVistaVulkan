@@ -26,9 +26,10 @@ namespace vv
     
         _application_name = "VirtualVistaVulkan";
         _engine_name = "VirtualVista";
-        //_asset_directory = "../assets/";
-        _asset_directory = "../../assets/";
+        _asset_directory = "../assets/";
+        //_asset_directory = "../../assets/";
         _model_directory = _asset_directory + "models/";
+        _texture_directory = _asset_directory + "textures/";
         _shader_directory = _asset_directory + "shaders/";
 
         _compute_required = false;
@@ -84,6 +85,12 @@ namespace vv
     std::string Settings::getModelDirectory() const
     {
         return _model_directory;
+    }
+
+
+    std::string Settings::getTextureDirectory() const
+    {
+        return _texture_directory;
     }
 
 

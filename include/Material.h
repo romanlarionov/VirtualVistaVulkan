@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "VulkanDevice.h"
+#include "TextureManager.h"
 #include "VulkanBuffer.h"
 #include "VulkanImageView.h"
 #include "MaterialTemplate.h"
@@ -21,7 +22,7 @@ namespace vv
     struct TextureStore
     {
         VkDescriptorImageInfo info;
-        VulkanImageView *view;
+        SampledTexture *texture;
     };
 
 	class Material
@@ -53,7 +54,7 @@ namespace vv
         /*
          * Instructs this instance to support a texture binding and maintains ownership over the data.
          */
-        void addTexture(VulkanImage *texture, int binding, VkSampler sampler);
+        void addTexture(SampledTexture *texture, int binding);
 
         /*
          * Updates the contents of the descriptor set with the uniform + samplers provided via addUniformBuffer and addTexture.
@@ -72,8 +73,6 @@ namespace vv
 
         std::vector<UBOStore *> _uniform_buffers;
         std::vector<TextureStore *> _textures;
-
-        std::vector<VulkanImage *> _image_store;
 	};
 }
 

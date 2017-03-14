@@ -137,15 +137,15 @@ namespace vv
             }
             else if (set == 1)
             {
-                if (name == "ambient_texture")
+                if (name == "ambient_map")
                     standard_material_descriptor_orderings.push_back(descriptor_info);
 
-                else if (name == "diffuse_texture")
+                else if (name == "diffuse_map")
                     standard_material_descriptor_orderings.push_back(descriptor_info);
 
-                else if (name == "specular_texture")
+                else if (name == "specular_map")
                     standard_material_descriptor_orderings.push_back(descriptor_info);
-                else
+                else // todo: currently not using non-standard. consider removing
                     throw std::runtime_error("Non-standard descriptor found with set 1: " + name);
             }
             else if (set == 2)

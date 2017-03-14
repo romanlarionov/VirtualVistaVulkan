@@ -26,6 +26,7 @@ namespace vv
         std::string getShaderDirectory() const;
         std::string getAssetDirectory() const;
         std::string getModelDirectory() const;
+        std::string getTextureDirectory() const;
 
         bool isComputeRequired() const;
 
@@ -48,6 +49,7 @@ namespace vv
         std::string _shader_directory;
         std::string _asset_directory;
         std::string _model_directory;
+        std::string _texture_directory;
 
         bool _compute_required;
 

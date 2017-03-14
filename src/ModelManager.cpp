@@ -19,11 +19,12 @@ namespace vv
 	}
 
 
-	void ModelManager::create(VulkanDevice *device, VkDescriptorPool descriptor_pool, VkSampler sampler)
+	void ModelManager::create(VulkanDevice *device, TextureManager *texture_manager, VkDescriptorPool descriptor_pool)
 	{
 		_device = device;
+        _texture_manager = texture_manager;
         _descriptor_pool = descriptor_pool;
-        _sampler = sampler;
+        //_sampler = sampler;
 
         // todo: construct primitive geometry
 	}
@@ -71,13 +72,11 @@ namespace vv
         }
 
         if (file_type == "obj")
-        {
             return loadOBJ(path, name, load_geometry, material_template, model);
-        }
+
         else if (file_type == "gltf")
-        {
             return loadGLTF();
-        }
+
         else
         {
             VV_ASSERT(false, "File type: " + file_type + " not supported");
@@ -177,38 +176,42 @@ namespace vv
 
                     material->addUniformBuffer(buffer, o.binding);
                 }
-                else if (o.name == "ambient_texture")
+                else if (o.name == "ambient_map")
                 {
-                    VulkanImage *texture = new VulkanImage();
+                    /*VulkanImage *texture = new VulkanImage();
                     if (m.ambient_texname != "")
                         texture->createColorAttachment(path + m.ambient_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
                     else
-                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
 
-                    texture->transferToDevice();
-                    material->addTexture(texture, o.binding, _sampler);
+                    texture->transferToDevice();*/
+                    auto texture = _texture_manager->load2DImage(path, m.ambient_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+                    material->addTexture(texture, o.binding);
                 }
-                else if (o.name == "diffuse_texture")
+                else if (o.name == "diffuse_map")
                 {
-                    VulkanImage *texture = new VulkanImage();
+                    /*VulkanImage *texture = new VulkanImage();
                     if (m.diffuse_texname != "")
                         texture->createColorAttachment(path + m.diffuse_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
                     else
-                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);*/
 
-                    texture->transferToDevice();
-                    material->addTexture(texture, o.binding, _sampler);
+                    auto texture = _texture_manager->load2DImage(path, m.diffuse_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+
+                    //texture->transferToDevice();
+                    material->addTexture(texture, o.binding);
                 }
-                else if (o.name == "specular_texture")
+                else if (o.name == "specular_map")
                 {
-                    VulkanImage *texture = new VulkanImage();
+                    /*VulkanImage *texture = new VulkanImage();
                     if (m.specular_texname != "")
                         texture->createColorAttachment(path + m.specular_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
                     else
-                        texture->createColorAttachment(Settings::inst()->getAssetDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
-                    
-                    texture->transferToDevice();
-                    material->addTexture(texture, o.binding, _sampler);
+                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
+
+                    texture->transferToDevice();*/
+                    auto texture = _texture_manager->load2DImage(path, m.specular_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+                    material->addTexture(texture, o.binding);
                 }
                 else // descriptor type not populated
                 {

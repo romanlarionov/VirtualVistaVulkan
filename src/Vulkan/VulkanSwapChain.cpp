@@ -150,19 +150,18 @@ namespace vv
     	{
     	    // convert to abstracted format
     	    VulkanImage *curr_image = new VulkanImage();
-    	    curr_image->createFromImage(raw_images[i], device, format);
+    	    curr_image->createFromImage(device, raw_images[i], format, VK_IMAGE_ASPECT_COLOR_BIT, 1, 1);
     	    color_images[i] = curr_image;
 
     	    VulkanImageView *curr_image_view = new VulkanImageView();
-    	    curr_image_view->create(device, curr_image);
+    	    curr_image_view->create(device, curr_image, VK_IMAGE_VIEW_TYPE_2D);
     	    color_image_views[i] = curr_image_view;
     	}
 
     	depth_image = new VulkanImage();
-    	depth_image->createDepthAttachment(device, extent, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
+        depth_image->createDepthAttachment(device, extent, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     	depth_image_view = new VulkanImageView();
-    	depth_image_view->create(device, depth_image);
+    	depth_image_view->create(device, depth_image, VK_IMAGE_VIEW_TYPE_2D);
     }
 
 

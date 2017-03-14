@@ -2,7 +2,6 @@
 #ifndef VIRTUALVISTA_VULKANIMAGE_H
 #define VIRTUALVISTA_VULKANIMAGE_H
 
-#include <vulkan\vulkan.h>
 #include <vector>
 #include <array>
 #include <string>
@@ -18,47 +17,56 @@ namespace vv
 		VkImage image;
 		VkFormat format;
 		VkImageAspectFlags aspect_flags;
-		VkImageViewType image_view_type;
-		std::string path;
+        VkImageType type;
+        uint32_t mip_levels;
+        uint32_t array_layers;
+        VkSampleCountFlagBits sample_count;
+        VkImageLayout initial_layout;
+        int width;
+		int height;
+		int depth;
 
 		VulkanImage();
 		~VulkanImage();
 
-		// todo: i don't like how these functions operate. It seems like some manager should have control of what 
-		// the intended use of the image will be. Maybe VulkanImageView?
+        /*
+         * 
+         */
+        void create(VulkanDevice *device, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage, VkImageType type,
+                    VkImageAspectFlags aspect_flags, uint32_t mip_levels, uint32_t array_layers,
+                    VkImageLayout initial_layout, VkSampleCountFlagBits sample_count);
 
-		/*
+        /*
 		 * Creates an image from existing image. Mainly for swap chain image support.
 		 */
-		void createFromImage(VkImage image, VulkanDevice *device, VkFormat format);
+	    void createFromImage(VulkanDevice *device, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
+                             uint32_t mip_levels, uint32_t array_layers);
+
+        /*
+         * Creates a special image intended to be used as a depth/stencil attachment to a framebuffer.
+         */
+        void createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features);
 
 		/*
-		 * Loads, allocates, and stores a requested texture using the header-only STB image library.
-		 */
-		void createColorAttachment(std::string path, VulkanDevice *device, VkFormat format);
-
-		/*
-		 * Allocates a depth image with the proper format.
-		 */
-		void createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features);
-
-		/*
-		 * todo: should be able to load different types of textures such as,
-		 * 3d textures, generated textures, and deferred staging buffers.
-		 */
-		/*void create(VulkanDevice *device)
-		{
-
-		}*/
-
-		/*
-		 *
+		 * Removes allocated device memory.
 		 */
 		void shutDown();
 	
+        /*
+         * Performs update and transfer operation in single step.
+         */
+        void updateAndTransfer(void *data, uint32_t size_in_bytes);
+
+        /*
+         * Updates the allocated device memory with data provided.
+         */
+        void update(void *data, uint32_t size_in_bytes);
+
 		/*
 		 * Copies a buffer allocated on CPU memory to one allocated on GPU memory.
-		 * todo: this issues a lot of commands that are sent to be executed linearly. These should be done asynchronously for best performance.
+		 *
+         * todo: This issues a lot of commands that are sent to be executed linearly.
+         *       These should be done asynchronously for best performance.
 		 */
 		void transferToDevice();
 
@@ -68,21 +76,18 @@ namespace vv
 		bool hasStencilComponent();
 
 	private:
-		VulkanDevice *device_;
-		VkImage staging_image_			= VK_NULL_HANDLE;
-		VkDeviceMemory staging_memory_	= VK_NULL_HANDLE;
-		VkDeviceMemory image_memory_	= VK_NULL_HANDLE;
-		VkDeviceSize size_; // width * height * num_elements
-		int width_;
-		int height_;
-		int depth_;
-
+		VulkanDevice *_device;
+		VkImage _staging_image			= VK_NULL_HANDLE;
+		VkDeviceMemory _staging_memory	= VK_NULL_HANDLE;
+		VkDeviceMemory _image_memory	= VK_NULL_HANDLE;
+		
 		/*
 		 * Creates the Vulkan abstraction for a data buffer with the given specifications.
+         *
 		 * todo: maybe think about putting this sort of thing in its own "memory management" system
 		 */
-		void allocateMemory(VkImageType image_type, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-			VkMemoryPropertyFlags memory_properties, VkImage &image, VkDeviceMemory &memory);
+        void allocateMemory(VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memory_properties,
+                            VkImage &image, VkDeviceMemory &memory);
 	
 		/*
 		 * Move the linearly stored staging image into an optimal texture storage layout.

@@ -29,20 +29,20 @@ namespace vv
 
         createDescriptorPool();
         createSceneUniforms();
-        createSampler();
-
         createMaterialTemplates(); // Load material templates to prepare for model loading queries
 
+        _texture_manager = new TextureManager();
+        _texture_manager->create(_device);
+
         _model_manager = new ModelManager();
-        _model_manager->create(_device, _descriptor_pool, _sampler);
+        _model_manager->create(_device, _texture_manager, _descriptor_pool);
+
         _initialized = true;
 	}
 
 
 	void Scene::shutDown()
 	{
-        vkDestroySampler(_device->logical_device, _sampler, nullptr);
-
         for (auto &t : material_templates)
         {
             vkDestroyDescriptorSetLayout(_device->logical_device, t.second->material_descriptor_set_layout, nullptr);
@@ -79,8 +79,9 @@ namespace vv
         vkDestroyDescriptorSetLayout(_device->logical_device, _scene_descriptor_set_layout, nullptr);
 
 	  	vkDestroyDescriptorPool(_device->logical_device, _descriptor_pool, nullptr);
+        _texture_manager->shutDown(); delete _texture_manager;
         _model_manager->shutDown(); delete _model_manager;
-	}
+   }
 
 
     Light* Scene::addLight(glm::vec4 irradiance, float radius)
@@ -131,7 +132,11 @@ namespace vv
         VV_ASSERT(_active_camera != nullptr, "ERROR: main camera has not been initialized");
 
         for (auto i = 0; i < _lights.size(); ++i)
-            _lights_ubo.lights[i] = { glm::vec4(_lights[i]->getPosition(), 0.0f), _lights[i]->irradiance, _lights[i]->radius };
+        { 
+            _lights_ubo.lights[i].position = glm::vec4(_lights[i]->getPosition(), 0.0f);
+            _lights_ubo.lights[i].irradiance = _lights[i]->irradiance;
+            //_lights_ubo.lights[i].radius = _lights[i]->radius;
+        }
         _lights_uniform_buffer->updateAndTransfer(&_lights_ubo);
 
         _scene_ubo.view = _active_camera->getViewMatrix();
@@ -164,7 +169,6 @@ namespace vv
 
             // Update scene descriptor sets
             _scene_ubo.model = model->getModelMatrix();
-            //_scene_ubo.normalMat = glm::transpose(glm::inverse(_scene_ubo.view * model->getModelMatrix()));
             _scene_ubo.normalMat = glm::transpose(glm::inverse(model->getModelMatrix()));
 
             // Render all submeshes within this model
@@ -279,7 +283,11 @@ namespace vv
 
         // Lights data
         for (auto i = 0; i < VV_MAX_LIGHTS; ++i)
-            _lights_ubo.lights[i] = { glm::vec4(), glm::vec4() };
+        {
+            _lights_ubo.lights[i].position = glm::vec4();
+            _lights_ubo.lights[i].irradiance = glm::vec4();
+            //_lights_ubo.lights[i].radius = 0.0f;
+        }
 
         _lights_uniform_buffer = new VulkanBuffer();
         _lights_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_lights_ubo));
@@ -299,14 +307,13 @@ namespace vv
 
 		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &alloc_info, &_scene_descriptor_set));
 
+        std::array<VkWriteDescriptorSet, 2> write_sets;
+
 		VkDescriptorBufferInfo scene_buffer_info = {};
 		scene_buffer_info.buffer = _scene_uniform_buffer->buffer;
 		scene_buffer_info.offset = 0;
 		scene_buffer_info.range = sizeof(_scene_ubo);
 
-        std::array<VkWriteDescriptorSet, 2> write_sets;
-
-        //VkWriteDescriptorSet write_set = {};
 		write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_sets[0].dstSet = _scene_descriptor_set;
 		write_sets[0].dstBinding = 0;
@@ -332,7 +339,7 @@ namespace vv
 	}
 
 
-	void Scene::createSampler()
+	/*void Scene::createSampler()
 	{
 		VkSamplerCreateInfo sampler_create_info = {};
 		sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -355,7 +362,7 @@ namespace vv
 		sampler_create_info.maxLod = 0.0f; // todo: figure out how lod works with these things
 
 		VV_CHECK_SUCCESS(vkCreateSampler(_device->logical_device, &sampler_create_info, nullptr, &_sampler));
-	}
+	}*/
 
 
     void Scene::createVulkanDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings, VkDescriptorSetLayout &layout)

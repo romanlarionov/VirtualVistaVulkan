@@ -24,8 +24,14 @@ int main(int argc, char **argv)
     Camera *camera = scene->addCamera(glm::radians(90.0f), 0.1f, 1000.0f);
     scene->setActiveCamera(camera);
 
-    Light *light = scene->addLight(glm::vec4(0.8f, 0.8f, 0.8f, 0.0f), 0.7f);
-    light->translate(glm::vec3(1.0f, 1.0f, 0.0f));
+    Light *light = scene->addLight(glm::vec4(1.0f, 1.0f, 1.0f, 0.0f), 2.0f);
+    light->translate(glm::vec3(2.0f, 1.5f, 0.0f));
+
+    Light *light2 = scene->addLight(glm::vec4(1.0f, 0.1f, 0.1f, 0.0f), 3.0f);
+    light2->translate(glm::vec3(0.0f, 1.5f, 1.0f));
+
+    Light *light3 = scene->addLight(glm::vec4(0.1f, 0.1f, 1.0f, 0.0f), 2.0f);
+    light3->translate(glm::vec3(0.0f, 1.5f, -1.0f));
 
     //Model *model = scene->addModel("hammardillo/", "hammardillo.obj", "triangle");
     //Model *model = scene->addModel("chalet/", "chalet.obj", "dummy");

@@ -8,7 +8,9 @@
 
 #include "VulkanDevice.h"
 #include "VulkanRenderPass.h"
+#include "VulkanSampler.h"
 #include "ModelManager.h"
+#include "TextureManager.h"
 #include "Model.h"
 #include "Light.h"
 #include "Model.h"
@@ -20,8 +22,6 @@ namespace vv
     {
         glm::vec4 position;
         glm::vec4 irradiance;
-        float radius;
-        glm::vec3 pad;
     };
 
     struct LightUniformBufferObject
@@ -99,9 +99,10 @@ namespace vv
         VulkanDevice *_device                       = nullptr;
         VulkanRenderPass *_render_pass              = nullptr;
         ModelManager *_model_manager                = nullptr;
+        TextureManager *_texture_manager            = nullptr;
         bool _initialized                           = false;
 
-		VkSampler _sampler                          = VK_NULL_HANDLE;
+		VulkanSampler *_sampler                     = nullptr;
 		VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
 
         // General scene uniform
