@@ -26,7 +26,6 @@ namespace vv
 
 	void Model::shutDown()
 	{
-  
 	}
 
 

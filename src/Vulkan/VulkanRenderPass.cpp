@@ -75,7 +75,7 @@ namespace vv
 		VkRenderPassCreateInfo render_pass_create_info = {};
 		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		render_pass_create_info.flags = 0;
-		render_pass_create_info.attachmentCount = (uint32_t)attachment_descriptions.size();
+		render_pass_create_info.attachmentCount = static_cast<uint32_t>(attachment_descriptions.size());
 		render_pass_create_info.pAttachments = attachment_descriptions.data(); // todo: you can add more here to perform deferred rendering.
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass_description;
@@ -103,7 +103,7 @@ namespace vv
 		render_pass_begin_info.framebuffer = framebuffer;
 		render_pass_begin_info.renderArea.offset = { 0, 0 }; // define the size of render area
 		render_pass_begin_info.renderArea.extent = extent;
-		render_pass_begin_info.clearValueCount = (uint32_t)clear_values.size();
+		render_pass_begin_info.clearValueCount = static_cast<uint32_t>(clear_values.size());
 		render_pass_begin_info.pClearValues = clear_values.data();
 
 		vkCmdBeginRenderPass(command_buffer, &render_pass_begin_info, subpass_contents);
@@ -117,5 +117,4 @@ namespace vv
 
 	
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
-
 }

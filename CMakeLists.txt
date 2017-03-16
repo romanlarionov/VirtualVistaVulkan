@@ -43,6 +43,7 @@ include_directories("include/"
                     "deps/glfw/include/"
                     "deps/glm/"
                     "deps/SPRIV-Cross/include/"
+                    "deps/gli/"
                     "$ENV{VULKAN_SDK}/Include")
 
 file(GLOB PROJECT_HEADERS include/*.h)

@@ -42,21 +42,26 @@ namespace vv
          */
         bool loadModel(std::string path, std::string name, MaterialTemplate *material_template, Model *model);
 
+        /*
+         * Returns a pointer to the sphere primitive geometry data.
+         */
+        Mesh* getSphereMesh() const;
+
     private:
 		VulkanDevice *_device;
         VkDescriptorPool _descriptor_pool;
         TextureManager *_texture_manager;
 
         // todo: consider using smart pointers for reference counting.
+        // todo: can have global array of geometry and material data that constantly updates.
         std::unordered_map<std::string, std::vector<Mesh *> > _loaded_meshes;
         std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Material *> > > _loaded_materials;
-
-        // todo: can have global array of geometry and material data that constantly updates.
 
         /*
          * Loads obj + mtl files for a single model. Returns a model abstraction with references to raw loaded geometry + material data.
          */
-        bool loadOBJ(std::string path, std::string name, bool load_geometry, MaterialTemplate *material_template, Model *model);
+        bool loadOBJ(std::string path, std::string name, bool load_geometry, bool load_materials,
+                     MaterialTemplate *material_template, Model *model);
 
         /*
          * todo: add support for glTF

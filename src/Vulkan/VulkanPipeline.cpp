@@ -15,7 +15,7 @@ namespace vv
 
 
 	void VulkanPipeline::create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
-                                VulkanRenderPass *render_pass, bool depth_test_enable, bool depth_write_enable)
+                                VulkanRenderPass *render_pass, VkFrontFace front_face, bool depth_test_enable, bool depth_write_enable)
 	{
 		device_ = device;
 
@@ -79,7 +79,7 @@ namespace vv
 		rasterization_state_create_info.polygonMode = VK_POLYGON_MODE_FILL; // create fragments from the inside of a polygon
 		rasterization_state_create_info.lineWidth = 1.0f;
 		rasterization_state_create_info.cullMode = VK_CULL_MODE_BACK_BIT; // cull the back of polygons from rendering
-		rasterization_state_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE; // order of vertices
+        rasterization_state_create_info.frontFace = front_face;// VK_FRONT_FACE_CLOCKWISE; // order of vertices
 		rasterization_state_create_info.depthBiasEnable = VK_FALSE; // all stuff for shadow mapping? look into it
 		rasterization_state_create_info.depthBiasClamp = 0.0f;
 		rasterization_state_create_info.depthBiasConstantFactor = 0.0f;
@@ -138,7 +138,7 @@ namespace vv
 		VkGraphicsPipelineCreateInfo graphics_pipeline_create_info = {};
 		graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		graphics_pipeline_create_info.flags = 0;
-		graphics_pipeline_create_info.stageCount = 2; // vert & frag shader
+		graphics_pipeline_create_info.stageCount = 2;
 		graphics_pipeline_create_info.pStages = shaders.data();
 		graphics_pipeline_create_info.pVertexInputState = &vertex_input_state_create_info;
 		graphics_pipeline_create_info.pInputAssemblyState = &input_assembly_create_info;
@@ -154,7 +154,6 @@ namespace vv
 		graphics_pipeline_create_info.subpass = 0; // index of render_pass that this pipeline will be used with
 		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
 
-		// todo: this call can create multiple pipelines with a single call. utilize to improve performance.
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
 		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(device_->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline));
 	}

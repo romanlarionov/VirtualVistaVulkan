@@ -87,13 +87,9 @@ namespace vv
 
     void Material::addTexture(SampledTexture *texture, int binding)
     {
-        //_image_store.push_back(texture);
-        //VulkanImageView *texture_image_view = new VulkanImageView();
-        //texture_image_view->create(_device, texture);
-
-    	VkDescriptorImageInfo image_info = {};
+        VkDescriptorImageInfo image_info = {};
     	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	image_info.imageView = texture->image_view->image_view;
+    	image_info.imageView = texture->image_views[0]->image_view;
     	image_info.sampler = texture->sampler->sampler;
 
         TextureStore *store = new TextureStore();
@@ -104,7 +100,6 @@ namespace vv
         _textures.push_back(store);
 
         VkWriteDescriptorSet write_set = {};
-        
         write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     	write_set.dstSet = _descriptor_set;
     	write_set.dstBinding = binding; // location in layout

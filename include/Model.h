@@ -24,12 +24,12 @@ namespace vv
 
 		/*
          * Stores all necessary components for a loaded model including geometry and material data.
-         * Creation should be left to the AssetManager class which handles loading and managing assets such as this.
+         * Creation should be left to the ModelManager class which handles loading and managing assets such as this.
 		 */
 		void create(std::string name, std::string data_handle, std::string material_id_set, MaterialTemplate *material_template);
 
 		/*
-		 *
+		 * This class does not hold ownership of any actual raw data.
 		 */
 		void shutDown();
 

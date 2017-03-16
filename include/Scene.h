@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "VulkanDevice.h"
+#include "SkyBox.h"
 #include "VulkanRenderPass.h"
 #include "VulkanSampler.h"
 #include "ModelManager.h"
@@ -74,9 +75,20 @@ namespace vv
         Camera* addCamera(float fov_y, float near_plane, float far_plane);
 
         /*
+         * Adds a global skybox using a cube to render.
+         */
+        SkyBox* addSkyBox(std::string path, std::string radiance_map_name, std::string diffuse_map_name,
+                          std::string specular_map_name, std::string brdf_lut_name);
+
+        /*
          * Returns the currently marked "main" camera.
          */
         Camera* getActiveCamera() const;
+
+        /*
+         * Returns the currently marked active skybox.
+         */
+        SkyBox* getActiveSkyBox() const;
 
         /*
          * Sets the specified camera as the active render viewpoint.
@@ -84,9 +96,14 @@ namespace vv
         void setActiveCamera(Camera *camera);
 
         /*
+         * Specifies that the given skybox be rendered and used as environment lighting for scene.
+         */
+        void setActiveSkyBox(SkyBox *skybox);
+
+        /*
          * Updates the global scene descriptor sets with newly updates data.
          */
-        void updateSceneUniforms(VkExtent2D extent, float time);
+        void updateUniformData(VkExtent2D extent, float time);
 
         /*
          * Recursively renders each model.
@@ -113,14 +130,24 @@ namespace vv
 
         // Light uniforms
         LightUniformBufferObject _lights_ubo;
+        VkDescriptorSetLayout _lights_descriptor_set_layout;
 		VulkanBuffer *_lights_uniform_buffer         = nullptr;
+
+        VkDescriptorSetLayout _environment_descriptor_set_layout;
+        VkDescriptorSetLayout _radiance_descriptor_set_layout;
+        VkDescriptorSet _environment_descriptor_set  = VK_NULL_HANDLE; // used for IBL calculations
+        VkDescriptorSet _radiance_descriptor_set     = VK_NULL_HANDLE; // applied to skybox model
 
         // todo: think of better data structure. maybe something to help with culling
 		std::vector<Light *> _lights;
 		std::vector<Model *> _models;
 		std::vector<Camera *> _cameras;
+		std::vector<SkyBox *> _skyboxes;
 
         Camera *_active_camera;
+        SkyBox *_active_skybox;
+        bool _has_active_camera;
+        bool _has_active_skybox;
 
         /*
          * Reads required shaders from file and creates all possible MaterialTemplates that can be used during execution.
@@ -133,17 +160,13 @@ namespace vv
          */
         void createDescriptorPool();
 
-        /*
-         * Creates everything necessary for scene global uniforms.
-         *
-         * note: Each shader needs to accept these required uniform in its own descriptor set at set = 0.
-         */
+
         void createSceneUniforms();
 
         /*
-         * Creates single 16x anisotropic sampler used for all texture sampling.
+         * Creates everything necessary for scene global uniforms.
          */
-        void createSampler();
+        void createEnvironmentUniforms();
 
         /*
          * Utility function for creating descriptor set layouts.

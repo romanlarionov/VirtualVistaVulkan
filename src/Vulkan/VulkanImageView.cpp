@@ -13,7 +13,7 @@ namespace vv
 	{
 	}
 
-	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type)
+	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type, uint32_t base_mip_level)
 	{
 		_device = device;
 		_image = image;
@@ -33,7 +33,7 @@ namespace vv
 		image_view_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
 		image_view_create_info.subresourceRange.aspectMask = image->aspect_flags;
-		image_view_create_info.subresourceRange.baseMipLevel = 0; // todo: this might not always be the case?
+        image_view_create_info.subresourceRange.baseMipLevel = base_mip_level;
 		image_view_create_info.subresourceRange.levelCount = image->mip_levels;
 		image_view_create_info.subresourceRange.baseArrayLayer = 0;
 		image_view_create_info.subresourceRange.layerCount = image->array_layers;

@@ -24,9 +24,11 @@ namespace vv
 		_device = device;
         _texture_manager = texture_manager;
         _descriptor_pool = descriptor_pool;
-        //_sampler = sampler;
 
-        // todo: construct primitive geometry
+        // load primitive mesh to cache
+        Model *temp_model = new Model();
+        loadOBJ(Settings::inst()->getModelDirectory() + "primitives/", "sphere.obj", true, false, nullptr, temp_model);
+        delete temp_model;
 	}
 
 
@@ -51,8 +53,6 @@ namespace vv
 
     bool ModelManager::loadModel(std::string path, std::string name, MaterialTemplate *material_template, Model *model)
     {
-        // todo: should pass descriptor sets that are general to model and pass those to model class.
-
         bool load_geometry = true;
         path = Settings::inst()->getModelDirectory() + path;
         std::string file_type = name.substr(name.find_first_of('.') + 1);
@@ -72,7 +72,7 @@ namespace vv
         }
 
         if (file_type == "obj")
-            return loadOBJ(path, name, load_geometry, material_template, model);
+            return loadOBJ(path, name, load_geometry, true, material_template, model);
 
         else if (file_type == "gltf")
             return loadGLTF();
@@ -85,8 +85,14 @@ namespace vv
     }
 
 
+    Mesh* ModelManager::getSphereMesh() const
+    {
+        return _loaded_meshes.at(Settings::inst()->getModelDirectory() + "primitives/sphere.obj")[0];
+    }
+
+
     ///////////////////////////////////////////////////////////////////////////////////////////// Private
-    bool ModelManager::loadOBJ(std::string path, std::string name, bool load_geometry, MaterialTemplate *material_template, Model *model)
+    bool ModelManager::loadOBJ(std::string path, std::string name, bool load_geometry, bool load_materials, MaterialTemplate *material_template, Model *model)
     {
         bool success = true;
         std::string full_path(path + name);
@@ -143,7 +149,6 @@ namespace vv
 
             int curr_material_id = shape.mesh.material_ids[0];
 
-            // todo: construct mesh from parsed data
             Mesh *mesh = new Mesh();
             mesh->create(_device, shape.name, vertices, indices, ((curr_material_id < 0) ? 0 : curr_material_id));
             meshes.push_back(mesh);
@@ -151,94 +156,73 @@ namespace vv
 
         _loaded_meshes[path + name] = meshes;
 
-        // parse through all loaded materials and create internal abstractions.
-        for (const auto &m: tiny_materials)
+        if (material_template)
         {
-            Material *material = new Material();
-            material->create(_device, material_template, _descriptor_pool);
-
-            // store required descriptor set data in correct binding order
-            auto orderings = material_template->shader->standard_material_descriptor_orderings;
-            for (size_t i = 0; i < orderings.size(); ++i)
+            // parse through all loaded materials and create internal abstractions.
+            for (const auto &m : tiny_materials)
             {
-                auto o = orderings[i];
-                if (o.name == "constants")
+                Material *material = new Material();
+                material->create(_device, material_template, _descriptor_pool);
+
+                // store required descriptor set data in correct binding order
+                auto orderings = material_template->shader->standard_material_descriptor_orderings;
+                for (size_t i = 0; i < orderings.size(); ++i)
                 {
-                    // todo: check if these are always present. for now assuming they are.
-                    glm::vec4 amb(m.ambient[0], m.ambient[1], m.ambient[2], 0.0);
-                    glm::vec4 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2], 0.0);
-                    glm::vec4 spec(m.specular[0], m.specular[1], m.specular[2], 0.0);
-                    MaterialConstants constants = { amb, dif, spec, static_cast<int>(m.shininess) };
+                    auto o = orderings[i];
+                    if (o.name == "constants")
+                    {
+                        glm::vec4 amb(m.ambient[0], m.ambient[1], m.ambient[2], 0.0);
+                        glm::vec4 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2], 0.0);
+                        glm::vec4 spec(m.specular[0], m.specular[1], m.specular[2], 0.0);
+                        MaterialConstants constants = { amb, dif, spec, static_cast<int>(m.shininess) };
 
-                    VulkanBuffer *buffer = new VulkanBuffer();
-                    buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
-                    buffer->updateAndTransfer(&constants);
+                        VulkanBuffer *buffer = new VulkanBuffer();
+                        buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
+                        buffer->updateAndTransfer(&constants);
 
-                    material->addUniformBuffer(buffer, o.binding);
+                        material->addUniformBuffer(buffer, o.binding);
+                    }
+                    else if (o.name.find("map") != std::string::npos)
+                    {
+                        std::string temp_name;
+                        if (o.name == "ambient_map")
+                            temp_name = m.ambient_texname;
+                        else if (o.name == "diffuse_map")
+                            temp_name = m.diffuse_texname;
+                        else if (o.name == "specular_map")
+                            temp_name = m.specular_texname;
+
+                        auto texture = _texture_manager->load2DImage(path, temp_name, VK_FORMAT_R8G8B8A8_UNORM, false);
+                        material->addTexture(texture, o.binding);
+                    }
+                    else // descriptor type not populated
+                    {
+                        // todo: remove and fill with dummy data as opposed to using different material template
+                        std::cerr << "ERROR: Descriptor Type not populated for model: " << name << ". Using dummy material.\n";
+                        success = false;
+                        break;
+                    }
                 }
-                else if (o.name == "ambient_map")
-                {
-                    /*VulkanImage *texture = new VulkanImage();
-                    if (m.ambient_texname != "")
-                        texture->createColorAttachment(path + m.ambient_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
-                    else
-                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
 
-                    texture->transferToDevice();*/
-                    auto texture = _texture_manager->load2DImage(path, m.ambient_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-                    material->addTexture(texture, o.binding);
-                }
-                else if (o.name == "diffuse_map")
-                {
-                    /*VulkanImage *texture = new VulkanImage();
-                    if (m.diffuse_texname != "")
-                        texture->createColorAttachment(path + m.diffuse_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
-                    else
-                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);*/
-
-                    auto texture = _texture_manager->load2DImage(path, m.diffuse_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
-                    //texture->transferToDevice();
-                    material->addTexture(texture, o.binding);
-                }
-                else if (o.name == "specular_map")
-                {
-                    /*VulkanImage *texture = new VulkanImage();
-                    if (m.specular_texname != "")
-                        texture->createColorAttachment(path + m.specular_texname, _device, VK_FORMAT_R8G8B8A8_UNORM);
-                    else
-                        texture->createColorAttachment(Settings::inst()->getTextureDirectory() + "dummy.png", _device, VK_FORMAT_R8G8B8A8_UNORM);
-
-                    texture->transferToDevice();*/
-                    auto texture = _texture_manager->load2DImage(path, m.specular_texname, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-                    material->addTexture(texture, o.binding);
-                }
-                else // descriptor type not populated
-                {
-                    // todo: remove and fill with dummy data as opposed to using different material template
-                    std::cerr << "ERROR: Descriptor Type not populated for model: " << name << ". Using dummy material.\n";
-                    success = false;
-                    break;
-                }
+                material->updateDescriptorSets();
+                materials.push_back(material);
             }
 
-            material->updateDescriptorSets();
-            materials.push_back(material);
+            // if no mtl file was found
+            if (tiny_materials.empty())
+            {
+                Material *material = new Material();
+                material->create(_device, material_template, _descriptor_pool);
+
+                // todo: this should loop over all non-standard descriptors provided
+                materials.push_back(material);
+            }
+
+            _loaded_materials[path + name][material_template->name] = materials;
+            
+            model->create(name, path + name, material_template->name, material_template);
         }
 
-        // if no mtl file was found
-        if (tiny_materials.empty())
-        {
-            Material *material = new Material();
-            material->create(_device, material_template, _descriptor_pool);
-
-            // todo: this should loop over all non-standard descriptors provided
-            materials.push_back(material);
-        }
-
-        _loaded_materials[path + name][material_template->name] = materials;
-
-        model->create(name, path + name, material_template->name, material_template);
         return success;
     }
 

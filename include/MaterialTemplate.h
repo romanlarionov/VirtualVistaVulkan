@@ -19,7 +19,7 @@ namespace vv
         VulkanPipeline *pipeline;
         Shader *shader;
         VkDescriptorSetLayout material_descriptor_set_layout;
-        VkDescriptorSetLayout non_standard_descriptor_set_layout;
+        bool uses_environment_lighting;
     };
 }
 

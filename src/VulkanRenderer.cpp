@@ -113,7 +113,7 @@ namespace vv
 		// Poll window specific updates and input.
 		window_->run();
 
-        scene_->updateSceneUniforms(swap_chain_->extent, delta_time);
+        scene_->updateUniformData(swap_chain_->extent, delta_time);
 
 		// Draw Frame
 		/// Acquire an image from the swap chain

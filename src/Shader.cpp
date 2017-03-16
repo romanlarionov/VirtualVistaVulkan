@@ -2,6 +2,7 @@
 #include <ostream>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 #include "Shader.h"
 #include "Utils.h"
@@ -9,7 +10,8 @@
 namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
-	Shader::Shader()
+	Shader::Shader() :
+        uses_environmental_lighting(false)
 	{
 	}
 
@@ -48,11 +50,8 @@ namespace vv
 
 	void Shader::shutDown()
 	{
-		if (vert_module)
-			vkDestroyShaderModule(_device->logical_device, vert_module, nullptr);
-
-		if (frag_module) // todo: test if pointer checking even helps
-			vkDestroyShaderModule(_device->logical_device, frag_module, nullptr);
+		if (vert_module) vkDestroyShaderModule(_device->logical_device, vert_module, nullptr);
+		if (frag_module) vkDestroyShaderModule(_device->logical_device, frag_module, nullptr);
 	}
 
 	
@@ -60,7 +59,6 @@ namespace vv
 	std::vector<char> Shader::loadSpirVBinary(std::string file_name)
 	{
 		std::ifstream file(file_name, std::ios::ate | std::ios::binary);
-        // todo: this doesn't error handle correctly on release
 		VV_ASSERT(file.is_open(), "Vulkan Error: failed to open Spir-V file: " + file_name);
 
 		size_t file_size = static_cast<size_t>(file.tellg());
@@ -137,19 +135,20 @@ namespace vv
             }
             else if (set == 1)
             {
-                if (name == "ambient_map")
+                // if descriptor name found is a white listed material descriptor
+                if (std::find(_accepted_material_descriptors.begin(), _accepted_material_descriptors.end(), name)
+                              != _accepted_material_descriptors.end())
                     standard_material_descriptor_orderings.push_back(descriptor_info);
 
-                else if (name == "diffuse_map")
-                    standard_material_descriptor_orderings.push_back(descriptor_info);
-
-                else if (name == "specular_map")
-                    standard_material_descriptor_orderings.push_back(descriptor_info);
                 else // todo: currently not using non-standard. consider removing
                     throw std::runtime_error("Non-standard descriptor found with set 1: " + name);
             }
             else if (set == 2)
-                non_standard_descriptor_orderings.push_back(descriptor_info);
+            {
+                if (name == "brdf_lut" || name == "d_irradiance_map" || name == "s_irradiance_map")
+                    uses_environmental_lighting = true;
+            }
+                
             else
                 throw std::runtime_error("Descriptor with set outside of range found: " + name);
         }

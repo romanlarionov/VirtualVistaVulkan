@@ -22,7 +22,7 @@ namespace vv
          * note: This class does not maintain ownership over VulkanImages.
          *       They must be manually deleted outside of this class.
 		 */
-		void create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type);
+		void create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type, uint32_t base_mip_level);
 
 		/*
 		 *

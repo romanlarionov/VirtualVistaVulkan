@@ -1,3 +1,4 @@
-triangle
 phong
 dummy
+skybox
+triangle

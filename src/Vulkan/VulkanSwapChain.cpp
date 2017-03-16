@@ -154,14 +154,14 @@ namespace vv
     	    color_images[i] = curr_image;
 
     	    VulkanImageView *curr_image_view = new VulkanImageView();
-    	    curr_image_view->create(device, curr_image, VK_IMAGE_VIEW_TYPE_2D);
+    	    curr_image_view->create(device, curr_image, VK_IMAGE_VIEW_TYPE_2D, 0);
     	    color_image_views[i] = curr_image_view;
     	}
 
     	depth_image = new VulkanImage();
         depth_image->createDepthAttachment(device, extent, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     	depth_image_view = new VulkanImageView();
-    	depth_image_view->create(device, depth_image, VK_IMAGE_VIEW_TYPE_2D);
+    	depth_image_view->create(device, depth_image, VK_IMAGE_VIEW_TYPE_2D, 0);
     }
 
 

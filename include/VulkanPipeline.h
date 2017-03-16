@@ -21,11 +21,12 @@ namespace vv
 
 		/*
 		 * Creates a pipeline abstraction.
+         *
          * note: this is single use pipeline for now. No current way to alter the pipeline
          *       created outside of shader modules, descriptor set layouts, and push constants.
 		 */
 		void create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
-                    VulkanRenderPass *render_pass, bool depth_test_enable, bool depth_write_enable);
+                    VulkanRenderPass *render_pass, VkFrontFace front_face, bool depth_test_enable, bool depth_write_enable);
 
 		/*
 		 *

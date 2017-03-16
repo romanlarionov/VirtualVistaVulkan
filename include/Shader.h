@@ -19,14 +19,13 @@ namespace vv
         // specifies the binding order of the model descriptor.
         std::vector<DescriptorInfo> standard_material_descriptor_orderings;
         std::vector<DescriptorInfo> non_standard_descriptor_orderings;
+        bool uses_environmental_lighting;
 
 		Shader();
 		~Shader();
 
         /*
-         * Manages loading of binary spir-V shader programs from file.
-         *
-         * todo: add support for other types of shader programs
+         * Manages loading of binary Spir-V shader programs from file.
          */
 		void create(VulkanDevice *device, std::string name);
 
@@ -44,6 +43,12 @@ namespace vv
 
 		std::vector<char> _vert_binary_data;
 		std::vector<char> _frag_binary_data;
+
+        std::vector<std::string> _accepted_material_descriptors = {
+            "ambient_map", "diffuse_map", "specular_map",
+            "normal_map", "roughness_map", "metalness_map",
+            "emissiveness_map", "radiance_map"
+        };
 
         /*
          * Parses binary data and returns it as an array of chars.
