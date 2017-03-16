@@ -85,6 +85,7 @@ namespace vv
         _lights_uniform_buffer->shutDown(); delete _lights_uniform_buffer;
         vkDestroyDescriptorSetLayout(_device->logical_device, _scene_descriptor_set_layout, nullptr);
         vkDestroyDescriptorSetLayout(_device->logical_device, _environment_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(_device->logical_device, _radiance_descriptor_set_layout, nullptr);
 
         vkDestroyDescriptorPool(_device->logical_device, _descriptor_pool, nullptr);
         _texture_manager->shutDown(); delete _texture_manager;

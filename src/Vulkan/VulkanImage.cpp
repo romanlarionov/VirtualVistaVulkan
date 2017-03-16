@@ -101,181 +101,71 @@ namespace vv
 		vkFreeMemory(_device->logical_device, _image_memory, nullptr);
 	}
 
-
-/*    void VulkanImage::updateAndTransfer(void *data, uint32_t size_in_bytes)
-    {
-        update(data, size_in_bytes);
-        transferToDevice();
-    }
-
-    void VulkanImage::update(void *data, uint32_t size_in_bytes)
-    {
-		void *mapped_data;
-            vkMapMemory(_device->logical_device, _staging_memory, 0, size_in_bytes, 0, &mapped_data);
-            memcpy(mapped_data, data, size_in_bytes);
-            vkUnmapMemory(_device->logical_device, _staging_memory);
-    }
-
-
-	void VulkanImage::transferToDevice()
-	{
-        transformImageLayout(_staging_image, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        transformImageLayout(image, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-        auto command_pool_used = _device->command_pools["graphics"];
-
-        // use transfer queue if available
-        if (_device->command_pools.count("transfer") > 0)
-            command_pool_used = _device->command_pools["transfer"];
-
-        auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
-
-        // perform transfer on each mip level
-        for (uint32_t layer = 0; layer < this->array_layers; ++layer)
-        {
-            for (uint32_t level = 0; level < this->mip_levels; ++level)
-            {
-                uint32_t image_width = (this->width >> level);
-                uint32_t image_height = (this->height >> level);
-
-
-            }
-        }
-
-        VkImageSubresourceLayers sub_resource = {};
-        sub_resource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        sub_resource.baseArrayLayer = 0;
-        sub_resource.mipLevel = 0;
-        sub_resource.layerCount = 1;
-
-        VkImageCopy image_copy = {};
-        image_copy.srcSubresource = sub_resource;
-        image_copy.dstSubresource = sub_resource;
-        image_copy.srcOffset = { 0, 0, 0 };
-        image_copy.dstOffset = { 0, 0, 0 };
-        image_copy.extent.width = this->width;
-        image_copy.extent.height = this->height;
-        image_copy.extent.depth = this->depth;
-
-        vkCmdCopyImage(command_buffer, _staging_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_copy);
-
-        if (_device->transfer_family_index != -1)
-            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
-        else
-            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
-
-        transformImageLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-	}
-
-    */
     
     void VulkanImage::updateAndTransfer(void *data, VkDeviceSize size_in_bytes)
     {
-        // https://github.com/SaschaWillems/Vulkan/blob/master/texturemipmapgen/texturemipmapgen.cpp
+        auto command_pool_used = _device->command_pools["graphics"];
+        auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
 
-        VkFormatProperties formatProperties = {};
-        vkGetPhysicalDeviceFormatProperties(_device->physical_device, format, &formatProperties);
+        VkImageSubresourceRange subresource_range = {};
+        subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subresource_range.baseMipLevel = 0;
+        subresource_range.levelCount = this->mip_levels;
+        subresource_range.layerCount = this->array_layers;
 
-        // Mip-chain generation requires support for blit source and destination
-        assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
-        assert(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT);
+        transformImageLayout(command_buffer, image, subresource_range, initial_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        for (int32_t layer = 0; layer < this->array_layers; ++layer)
-        {
-            auto command_pool_used = _device->command_pools["graphics"];
-            auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
+        // move host data to transfer buffer
+        allocateTransferMemory(size_in_bytes);
+        void *mapped_data;
+        vkMapMemory(_device->logical_device, _staging_memory, 0, size_in_bytes, 0, &mapped_data);
+        memcpy(mapped_data, data, size_in_bytes);
+        vkUnmapMemory(_device->logical_device, _staging_memory);
+        mapped_data = nullptr;
 
-            VkImageSubresourceRange subresource_range = {};
-            subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            subresource_range.baseMipLevel = 0;
-            subresource_range.levelCount = 1;
-            subresource_range.layerCount = 1;
+        const auto &format_info = _format_info_table.at(format);
+		const uint32_t block_size = format_info.block_size;
+		const uint32_t block_width = format_info.block_extent.width;
+		const uint32_t block_height = format_info.block_extent.height;
+		const uint32_t block_depth = format_info.block_extent.depth;
 
-            transformImageLayout(command_buffer, image, subresource_range, initial_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		// Copy mip levels from staging buffer
+		std::vector<VkBufferImageCopy> buffer_copy_regions;
+		uint32_t offset = 0;
 
-            // move host data to transfer buffer
-            allocateTransferMemory(size_in_bytes);
-            void *mapped_data;
-            vkMapMemory(_device->logical_device, _staging_memory, 0, size_in_bytes, 0, &mapped_data);
-            memcpy(mapped_data, data, size_in_bytes);
-            vkUnmapMemory(_device->logical_device, _staging_memory);
+		for (uint32_t layer = 0; layer < this->array_layers; layer++)
+		{
+			for (uint32_t level = 0; level < this->mip_levels; level++)
+			{
+				uint32_t image_width = (this->width >> level);
+				uint32_t image_height = (this->height >> level);
+				uint32_t block_count_x = (image_width + (block_width - 1)) / block_width;
+				uint32_t block_count_y = (image_height + (block_height - 1)) / block_height;
+				uint32_t block_count_z = (depth + (block_depth - 1)) / block_depth;
 
-            // Copy the first mip of the chain, remaining mips will be generated
-            VkBufferImageCopy buffer_copy_region = {};
-            buffer_copy_region.imageSubresource.aspectMask = this->aspect_flags;
-            buffer_copy_region.imageSubresource.mipLevel = 0;
-            buffer_copy_region.imageSubresource.baseArrayLayer = 0;
-            buffer_copy_region.imageSubresource.layerCount = 1;
-            buffer_copy_region.imageExtent.width = width;
-            buffer_copy_region.imageExtent.height = height;
-            buffer_copy_region.imageExtent.depth = 1;
+				VkBufferImageCopy buffer_copy_region = {};
+				buffer_copy_region.imageSubresource.aspectMask = this->aspect_flags;
+				buffer_copy_region.imageSubresource.mipLevel = level;
+				buffer_copy_region.imageSubresource.baseArrayLayer = layer;
+				buffer_copy_region.imageSubresource.layerCount = 1;
+				buffer_copy_region.imageExtent.width = image_width;
+				buffer_copy_region.imageExtent.height = image_height;
+				buffer_copy_region.imageExtent.depth = depth;
+				buffer_copy_region.bufferOffset = offset;
 
-            vkCmdCopyBufferToImage(command_buffer, _staging_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &buffer_copy_region);
+				buffer_copy_regions.push_back(buffer_copy_region);
+				offset += block_count_x * block_count_y * block_count_z * block_size;
+			}
+		}
 
-            // Transition first mip level to transfer source for read during blit
-            transformImageLayout(command_buffer, image, subresource_range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vkCmdCopyBufferToImage(command_buffer, _staging_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               static_cast<uint32_t>(buffer_copy_regions.size()), buffer_copy_regions.data());
 
-            // end copy of first mip level
-            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
+        transformImageLayout(command_buffer, image, subresource_range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
 
-            // Clean up staging resources
-            vkFreeMemory(_device->logical_device, _staging_memory, nullptr);
-            vkDestroyBuffer(_device->logical_device, _staging_buffer, nullptr);
-
-            // Generate the mip chain
-            // ---------------------------------------------------------------
-            // We copy down the whole mip chain doing a blit from mip-1 to mip
-            // An alternative way would be to always blit from the first mip level and sample that one down
-            auto blit_command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
-
-            // Copy down mips from n-1 to n
-            for (int32_t i = 1; i < this->mip_levels; ++i)
-            {
-                VkImageBlit image_blit{};
-
-                // Source
-                image_blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                image_blit.srcSubresource.layerCount = 1;
-                image_blit.srcSubresource.mipLevel = i - 1;
-                image_blit.srcOffsets[1].x = int32_t(this->width >> (i - 1));
-                image_blit.srcOffsets[1].y = int32_t(this->height >> (i - 1));
-                image_blit.srcOffsets[1].z = 1;
-
-                // Destination
-                image_blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                image_blit.dstSubresource.layerCount = 1;
-                image_blit.dstSubresource.mipLevel = i;
-                image_blit.dstOffsets[1].x = int32_t(this->width >> i);
-                image_blit.dstOffsets[1].y = int32_t(this->height >> i);
-                image_blit.dstOffsets[1].z = 1;
-
-                VkImageSubresourceRange mip_sub_range = {};
-                mip_sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                mip_sub_range.baseMipLevel = i;
-                mip_sub_range.levelCount = 1;
-                mip_sub_range.layerCount = 1;
-
-                // Transition current mip level to transfer destination
-                transformImageLayout(blit_command_buffer, image, mip_sub_range, VK_IMAGE_LAYOUT_UNDEFINED,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
-
-                // Blit from previous level
-                vkCmdBlitImage(blit_command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
-                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &image_blit, VK_FILTER_LINEAR);
-
-                // Transition current mip level to transfer source for read in next iteration
-                transformImageLayout(blit_command_buffer, image, mip_sub_range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-            }
-
-            // After the loop, all mip layers are in TRANSFER_SRC layout, so transition all to SHADER_READ
-            subresource_range.levelCount = this->mip_levels;
-            transformImageLayout(blit_command_buffer, image, subresource_range, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-            util::endSingleUseCommand(_device->logical_device, command_pool_used, blit_command_buffer, _device->graphics_queue);
-        }
+        vkDestroyBuffer(_device->logical_device, _staging_buffer, nullptr);
+        vkFreeMemory(_device->logical_device, _staging_memory, nullptr);
     }
 
 
@@ -407,33 +297,6 @@ namespace vv
 		memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memory_barrier.image = image;
         memory_barrier.subresourceRange = subresource_range;
-
-        /*if (old_layout == VK_IMAGE_LAYOUT_PREINITIALIZED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		} else if (old_layout == VK_IMAGE_LAYOUT_PREINITIALIZED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-			memory_barrier.srcAccessMask = 0;
-			memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        } else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-			memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-			memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        } 
-        
-        else {
-			VV_ASSERT(false, "Unsupported image layout transformation.");
-		}*/
 
         // https://github.com/SaschaWillems/Vulkan/blob/master/base/VulkanTools.cpp#L94
         // Source layouts (old)

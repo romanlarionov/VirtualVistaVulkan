@@ -12,6 +12,12 @@
 
 namespace vv
 {
+    struct FormatInfo
+    {
+        uint32_t block_size;
+        VkExtent3D block_extent;
+    };
+
 	class VulkanImage
 	{
 	public:
@@ -69,6 +75,16 @@ namespace vv
         VkBuffer _staging_buffer        = VK_NULL_HANDLE;
 		VkDeviceMemory _staging_memory	= VK_NULL_HANDLE;
 		VkDeviceMemory _image_memory	= VK_NULL_HANDLE;
+
+        std::unordered_map<VkFormat, FormatInfo> _format_info_table =
+        {
+            { VK_FORMAT_R8G8B8A8_UNORM, { 4, { 1, 1, 1 } } },
+            { VK_FORMAT_R32G32_SFLOAT, { 8, { 1, 1, 1 } } },
+            { VK_FORMAT_R32G32B32A32_SFLOAT, { 16, { 1, 1, 1 } } },
+            { VK_FORMAT_BC3_UNORM_BLOCK, { 16, { 4, 4, 1 } } },
+            { VK_FORMAT_R8_UNORM, { 1, { 1, 1, 1 } } },
+            { VK_FORMAT_R8G8B8_UNORM, { 3, { 1, 1, 1 } } }
+        };
 
         /*
          * Allocates a VkBuffer to use during transfer operations between host and device memory.

@@ -17,7 +17,7 @@ namespace vv
 	void VulkanPipeline::create(VulkanDevice *device, Shader *shader, VkPipelineLayout pipeline_layout,
                                 VulkanRenderPass *render_pass, VkFrontFace front_face, bool depth_test_enable, bool depth_write_enable)
 	{
-		device_ = device;
+		_device = device;
 
 		VkPipelineShaderStageCreateInfo vert_shader_create_info = {};
 		vert_shader_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -155,14 +155,14 @@ namespace vv
 		graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE; // used for creating new pipeline from existing one.
 
 		// info: the null handle here specifies a VkPipelineCache that can be used to store pipeline creation info after a pipeline's deletion.
-		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(device_->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline));
+		VV_CHECK_SUCCESS(vkCreateGraphicsPipelines(_device->logical_device, VK_NULL_HANDLE, 1, &graphics_pipeline_create_info, nullptr, &pipeline));
 	}
 
 
 	void VulkanPipeline::shutDown()
 	{
 		if (pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(device_->logical_device, pipeline, nullptr);
+			vkDestroyPipeline(_device->logical_device, pipeline, nullptr);
 	}
 
 

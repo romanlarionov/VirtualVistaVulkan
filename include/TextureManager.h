@@ -16,7 +16,7 @@ namespace vv
     struct SampledTexture
     {
         VulkanImage *image = nullptr;
-        std::vector<VulkanImageView *> image_views;
+        VulkanImageView * image_view = nullptr;
         VulkanSampler *sampler = nullptr;
     };
 
@@ -67,7 +67,6 @@ namespace vv
 			{ gli::FORMAT_RG32_SFLOAT_PACK32, VK_FORMAT_R32G32_SFLOAT },
 			{ gli::FORMAT_RGB8_UNORM_PACK8, VK_FORMAT_R8G8B8_UNORM }
 		};
-
 
         /*
          * Generalized function to abstract loading of different texture types.

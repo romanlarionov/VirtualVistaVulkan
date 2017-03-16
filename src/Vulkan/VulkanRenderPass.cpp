@@ -20,7 +20,7 @@ namespace vv
 		if (has_been_created) return;
 
 		VV_ASSERT(device != nullptr, "Vulkan Device is NULL");
-		device_ = device;
+		_device = device;
 
 		VkAttachmentDescription color_attachment_description = {};
 		color_attachment_description.flags = 0;
@@ -90,7 +90,7 @@ namespace vv
 	void VulkanRenderPass::shutDown()
 	{
 		if (render_pass != VK_NULL_HANDLE)
-			vkDestroyRenderPass(device_->logical_device, render_pass, nullptr);
+			vkDestroyRenderPass(_device->logical_device, render_pass, nullptr);
 	}
 
 

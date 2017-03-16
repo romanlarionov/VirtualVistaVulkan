@@ -41,19 +41,6 @@ namespace vv
             delete ubo->buffer;
             delete ubo;
         }
-
-        /*for (auto &i : _image_store)
-        {
-            i->shutDown();
-            delete i;
-        }*/
-
-        /*for (auto &tex : _textures)
-        {
-            tex->view->shutDown();
-            delete tex->view;
-            delete tex;
-        }*/
     }
 
 
@@ -89,7 +76,7 @@ namespace vv
     {
         VkDescriptorImageInfo image_info = {};
     	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	image_info.imageView = texture->image_views[0]->image_view;
+    	image_info.imageView = texture->image_view->image_view;
     	image_info.sampler = texture->sampler->sampler;
 
         TextureStore *store = new TextureStore();

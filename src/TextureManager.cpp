@@ -37,13 +37,8 @@ namespace vv
         for (auto &t : _loaded_textures)
         {
             t.second->image->shutDown(); delete t.second->image;
+            t.second->image_view->shutDown(); delete t.second->image_view;
             t.second->sampler->shutDown(); delete t.second->sampler;
-
-            for (auto &v : t.second->image_views)
-            {
-                v->shutDown();
-                delete v;
-            }
         }
 
         for (auto &d : _ldr_texture_array_data_cache)
@@ -77,23 +72,6 @@ namespace vv
             }
 
             _ldr_texture_array_data_cache[path + name] = texels;
-
-            /*SampledTexture *texture = new SampledTexture();
-            texture->image = new VulkanImage();
-            texture->image->create(_device, extent, format, VK_IMAGE_TYPE_2D, 0, VK_IMAGE_ASPECT_COLOR_BIT, 1, 1,
-                          VK_IMAGE_LAYOUT_PREINITIALIZED, VK_SAMPLE_COUNT_1_BIT);
-            texture->image->updateAndTransfer(texels, size_in_bytes);
-
-            // todo: add runtime mip map gen
-            texture->image_views.resize(1);
-            texture->image_views[0] = new VulkanImageView();
-            texture->image_views[0]->create(_device, texture->image, VK_IMAGE_VIEW_TYPE_2D, 0);
-
-            // todo: fix sampler creation. I have it hardcoded atm.
-            texture->sampler = new VulkanSampler();
-            texture->sampler->create(_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-                VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, true, 16, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-                0.f, 0.f, 0.f, false);*/
 
             uint32_t size = width * height * 4;
             VkExtent3D extent = {};
@@ -155,30 +133,7 @@ namespace vv
             extent.width = static_cast<uint32_t>(cube.extent().x);
 			extent.height = static_cast<uint32_t>(cube.extent().y);
             extent.depth = 1;
-            uint32_t mip_levels = static_cast<uint32_t>(cube.levels());//(create_mip_levels) ? std::floor(std::log2(std::max(extent.width, extent.height))) + 1 : 1;
-
-            /*SampledTexture *texture = new SampledTexture();
-            texture->image = new VulkanImage();
-            texture->image->create(_device, extent, format, VK_IMAGE_TYPE_2D, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, VK_IMAGE_ASPECT_COLOR_BIT, 
-                          mip_levels, 6, VK_IMAGE_LAYOUT_UNDEFINED, VK_SAMPLE_COUNT_1_BIT);
-            texture->image->updateAndTransfer(cube.data(), cube.size());
-            
-            // create image views for each mip level
-            texture->image_views.resize(mip_levels + 1);
-            texture->image_views[0] = new VulkanImageView();
-            texture->image_views[0]->create(_device, texture->image, VK_IMAGE_VIEW_TYPE_CUBE, 0);
-            
-            for (int l = 0; l < mip_levels; ++l)
-            {
-                texture->image_views[l + 1] = new VulkanImageView();
-                texture->image_views[l + 1]->create(_device, texture->image, VK_IMAGE_VIEW_TYPE_CUBE, l);
-            }
-
-            // todo: fix sampler creation. I have it hardcoded atm.
-            texture->sampler = new VulkanSampler();
-            texture->sampler->create(_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, true, 16, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-                0.f, 0.f, float(mip_levels - 1), false);*/
+            uint32_t mip_levels = static_cast<uint32_t>(cube.levels());
 
             _loaded_textures[path + name] = loadTexture(cube.data(), cube.size(), extent, format,
                                             VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, mip_levels, 6, VK_IMAGE_VIEW_TYPE_CUBE);
@@ -201,17 +156,9 @@ namespace vv
         texture->image->updateAndTransfer(data, size_in_bytes);
         
         // create image views for each mip level
-        texture->image_views.resize(1);
-        //texture->image_views.resize(mip_levels + 1);
-        texture->image_views[0] = new VulkanImageView();
-        texture->image_views[0]->create(_device, texture->image, image_view_type, 0);
+        texture->image_view = new VulkanImageView();
+        texture->image_view->create(_device, texture->image, image_view_type, 0);
         
-        /*for (int l = 0; l < mip_levels; ++l)
-        {
-            texture->image_views[l + 1] = new VulkanImageView();
-            texture->image_views[l + 1]->create(_device, texture->image, VK_IMAGE_VIEW_TYPE_CUBE, l);
-        }*/
-
         // todo: fix sampler creation. I have it hardcoded atm.
         texture->sampler = new VulkanSampler();
         texture->sampler->create(_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,

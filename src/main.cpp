@@ -23,7 +23,6 @@ int main(int argc, char **argv)
 
     Camera *camera = scene->addCamera(glm::radians(90.0f), 0.1f, 1000.0f);
     scene->setActiveCamera(camera);
-    camera->translate(glm::vec3(0.0f, 0.0f, -9.0f));
 
     SkyBox *skybox = scene->addSkyBox("Canyon/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
     scene->setActiveSkyBox(skybox);

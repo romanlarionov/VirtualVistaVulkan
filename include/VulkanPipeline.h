@@ -41,7 +41,7 @@ namespace vv
         // todo: add functions that add single attachment states
 		
 	private:
-		VulkanDevice *device_;
+		VulkanDevice *_device;
 	};
 }
 

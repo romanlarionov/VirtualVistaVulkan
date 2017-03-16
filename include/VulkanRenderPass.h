@@ -41,7 +41,7 @@ namespace vv
 		void endRenderPass(VkCommandBuffer command_buffer);
 
 	private:
-		VulkanDevice *device_;
+		VulkanDevice *_device;
 
 	};
 }

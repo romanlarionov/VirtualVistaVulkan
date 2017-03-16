@@ -29,7 +29,7 @@ namespace vv
 
         // SkyBox radiance descriptor set
     	_radiance_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	_radiance_image_info.imageView = radiance_map->image_views[0]->image_view;
+    	_radiance_image_info.imageView = radiance_map->image_view->image_view;
     	_radiance_image_info.sampler = radiance_map->sampler->sampler;
 
         _write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -42,7 +42,7 @@ namespace vv
 
         // Diffuse irradiance probe descriptor set
     	_diffuse_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	_diffuse_image_info.imageView = diffuse_map->image_views[0]->image_view;
+    	_diffuse_image_info.imageView = diffuse_map->image_view->image_view;
     	_diffuse_image_info.sampler = diffuse_map->sampler->sampler;
 
         _write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -55,7 +55,7 @@ namespace vv
 
         // Specular irradiance probe descriptor set
         _specular_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	_specular_image_info.imageView = specular_map->image_views[0]->image_view;
+    	_specular_image_info.imageView = specular_map->image_view->image_view;
     	_specular_image_info.sampler = specular_map->sampler->sampler;
 
         _write_sets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -68,7 +68,7 @@ namespace vv
 
         // BRDF LUT descriptor set
         _brdf_image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	_brdf_image_info.imageView = brdf_lut->image_views[0]->image_view;
+    	_brdf_image_info.imageView = brdf_lut->image_view->image_view;
     	_brdf_image_info.sampler = brdf_lut->sampler->sampler;
 
         _write_sets[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

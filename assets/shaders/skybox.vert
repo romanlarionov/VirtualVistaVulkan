@@ -27,5 +27,5 @@ void main()
     mat3 scale = mat3(vec3(20.0, 0.0, 0.0), vec3(0.0, 20.0, 0.0), vec3(0.0, 0.0, 20.0));
 
     gl_Position = ubo.projection * ubo.view * vec4(scale * position, 1.0);
-    uvw = scale * position;
+    uvw = position;
 }

@@ -17,28 +17,28 @@ namespace vv
     void VulkanBuffer::create(VulkanDevice *device, VkBufferUsageFlags usage_flags, VkDeviceSize size)
     {
         VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
-        device_ = device;
-        usage_flags_ = usage_flags;
+        _device = device;
+        _usage_flags = usage_flags;
         this->size = size;
 
         // Create temporary transfer buffer on CPU 
         allocateMemory(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buffer_, staging_memory_);
+        				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _staging_buffer, _staging_memory);
 
         // Create storage buffer for GPU
-        allocateMemory(size, usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, buffer_memory_);	
+        allocateMemory(size, usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, buffer, _buffer_memory);	
     }
 
 
     void VulkanBuffer::shutDown()
     {
-        if (staging_buffer_)
-        	vkDestroyBuffer(device_->logical_device, staging_buffer_, nullptr);
-        if (staging_memory_)
-        	vkFreeMemory(device_->logical_device, staging_memory_, nullptr);
+        if (_staging_buffer)
+        	vkDestroyBuffer(_device->logical_device, _staging_buffer, nullptr);
+        if (_staging_memory)
+        	vkFreeMemory(_device->logical_device, _staging_memory, nullptr);
 
-        vkDestroyBuffer(device_->logical_device, buffer, nullptr);
-        vkFreeMemory(device_->logical_device, buffer_memory_, nullptr);
+        vkDestroyBuffer(_device->logical_device, buffer, nullptr);
+        vkFreeMemory(_device->logical_device, _buffer_memory, nullptr);
     }
 
 
@@ -53,32 +53,32 @@ namespace vv
     {
         // Move raw data to staging Vulkan buffer.
         void *mapped_data;
-        vkMapMemory(device_->logical_device, staging_memory_, 0, size, 0, &mapped_data);
+        vkMapMemory(_device->logical_device, _staging_memory, 0, size, 0, &mapped_data);
         memcpy(mapped_data, data, size);
-        vkUnmapMemory(device_->logical_device, staging_memory_);
+        vkUnmapMemory(_device->logical_device, _staging_memory);
     }
 
 
     void VulkanBuffer::transferToDevice()
     {
-        VV_ASSERT(staging_buffer_ && buffer, "Buffers not allocated correctly. Perhaps create() wasn't called.");
+        VV_ASSERT(_staging_buffer && buffer, "Buffers not allocated correctly. Perhaps create() wasn't called.");
 
-        auto command_pool_used = device_->command_pools["graphics"];
+        auto command_pool_used = _device->command_pools["graphics"];
 
         // use transfer queue if available
-        if (device_->command_pools.count("transfer") > 0)
-            command_pool_used = device_->command_pools["transfer"];
+        if (_device->command_pools.count("transfer") > 0)
+            command_pool_used = _device->command_pools["transfer"];
 
-        auto command_buffer = util::beginSingleUseCommand(device_->logical_device, command_pool_used);
+        auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
 
         VkBufferCopy buffer_copy = {};
         buffer_copy.size = size;
-        vkCmdCopyBuffer(command_buffer, staging_buffer_, buffer, 1, &buffer_copy);
+        vkCmdCopyBuffer(command_buffer, _staging_buffer, buffer, 1, &buffer_copy);
 
-        if (device_->transfer_family_index != -1)
-            util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->transfer_queue);
+        if (_device->transfer_family_index != -1)
+            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
         else
-            util::endSingleUseCommand(device_->logical_device, command_pool_used, command_buffer, device_->graphics_queue);
+            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
     }
 
 
@@ -93,13 +93,13 @@ namespace vv
         buffer_create_info.usage = usage; // use this as a vertex/index buffer
 
         // use transfer queue if available
-        if (device_->transfer_family_index != -1)
+        if (_device->transfer_family_index != -1)
         {
             buffer_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
             buffer_create_info.queueFamilyIndexCount = 2;
             std::array<uint32_t, 2> queue_family_indices = {
-                static_cast<uint32_t>(device_->graphics_family_index),
-                static_cast<uint32_t>(device_->transfer_family_index)
+                static_cast<uint32_t>(_device->graphics_family_index),
+                static_cast<uint32_t>(_device->transfer_family_index)
             };
             buffer_create_info.pQueueFamilyIndices = queue_family_indices.data();
         }
@@ -107,16 +107,16 @@ namespace vv
         {
             buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             buffer_create_info.queueFamilyIndexCount = 1;
-            uint32_t queue_index = static_cast<uint32_t>(device_->graphics_family_index);
+            uint32_t queue_index = static_cast<uint32_t>(_device->graphics_family_index);
             buffer_create_info.pQueueFamilyIndices = &queue_index;
         }
 
-        VV_CHECK_SUCCESS(vkCreateBuffer(device_->logical_device, &buffer_create_info, nullptr, &buffer));
+        VV_CHECK_SUCCESS(vkCreateBuffer(_device->logical_device, &buffer_create_info, nullptr, &buffer));
 
         // Determine requirements for memory (where it's allocated, type of memory, etc.)
         VkMemoryRequirements memory_requirements = {};
-        vkGetBufferMemoryRequirements(device_->logical_device, buffer, &memory_requirements);
-        auto memory_type = device_->findMemoryTypeIndex(memory_requirements.memoryTypeBits, memory_properties);
+        vkGetBufferMemoryRequirements(_device->logical_device, buffer, &memory_requirements);
+        auto memory_type = _device->findMemoryTypeIndex(memory_requirements.memoryTypeBits, memory_properties);
 
         // Allocate and bind buffer memory.
         VkMemoryAllocateInfo memory_allocate_info = {};
@@ -125,7 +125,7 @@ namespace vv
         memory_allocate_info.memoryTypeIndex = memory_type;
 
         // todo: single allocations are costly. figure out how to batch data together. (might just do that logic outside of this class)
-        VV_CHECK_SUCCESS(vkAllocateMemory(device_->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
-        vkBindBufferMemory(device_->logical_device, buffer, buffer_memory, 0);
+        VV_CHECK_SUCCESS(vkAllocateMemory(_device->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
+        vkBindBufferMemory(_device->logical_device, buffer, buffer_memory, 0);
     }
 }

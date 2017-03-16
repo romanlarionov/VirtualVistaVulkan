@@ -3,6 +3,10 @@
 #include "Settings.h"
 
 #include "glm/gtx/rotate_vector.hpp"
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace vv
 {
@@ -28,7 +32,7 @@ namespace vv
         _near_plane = near_plane;
         _far_plane = far_plane;
         _look_at_point = glm::vec3(0.0f, 0.0f, -1.0f); // todo: maybe don't hardcode these?
-        _up_vec = glm::vec3(0.0f, 1.0f, 0.0f);
+        _up_vec = glm::vec3(0.0f, -1.0f, 0.0f);
 	}
 
 
@@ -67,9 +71,13 @@ namespace vv
         pitch = (pitch < -89.0f) ? -89.0f : pitch;
         auto position = Entity::getPosition();
 
-        // rotate look at point around relative frame's axes
-        _look_at_point = glm::rotate(_look_at_point - position, pitch, u) + position;
-        _look_at_point = glm::rotate(_look_at_point - position, -yaw, v) + position;
+        // find component-wise rotation quaternions
+        glm::quat pitch_quat = glm::angleAxis(pitch, u);
+        glm::quat yaw_quat = glm::angleAxis(-yaw, _up_vec);
+
+        // combine both components
+        glm::quat combined_rotations = glm::normalize(glm::cross(pitch_quat, yaw_quat));
+        _look_at_point = glm::rotate(combined_rotations, _look_at_point - position) + position;
     }
 
 
