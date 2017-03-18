@@ -157,12 +157,14 @@ namespace vv
 
         VV_CHECK_SUCCESS(vkAllocateCommandBuffers(physical_device_->logical_device, &command_buffer_allocate_info, command_buffers_.data()));
 
-        std::vector<VkClearValue> clear_values; // todo: offload to settings
+        std::vector<VkClearValue> clear_values;
         VkClearValue color_value, depth_value;
         color_value.color = { 0.3f, 0.5f, 0.5f, 1.0f };
         depth_value.depthStencil = {1.0f, 0};
         clear_values.push_back(color_value);
         clear_values.push_back(depth_value);
+
+        scene_->allocateSceneDescriptorSets();
 
 		for (std::size_t i = 0; i < command_buffers_.size(); ++i)
 		{
@@ -204,7 +206,6 @@ namespace vv
 		std::string application_name = Settings::inst()->getApplicationName();
 		std::string engine_name = Settings::inst()->getEngineName();
 
-		// todo: offload the version stuff to settings
 		VkApplicationInfo app_info = {};
 		app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		app_info.pApplicationName = application_name.c_str();
@@ -303,10 +304,7 @@ namespace vv
 	}
 
 
-	/*
-	 * Callback that performs all printing of validation layer info.
-	 */
-	VKAPI_ATTR VkBool32 VKAPI_CALL
+    VKAPI_ATTR VkBool32 VKAPI_CALL
 		vulkanDebugCallback(VkDebugReportFlagsEXT flags,
 			VkDebugReportObjectTypeEXT obj_type, // object that caused the error
 			uint64_t src_obj,
@@ -316,8 +314,6 @@ namespace vv
 			const char *msg,
 			void *usr_data)
 	{
-		// todo: maybe add logging to files
-		// todo: think of other things that might be useful to log
 		std::ostringstream stream;
 		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
 			stream << "WARNING: ";
@@ -362,7 +358,6 @@ namespace vv
 
 	void VulkanRenderer::createVulkanDevices()
 	{
-		// todo: implement ranking system to choose most optimal GPU or order them in increasing order of relevance.
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(instance_, &physical_device_count, nullptr);
 
@@ -380,8 +375,8 @@ namespace vv
 			if (physical_device_->isSuitable(window_->surface, surface_details_handle))
 			{
 				physical_device_->createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT);
-				window_->surface_settings[physical_device_] = surface_details_handle; // todo: find a better hash code than a pointer
-				break; // todo: remove. for now only adding one device.
+				window_->surface_settings[physical_device_] = surface_details_handle;
+				break;
 			}
 			else
 			{

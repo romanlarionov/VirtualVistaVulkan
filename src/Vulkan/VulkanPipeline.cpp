@@ -105,7 +105,7 @@ namespace vv
 		depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
 		depth_stencil_state_create_info.minDepthBounds = 0.0f;
 		depth_stencil_state_create_info.maxDepthBounds = 1.0f;
-		depth_stencil_state_create_info.stencilTestEnable = VK_FALSE; // dont want to do any cutting of the image currently.
+		depth_stencil_state_create_info.stencilTestEnable = VK_FALSE; // don't want to do any cutting of the image currently.
 		depth_stencil_state_create_info.front = {};
 		depth_stencil_state_create_info.back = {};
 
@@ -161,14 +161,13 @@ namespace vv
 
 	void VulkanPipeline::shutDown()
 	{
-		if (pipeline != VK_NULL_HANDLE)
-			vkDestroyPipeline(_device->logical_device, pipeline, nullptr);
+        vkDestroyPipeline(_device->logical_device, pipeline, nullptr);
 	}
 
 
 	void VulkanPipeline::bind(VkCommandBuffer command_buffer, VkPipelineBindPoint bind_point) const
 	{
-		vkCmdBindPipeline(command_buffer, bind_point, pipeline);
+        vkCmdBindPipeline(command_buffer, bind_point, pipeline);
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private

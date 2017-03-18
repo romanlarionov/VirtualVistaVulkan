@@ -59,11 +59,19 @@ namespace vv
         }
 	}
 
+	inline void VV_ALERT(std::string message)
+	{
+#ifdef _WIN32
+        MessageBox(NULL, message.c_str(), "Application Warning", 0);
+#endif
+	}
+
 #else
 
 	inline void VV_CHECK_SUCCESS(VkResult success) {}
 	inline void VV_ASSERT(bool condition, std::string message) {}
 	inline void VV_ASSERT(VkResult condition, std::string message) {}
+    inline void VV_ALERT(std::string message) {}
 
 #endif
 
@@ -71,7 +79,7 @@ namespace vv
 	{
 	public:
 		glm::vec3 position;
-		glm::vec3 color;
+		glm::vec3 normal;
 		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription getBindingDesciption()
@@ -95,7 +103,7 @@ namespace vv
 			attribute_descriptions[1].binding = 0;
 			attribute_descriptions[1].location = 1;
 			attribute_descriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attribute_descriptions[1].offset = offsetof(Vertex, color);
+			attribute_descriptions[1].offset = offsetof(Vertex, normal);
 
 			attribute_descriptions[2].binding = 0;
 			attribute_descriptions[2].location = 2;
@@ -107,11 +115,11 @@ namespace vv
 
 		bool operator==(const Vertex& other) const
 		{
-			return position == other.position && color == other.color && texCoord == other.texCoord;
+			return position == other.position && normal == other.normal && texCoord == other.texCoord;
 		}
 	};
 
-    struct MaterialConstants
+    struct MaterialProperties
     {
         glm::vec4 ambient;
         glm::vec4 diffuse;
@@ -203,7 +211,7 @@ namespace std {
 	template<> struct hash<vv::Vertex> {
 		size_t operator()(vv::Vertex const& vertex) const {
 			return ((hash<glm::vec3>()(vertex.position) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+				(hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
 				(hash<glm::vec2>()(vertex.texCoord) << 1);
 		}
 	};

@@ -31,7 +31,7 @@ namespace vv
         _fov_y = fov;
         _near_plane = near_plane;
         _far_plane = far_plane;
-        _look_at_point = glm::vec3(0.0f, 0.0f, -1.0f); // todo: maybe don't hardcode these?
+        _look_at_point = glm::vec3(0.0f, 0.0f, 1.0f);
         _up_vec = glm::vec3(0.0f, -1.0f, 0.0f);
 	}
 
@@ -67,8 +67,8 @@ namespace vv
         auto u = getSidewaysDirection();
         auto v = glm::normalize(glm::cross(u, w));
 
-        pitch = (pitch > 89.0f) ? 89.0f : pitch;
-        pitch = (pitch < -89.0f) ? -89.0f : pitch;
+        pitch = (pitch > 83.0f) ? 83.0f : pitch;
+        pitch = (pitch < -83.0f) ? -83.0f : pitch;
         auto position = Entity::getPosition();
 
         // find component-wise rotation quaternions

@@ -3,14 +3,18 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout(set = 0, binding = 0) uniform UniformBufferObject
+layout(set = 0, binding = 0) uniform SceneUBO 
 {
-    mat4 model;
     mat4 view;
     mat4 projection;
-    mat4 normalMat;
     vec4 camera_position;
-} ubo;
+} scene_ubo;
+
+layout(set = 0, binding = 1) uniform ModelUBO
+{
+    mat4 model;
+    mat4 normal;
+} model_ubo;
 
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
@@ -28,10 +32,10 @@ out gl_PerVertex
 
 void main()
 {
-    frag_position = vec3(ubo.model * vec4(position, 0.0));
+    frag_position = vec3(model_ubo.model * vec4(position, 0.0));
 	frag_tex_coord = tex_coord;
-    camera_position = ubo.camera_position.xyz;
-    Normal = vec3(ubo.normalMat * vec4(normal, 0.0));
+    camera_position = scene_ubo.camera_position.xyz;
+    Normal = vec3(model_ubo.normal * vec4(normal, 0.0));
 
-    gl_Position = ubo.projection * ubo.view * ubo.model * vec4(position, 1.0);
+    gl_Position = scene_ubo.projection * scene_ubo.view * model_ubo.model * vec4(position, 1.0);
 }

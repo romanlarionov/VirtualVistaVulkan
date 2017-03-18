@@ -30,7 +30,7 @@ namespace vv
         _render_pass = render_pass;
 
         createDescriptorPool();
-        createSceneUniforms();
+        createSceneDescriptorSetLayout();
         createEnvironmentUniforms();
         createMaterialTemplates(); // Load material templates to prepare for model loading queries
 
@@ -106,6 +106,7 @@ namespace vv
     Model* Scene::addModel(std::string path, std::string name, std::string material_template)
     {
         VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding models");
+        VV_ASSERT(material_templates[material_template], "ERROR: material_template does not exist");
         Model *model = new Model();
         _model_manager->loadModel(path, name, material_templates[material_template], model);
         _models.push_back(model);
@@ -180,10 +181,13 @@ namespace vv
         }
         _lights_uniform_buffer->updateAndTransfer(&_lights_ubo);
 
-        _scene_ubo.view = _active_camera->getViewMatrix();
-        _scene_ubo.projection = _active_camera->getProjectionMatrix(extent.width / static_cast<float>(extent.height));
+        _scene_ubo.view_mat = _active_camera->getViewMatrix();
+        _scene_ubo.projection_mat = _active_camera->getProjectionMatrix(extent.width / static_cast<float>(extent.height));
         _scene_ubo.camera_position = glm::vec4(_active_camera->getPosition(), 1.0);
         _scene_uniform_buffer->updateAndTransfer(&_scene_ubo);
+
+        for (auto &m : _models)
+            m->updateModelUBO();
     }
 
 
@@ -196,12 +200,13 @@ namespace vv
         {
             auto skybox_template = material_templates["skybox"];
             skybox_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template->pipeline_layout, 0, 1, &_scene_descriptor_set, 0, nullptr);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template->pipeline_layout, 0, 1, &_scene_descriptor_sets[0], 0, nullptr);
 
             _active_skybox->bindSkyBoxDescriptorSets(command_buffer, skybox_template->pipeline_layout);
             _active_skybox->render(command_buffer);
         }
 
+        int i = 0;
         for (auto &model : _models)
         {
             // reduce pipeline state switches as much as possible
@@ -210,17 +215,16 @@ namespace vv
                 first_run = false;
                 curr_template = model->material_template;
                 curr_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
-
-                // bind updated scene descriptor set
-                vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, 0, 1, &_scene_descriptor_set, 0, nullptr);
             }
 
-            // Update scene descriptor sets
-            _scene_ubo.model = model->getModelMatrix();
-            _scene_ubo.normalMat = glm::transpose(glm::inverse(model->getModelMatrix()));
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, i, 1, &_scene_descriptor_sets[i], 0, nullptr);
 
+            // Bind environment lighting descriptor sets
             if (model->material_template->uses_environment_lighting)
+            {
                 _active_skybox->bindIBLDescriptorSets(command_buffer, curr_template->pipeline_layout);
+                _active_skybox->submitMipLevelPushConstants(command_buffer, curr_template->pipeline_layout);
+            }
 
             // Render all submeshes within this model
             for (auto &mesh : _model_manager->_loaded_meshes[model->_data_handle])
@@ -266,7 +270,7 @@ namespace vv
                 std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
 
                 /// material descriptor layout
-                for (auto &o : shader->standard_material_descriptor_orderings)
+                for (auto &o : shader->material_descriptor_orderings)
                     temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(o.binding, o.type, 1, o.shader_stage));
 
                 createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template->material_descriptor_set_layout);
@@ -283,8 +287,8 @@ namespace vv
             pipeline_layout_create_info.flags = 0;
             pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
             pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts.data();
-            pipeline_layout_create_info.pPushConstantRanges = nullptr; // todo: add push constants
-            pipeline_layout_create_info.pushConstantRangeCount = 0;
+            pipeline_layout_create_info.pPushConstantRanges = shader->push_constant_ranges.data();
+            pipeline_layout_create_info.pushConstantRangeCount = shader->push_constant_ranges.size();
 
             VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template->pipeline_layout));
 
@@ -324,99 +328,85 @@ namespace vv
     }
 
 
-    void Scene::createSceneUniforms()
+    void Scene::createSceneDescriptorSetLayout()
     {
         // MVP matrix data
-        /*_scene_ubo = { glm::mat4(), glm::mat4(), glm::mat4(), glm::mat4(), glm::vec4() };
+        _scene_ubo = { glm::mat4(), glm::mat4(), glm::vec4() };
         _scene_uniform_buffer = new VulkanBuffer();
-        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_scene_ubo));
-
-        std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
-        temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT));
-        createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, _scene_descriptor_set_layout);
-
-        /// Descriptor Set
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		alloc_info.descriptorPool = _descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &_scene_descriptor_set_layout;
-
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &alloc_info, &_scene_descriptor_set));
-
-		VkDescriptorBufferInfo scene_buffer_info = {};
-		scene_buffer_info.buffer = _scene_uniform_buffer->buffer;
-		scene_buffer_info.offset = 0;
-		scene_buffer_info.range = sizeof(_scene_ubo);
-
-        VkWriteDescriptorSet write_set;
-		write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_set.dstSet = _scene_descriptor_set;
-		write_set.dstBinding = 0;
-		write_set.dstArrayElement = 0;
-		write_set.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_set.descriptorCount = 1; // how many elements to update
-		write_set.pBufferInfo = &scene_buffer_info;
-
-        vkUpdateDescriptorSets(_device->logical_device, 1, &write_set, 0, nullptr);*/
-
-
-        // MVP matrix data
-        _scene_ubo = { glm::mat4(), glm::mat4(), glm::mat4(), glm::mat4(), glm::vec4() };
-        _scene_uniform_buffer = new VulkanBuffer();
-        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_scene_ubo));
+        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(SceneUBO));
 
         // Lights data
         for (auto i = 0; i < VV_MAX_LIGHTS; ++i)
             _lights_ubo.lights[i] = { glm::vec4(), glm::vec4() };
 
         _lights_uniform_buffer = new VulkanBuffer();
-        _lights_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(_lights_ubo));
+        _lights_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(LightUBO));
 
         /// Layout
         std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT));
-        temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
+        temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT));
+        temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
         createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, _scene_descriptor_set_layout);
+    }
 
-        /// Descriptor Set
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		alloc_info.descriptorPool = _descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &_scene_descriptor_set_layout;
 
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &alloc_info, &_scene_descriptor_set));
+    void Scene::allocateSceneDescriptorSets()
+    {
+		VkDescriptorSetAllocateInfo scene_alloc_info = {};
+		scene_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		scene_alloc_info.descriptorPool = _descriptor_pool;
+		scene_alloc_info.descriptorSetCount = _models.size();
+		scene_alloc_info.pSetLayouts = &_scene_descriptor_set_layout;
 
-        std::array<VkWriteDescriptorSet, 2> write_sets;
+        _scene_descriptor_sets.resize(_models.size());
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &scene_alloc_info, _scene_descriptor_sets.data()));
 
-		VkDescriptorBufferInfo scene_buffer_info = {};
-		scene_buffer_info.buffer = _scene_uniform_buffer->buffer;
-		scene_buffer_info.offset = 0;
-		scene_buffer_info.range = sizeof(_scene_ubo);
+        for (int i = 0; i < _models.size(); ++i)
+        {
+            std::array<VkWriteDescriptorSet, 3> write_sets;
 
-		write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_sets[0].dstSet = _scene_descriptor_set;
-		write_sets[0].dstBinding = 0;
-		write_sets[0].dstArrayElement = 0;
-		write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_sets[0].descriptorCount = 1; // how many elements to update
-		write_sets[0].pBufferInfo = &scene_buffer_info;
+		    VkDescriptorBufferInfo scene_buffer_info = {};
+		    scene_buffer_info.buffer = _scene_uniform_buffer->buffer;
+		    scene_buffer_info.offset = 0;
+		    scene_buffer_info.range = sizeof(SceneUBO);
 
-        VkDescriptorBufferInfo lights_buffer_info = {};
-		lights_buffer_info.buffer = _lights_uniform_buffer->buffer;
-		lights_buffer_info.offset = 0;
-        lights_buffer_info.range = sizeof(_lights_ubo);
+		    write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		    write_sets[0].dstSet = _scene_descriptor_sets[i];
+		    write_sets[0].dstBinding = 0;
+		    write_sets[0].dstArrayElement = 0;
+		    write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		    write_sets[0].descriptorCount = 1; // how many elements to update
+		    write_sets[0].pBufferInfo = &scene_buffer_info;
 
-		write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_sets[1].dstSet = _scene_descriptor_set;
-		write_sets[1].dstBinding = 1;
-		write_sets[1].dstArrayElement = 0;
-		write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_sets[1].descriptorCount = 1; // how many elements to update
-		write_sets[1].pBufferInfo = &lights_buffer_info;
+            VkDescriptorBufferInfo lights_buffer_info = {};
+		    lights_buffer_info.buffer = _lights_uniform_buffer->buffer;
+		    lights_buffer_info.offset = 0;
+            lights_buffer_info.range = sizeof(LightUBO);
+
+		    write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		    write_sets[1].dstSet = _scene_descriptor_sets[i];
+		    write_sets[1].dstBinding = 2;
+		    write_sets[1].dstArrayElement = 0;
+		    write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		    write_sets[1].descriptorCount = 1;
+		    write_sets[1].pBufferInfo = &lights_buffer_info;
+
+            VkDescriptorBufferInfo model_buffer_info = {};
+		    model_buffer_info.buffer = _models[i]->_model_uniform_buffer->buffer;
+		    model_buffer_info.offset = 0;
+		    model_buffer_info.range = sizeof(ModelUBO);
+
+            write_sets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		    write_sets[2].dstSet = _scene_descriptor_sets[i];
+		    write_sets[2].dstBinding = 1;
+		    write_sets[2].dstArrayElement = 0;
+		    write_sets[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		    write_sets[2].descriptorCount = 1;
+		    write_sets[2].pBufferInfo = &model_buffer_info;
 		
-        vkUpdateDescriptorSets(_device->logical_device, 2, write_sets.data(), 0, nullptr);
+            vkUpdateDescriptorSets(_device->logical_device, 3, write_sets.data(), 0, nullptr);
+        }
     }
 
 

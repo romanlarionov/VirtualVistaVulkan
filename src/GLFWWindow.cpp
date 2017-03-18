@@ -18,7 +18,6 @@ namespace vv
 	{
 	}
 
-
     
 	void GLFWWindow::create()
 	{
@@ -63,12 +62,6 @@ namespace vv
 	bool GLFWWindow::shouldClose()
 	{
 		return glfwWindowShouldClose(window) == 1;
-	}
-
-
-	void GLFWWindow::addSurfaceDetails(VulkanDevice *device, VulkanSurfaceDetailsHandle details)
-	{
-		
 	}
 
 

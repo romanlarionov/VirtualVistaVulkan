@@ -124,7 +124,6 @@ namespace vv
         memory_allocate_info.allocationSize = memory_requirements.size;
         memory_allocate_info.memoryTypeIndex = memory_type;
 
-        // todo: single allocations are costly. figure out how to batch data together. (might just do that logic outside of this class)
         VV_CHECK_SUCCESS(vkAllocateMemory(_device->logical_device, &memory_allocate_info, nullptr, &buffer_memory));
         vkBindBufferMemory(_device->logical_device, buffer, buffer_memory, 0);
     }

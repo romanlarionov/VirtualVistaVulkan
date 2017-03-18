@@ -8,10 +8,10 @@
 struct Light
 {
     vec4 position;
-    vec4 irradiance;
+    vec4 irradiance; // radius stored in a component
 };
 
-layout(set = 0, binding = 1) uniform LightData
+layout(set = 0, binding = 2) uniform LightData
 {
     Light lights[MAX_LIGHTS];
 } lights;
@@ -22,7 +22,7 @@ layout(set = 1, binding = 0) uniform MaterialConstants
     vec4 diffuse;
     vec4 specular;
     int shininess;
-} constants;
+} properties;
 
 layout(set = 1, binding = 1) uniform sampler2D diffuse_map;
 layout(set = 1, binding = 2) uniform sampler2D specular_map;
@@ -59,7 +59,7 @@ void main()
         Light l = lights.lights[i];
 
         Lo += blinnPhongShade(frag_position.xyz, normalize(normal.xyz), camera_position.xyz,
-              Kd.xyz, Ks.xyz, constants.shininess,
+              Kd.xyz, Ks.xyz, properties.shininess,
               l.position.xyz, l.irradiance.xyz, l.irradiance.a);
     }
 

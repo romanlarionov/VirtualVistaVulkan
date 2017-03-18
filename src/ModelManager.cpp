@@ -27,7 +27,7 @@ namespace vv
 
         // load primitive mesh to cache
         Model *temp_model = new Model();
-        loadOBJ(Settings::inst()->getModelDirectory() + "primitives/", "sphere.obj", true, false, nullptr, temp_model);
+        loadOBJ(Settings::inst()->getModelDirectory() + "primitives/", "sphere.obj", nullptr, temp_model);
         delete temp_model;
 	}
 
@@ -64,7 +64,7 @@ namespace vv
             if (_loaded_materials[path + name].count(material_template->name) > 0)
             {
                 auto mat_templ = _loaded_materials[path + name][material_template->name][0]->material_template;
-                model->create("", path + name, material_template->name, mat_templ);
+                model->create(_device, "", path + name, material_template->name, mat_templ);
                 return true;
             }
             else
@@ -72,7 +72,7 @@ namespace vv
         }
 
         if (file_type == "obj")
-            return loadOBJ(path, name, load_geometry, true, material_template, model);
+            return loadOBJ(path, name, material_template, model);
 
         else if (file_type == "gltf")
             return loadGLTF();
@@ -92,7 +92,7 @@ namespace vv
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////// Private
-    bool ModelManager::loadOBJ(std::string path, std::string name, bool load_geometry, bool load_materials, MaterialTemplate *material_template, Model *model)
+    bool ModelManager::loadOBJ(std::string path, std::string name, MaterialTemplate *material_template, Model *model)
     {
         bool success = true;
         std::string full_path(path + name);
@@ -103,8 +103,6 @@ namespace vv
 
         std::vector<Mesh *> meshes;
         std::vector<Material *> materials;
-
-        // todo: add branch for when geometry has already been loaded. need to figure out how LoadMtl works
 
 		VV_ASSERT(tinyobj::LoadObj(&attrib, &tiny_shapes, &tiny_materials, &err,
                   full_path.c_str(), path.c_str()),
@@ -121,22 +119,37 @@ namespace vv
 			{
 				Vertex vertex = {};
 
-				vertex.color = glm::vec3(1.0, 1.0, 1.0);
+                // Vertices
 				vertex.position = glm::vec3(
 					attrib.vertices[3 * index.vertex_index + 0],
 					attrib.vertices[3 * index.vertex_index + 1],
 					attrib.vertices[3 * index.vertex_index + 2]
 				);
 
-                if (!attrib.texcoords.empty())
+                // Normals
+                if (!attrib.normals.empty())
+                    vertex.normal = glm::vec3(
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2]
+                    );
+                else
                 {
+				    vertex.normal = glm::vec3(0.0, 0.0, 1.0);
+                    VV_ALERT("Model does not have normals.");
+                }
+
+                // UVs
+                if (!attrib.texcoords.empty())
                     vertex.texCoord = glm::vec2(
                         attrib.texcoords[2 * index.texcoord_index + 0],
                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                     );
-                }
                 else
+                {
                     vertex.texCoord = glm::vec2(0.0f, 0.0f);
+                    VV_ALERT("Model does not have UV coordinates.");
+                }
 
 				if (vertex_map.count(vertex) == 0)
 				{
@@ -165,20 +178,20 @@ namespace vv
                 material->create(_device, material_template, _descriptor_pool);
 
                 // store required descriptor set data in correct binding order
-                auto orderings = material_template->shader->standard_material_descriptor_orderings;
+                auto orderings = material_template->shader->material_descriptor_orderings;
                 for (size_t i = 0; i < orderings.size(); ++i)
                 {
                     auto o = orderings[i];
-                    if (o.name == "constants")
+                    if (o.name == "properties")
                     {
                         glm::vec4 amb(m.ambient[0], m.ambient[1], m.ambient[2], 0.0);
                         glm::vec4 dif(m.diffuse[0], m.diffuse[1], m.diffuse[2], 0.0);
                         glm::vec4 spec(m.specular[0], m.specular[1], m.specular[2], 0.0);
-                        MaterialConstants constants = { amb, dif, spec, static_cast<int>(m.shininess) };
+                        MaterialProperties properties = { amb, dif, spec, static_cast<int>(m.shininess) };
 
                         VulkanBuffer *buffer = new VulkanBuffer();
-                        buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(constants));
-                        buffer->updateAndTransfer(&constants);
+                        buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(properties));
+                        buffer->updateAndTransfer(&properties);
 
                         material->addUniformBuffer(buffer, o.binding);
                     }
@@ -191,14 +204,21 @@ namespace vv
                             temp_name = m.diffuse_texname;
                         else if (o.name == "specular_map")
                             temp_name = m.specular_texname;
+                        else if (o.name == "normal_map")
+                            temp_name = m.normal_texname;
+                        else if (o.name == "roughness_map")
+                            temp_name = m.roughness_texname;
+                        else if (o.name == "metalness_map")
+                            temp_name = m.metallic_texname;
+                        else if (o.name == "emissiveness_map")
+                            temp_name = m.emissive_texname;
 
                         auto texture = _texture_manager->load2DImage(path, temp_name, VK_FORMAT_R8G8B8A8_UNORM, false);
                         material->addTexture(texture, o.binding);
                     }
                     else // descriptor type not populated
                     {
-                        // todo: remove and fill with dummy data as opposed to using different material template
-                        std::cerr << "ERROR: Descriptor Type not populated for model: " << name << ". Using dummy material.\n";
+                        VV_ALERT("WARNING: Descriptor Type not populated for model: " + name + ". Using dummy material.");
                         success = false;
                         break;
                     }
@@ -214,13 +234,37 @@ namespace vv
                 Material *material = new Material();
                 material->create(_device, material_template, _descriptor_pool);
 
-                // todo: this should loop over all non-standard descriptors provided
+                //VV_ALERT("MTL file not found. Assuming PBR textures present.");
+                
+                auto orderings = material_template->shader->material_descriptor_orderings;
+                for (size_t i = 0; i < orderings.size(); ++i)
+                {
+                    auto o = orderings[i];
+                    std::string temp_name;
+
+                    if (o.name == "normal_map")
+                        temp_name = "normal.dds";
+                    else if (o.name == "albedo_map")
+                        temp_name = "albedo.dds";
+                    else if (o.name == "roughness_map")
+                        temp_name = "roughness.dds";
+                    else if (o.name == "metalness_map")
+                        temp_name = "metalness.dds";
+                    else if (o.name == "emissiveness_map")
+                        temp_name = "emissiveness.dds";
+                    else if (o.name == "ambient_occlusion_map")
+                        temp_name = "ambient_occlusion.dds";
+
+                    auto texture = _texture_manager->load2DImage(path + "textures/", temp_name);
+                    material->addTexture(texture, o.binding);
+                }
+
+                material->updateDescriptorSets();
                 materials.push_back(material);
             }
 
             _loaded_materials[path + name][material_template->name] = materials;
-            
-            model->create(name, path + name, material_template->name, material_template);
+            model->create(_device, name, path + name, material_template->name, material_template);
         }
 
         return success;

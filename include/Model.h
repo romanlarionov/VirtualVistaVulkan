@@ -11,6 +11,12 @@
 
 namespace vv
 {
+    struct ModelUBO
+    {
+        glm::mat4 model_mat;
+        glm::mat4 normal_mat;
+    };
+
 	class Model : public Entity
 	{
         friend class Scene;
@@ -24,9 +30,11 @@ namespace vv
 
 		/*
          * Stores all necessary components for a loaded model including geometry and material data.
-         * Creation should be left to the ModelManager class which handles loading and managing assets such as this.
+         * 
+         * note: creation should be left to the ModelManager class which handles loading and managing assets such as this.
 		 */
-		void create(std::string name, std::string data_handle, std::string material_id_set, MaterialTemplate *material_template);
+		void create(VulkanDevice *device, std::string name, std::string data_handle, std::string material_id_set,
+                    MaterialTemplate *material_template);
 
 		/*
 		 * This class does not hold ownership of any actual raw data.
@@ -34,15 +42,18 @@ namespace vv
 		void shutDown();
 
         /*
-         * Used for update of model matrix at render time.
+         * Used for update of model + normal matrix at render time.
          */
-        glm::mat4 getModelMatrix() const;
+        void updateModelUBO();
 		
 	private:
         // note: acts as hash key for ModelManager's data caches. this is used by scene during render-time.
         //       in reality this is simply the path + name of the file originally queried.
         std::string _data_handle;
         std::string _material_id_set;
+
+        ModelUBO _model_ubo;
+		VulkanBuffer *_model_uniform_buffer = nullptr;
 
 	};
 }

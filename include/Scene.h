@@ -19,28 +19,10 @@
 
 namespace vv
 {
-    struct LightData
-    {
-        glm::vec4 position;
-        glm::vec4 irradiance;
-    };
-
-    struct LightUniformBufferObject
-    {
-        LightData lights[VV_MAX_LIGHTS];
-    };
-
-    struct SceneUniformBufferObject
-    {
-		glm::mat4 model;
-		glm::mat4 view;
-		glm::mat4 projection;
-        glm::mat4 normalMat;
-        glm::vec4 camera_position;
-	};
-
 	class Scene
 	{
+        friend class VulkanRenderer;
+
 	public:
         std::unordered_map<std::string, MaterialTemplate *> material_templates;
 
@@ -123,14 +105,31 @@ namespace vv
 		VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
 
         // General scene uniform
+        struct SceneUBO
+        {
+            glm::mat4 view_mat;
+            glm::mat4 projection_mat;
+            glm::vec4 camera_position;
+        };
+
         VkDescriptorSetLayout _scene_descriptor_set_layout;
-        VkDescriptorSet _scene_descriptor_set       = VK_NULL_HANDLE;
-        SceneUniformBufferObject _scene_ubo;
+        std::vector<VkDescriptorSet> _scene_descriptor_sets;
+        SceneUBO _scene_ubo;
 		VulkanBuffer *_scene_uniform_buffer         = nullptr;
 
         // Light uniforms
-        LightUniformBufferObject _lights_ubo;
-        VkDescriptorSetLayout _lights_descriptor_set_layout;
+        struct LightData
+        {
+            glm::vec4 position;
+            glm::vec4 irradiance;
+        };
+
+        struct LightUBO
+        {
+            LightData lights[VV_MAX_LIGHTS];
+        };
+
+        LightUBO _lights_ubo;
 		VulkanBuffer *_lights_uniform_buffer         = nullptr;
 
         VkDescriptorSetLayout _environment_descriptor_set_layout;
@@ -160,8 +159,16 @@ namespace vv
          */
         void createDescriptorPool();
 
+        /*
+         * Scene descriptor set layout manages all matrices + analytic light data + camera info.
+         */
+        void createSceneDescriptorSetLayout();
 
-        void createSceneUniforms();
+        /*
+         * This dynamically allocates a number of scene related descriptor sets depending on the number of
+         * models specified through the scene interface.
+         */
+        void allocateSceneDescriptorSets();
 
         /*
          * Creates everything necessary for scene global uniforms.

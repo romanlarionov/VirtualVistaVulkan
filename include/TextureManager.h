@@ -27,7 +27,8 @@ namespace vv
 		~TextureManager();
 
         /*
-         * 
+         * Creates a texture importing + management system. This class holds ownership over all texture data loaded.
+         * This manager will only perform loading after verifying that it isn't already loaded.
          */
 		void create(VulkanDevice *device);
 
@@ -39,14 +40,18 @@ namespace vv
         /*
          * Loads a texture from file.
          *
-         * note: only png, dds, and ktx file formats are supported for now.
+         * note: only png, jpeg, dds, and ktx file formats are supported for now.
          */
-        SampledTexture* load2DImage(std::string path, std::string name, VkFormat format, bool create_mip_levels);
+        SampledTexture* load2DImage(std::string path, std::string name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
+                                    bool create_mip_levels = true);
 
         /*
          * Loads a provided cube map from file.
+         *
+         * note: only dds and ktx file formats are supported for now.
          */
-        SampledTexture* loadCubeMap(std::string path, std::string name, VkFormat format, bool create_mip_levels);
+        SampledTexture* loadCubeMap(std::string path, std::string name, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
+                                    bool create_mip_levels = true);
 
 	private:
 		VulkanDevice *_device;

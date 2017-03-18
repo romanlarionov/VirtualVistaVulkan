@@ -5,7 +5,7 @@ namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	VulkanRenderPass::VulkanRenderPass() :
-		has_been_created(false)
+		_initialized(false)
 	{
 	}
 
@@ -17,7 +17,7 @@ namespace vv
 
 	void VulkanRenderPass::create(VulkanDevice *device, VulkanSwapChain *swap_chain)
 	{
-		if (has_been_created) return;
+		if (_initialized) return;
 
 		VV_ASSERT(device != nullptr, "Vulkan Device is NULL");
 		_device = device;
@@ -76,14 +76,14 @@ namespace vv
 		render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		render_pass_create_info.flags = 0;
 		render_pass_create_info.attachmentCount = static_cast<uint32_t>(attachment_descriptions.size());
-		render_pass_create_info.pAttachments = attachment_descriptions.data(); // todo: you can add more here to perform deferred rendering.
+		render_pass_create_info.pAttachments = attachment_descriptions.data();
 		render_pass_create_info.subpassCount = 1;
 		render_pass_create_info.pSubpasses = &subpass_description;
 		render_pass_create_info.dependencyCount = 1;
 		render_pass_create_info.pDependencies = &subpass_dependency;
 
 		VV_CHECK_SUCCESS(vkCreateRenderPass(device->logical_device, &render_pass_create_info, nullptr, &render_pass));
-		has_been_created = true;
+		_initialized = true;
 	}
 
 

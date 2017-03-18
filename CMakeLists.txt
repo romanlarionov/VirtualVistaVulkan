@@ -28,7 +28,7 @@ endif()
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-    
+    add_definitions( -DROOTPROJECTDIR="${CMAKE_SOURCE_DIR}" )
     # for some reason, the MSVC compiler's optimizations executes vital Vulkan commands out of order
     string(REPLACE "/O2" "/Od" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 else()
@@ -44,6 +44,7 @@ include_directories("include/"
                     "deps/glm/"
                     "deps/SPRIV-Cross/include/"
                     "deps/gli/"
+                    "deps/include/"
                     "$ENV{VULKAN_SDK}/Include")
 
 file(GLOB PROJECT_HEADERS include/*.h)
@@ -52,7 +53,9 @@ file(GLOB PROJECT_SOURCES src/*.cpp
 file(GLOB PROJECT_SHADERS assets/shaders/*.comp
                           assets/shaders/*.frag
                           assets/shaders/*.geom
-                          assets/shaders/*.vert)
+                          assets/shaders/*.vert
+                          assets/shaders/*.glsl
+                          assets/shaders/shader_info.txt)
 
 file(GLOB PROJECT_CONFIGS "CMakeLists.txt"
                           "README.md"

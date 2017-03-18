@@ -76,7 +76,6 @@ namespace vv
 			device_queue_create_infos.push_back(queue_create_info);
 		}
 
-		// todo: adding the compute section causes a crash.
 		if (queue_types & VK_QUEUE_COMPUTE_BIT && compute_family_index != -1)
 		{
 			VkDeviceQueueCreateInfo queue_create_info = {};
@@ -150,7 +149,6 @@ namespace vv
 	
 	uint32_t VulkanDevice::findMemoryTypeIndex(uint32_t filter_type, VkMemoryPropertyFlags memory_property_flags)
 	{
-		// todo: check for validity and robustness.
 		auto memory_properties = physical_device_memory_properties;
 		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
 		{

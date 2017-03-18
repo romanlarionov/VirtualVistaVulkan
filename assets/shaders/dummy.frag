@@ -11,7 +11,7 @@ struct Light
     vec4 irradiance;
 };
 
-layout(set = 0, binding = 1) uniform LightData
+layout(set = 0, binding = 2) uniform LightData
 {
     Light lights[MAX_LIGHTS];
 } lights;

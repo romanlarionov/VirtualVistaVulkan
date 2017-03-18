@@ -12,15 +12,14 @@ namespace vv
 	class VulkanRenderPass
 	{
 	public:
-
 		VkRenderPass render_pass;
-		bool has_been_created; // todo: consider adding this to all classes. 
 
 		VulkanRenderPass();
 		~VulkanRenderPass();
 
 		/*
-		 *
+		 * Creates a single use case render pass to be used with a standard forward rendering design.
+         * No additional or dynamic subpass are currently available to be created.
 		 */
 		void create(VulkanDevice *device, VulkanSwapChain *swap_chain);
 
@@ -42,6 +41,7 @@ namespace vv
 
 	private:
 		VulkanDevice *_device;
+		bool _initialized;
 
 	};
 }

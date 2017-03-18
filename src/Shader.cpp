@@ -90,6 +90,19 @@ namespace vv
         spirv_cross::CompilerGLSL glsl(spirv_binary);
         spirv_cross::ShaderResources resources = glsl.get_shader_resources();
 
+        for (auto &resource : resources.push_constant_buffers)
+        {
+            auto ranges = glsl.get_active_buffer_ranges(resource.id);
+            for (auto &r : ranges)
+            {
+                VkPushConstantRange push_constant_range = {};
+                push_constant_range.offset = r.offset;
+                push_constant_range.size = r.range;
+                push_constant_range.stageFlags = shader_stage;
+                push_constant_ranges.push_back(push_constant_range);
+            }
+        }
+
         // Get all sampled uniform buffers in the shader.
         for (auto &resource : resources.uniform_buffers)
         {
@@ -108,13 +121,13 @@ namespace vv
             }
             else if (set == 1)
             {
-                if (name == "constants")
-                    standard_material_descriptor_orderings.push_back(descriptor_info);
+                if (name == "properties")
+                    material_descriptor_orderings.push_back(descriptor_info);
                 else
                     throw std::runtime_error("Non-standard descriptor found with set 1: " + name);
             }
             else if (set == 2)
-                non_standard_descriptor_orderings.push_back(descriptor_info);
+                continue;
             else
                 throw std::runtime_error("Descriptor with set outside of range found: " + name);
         }
@@ -138,9 +151,9 @@ namespace vv
                 // if descriptor name found is a white listed material descriptor
                 if (std::find(_accepted_material_descriptors.begin(), _accepted_material_descriptors.end(), name)
                               != _accepted_material_descriptors.end())
-                    standard_material_descriptor_orderings.push_back(descriptor_info);
+                    material_descriptor_orderings.push_back(descriptor_info);
 
-                else // todo: currently not using non-standard. consider removing
+                else
                     throw std::runtime_error("Non-standard descriptor found with set 1: " + name);
             }
             else if (set == 2)
@@ -154,13 +167,7 @@ namespace vv
         }
 
         // sort uniforms found by binding
-        std::sort(standard_material_descriptor_orderings.begin(), standard_material_descriptor_orderings.end(),
-            [](DescriptorInfo &l, DescriptorInfo &r) {
-                return l.binding < r.binding;
-            }
-        );
-
-        std::sort(non_standard_descriptor_orderings.begin(), non_standard_descriptor_orderings.end(),
+        std::sort(material_descriptor_orderings.begin(), material_descriptor_orderings.end(),
             [](DescriptorInfo &l, DescriptorInfo &r) {
                 return l.binding < r.binding;
             }

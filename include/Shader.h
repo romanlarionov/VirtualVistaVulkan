@@ -17,8 +17,8 @@ namespace vv
 		VkShaderModule frag_module = VK_NULL_HANDLE;
 
         // specifies the binding order of the model descriptor.
-        std::vector<DescriptorInfo> standard_material_descriptor_orderings;
-        std::vector<DescriptorInfo> non_standard_descriptor_orderings;
+        std::vector<DescriptorInfo> material_descriptor_orderings;
+        std::vector<VkPushConstantRange> push_constant_ranges;
         bool uses_environmental_lighting;
 
 		Shader();
@@ -47,7 +47,8 @@ namespace vv
         std::vector<std::string> _accepted_material_descriptors = {
             "ambient_map", "diffuse_map", "specular_map",
             "normal_map", "roughness_map", "metalness_map",
-            "emissiveness_map", "radiance_map"
+            "albedo_map", "emissiveness_map", "ambient_occlusion_map",
+            "radiance_map"
         };
 
         /*

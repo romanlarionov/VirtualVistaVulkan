@@ -9,10 +9,20 @@
 #include "TextureManager.h"
 #include "VulkanBuffer.h"
 #include "VulkanImageView.h"
-#include "MaterialTemplate.h"
+#include "VulkanPipeline.h"
 
 namespace vv
 {
+    struct MaterialTemplate
+    {
+        std::string name;
+        VkPipelineLayout pipeline_layout;
+        VulkanPipeline *pipeline;
+        Shader *shader;
+        VkDescriptorSetLayout material_descriptor_set_layout;
+        bool uses_environment_lighting;
+    };
+
     struct UBOStore
     {
         VkDescriptorBufferInfo info;

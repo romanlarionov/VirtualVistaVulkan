@@ -8,10 +8,10 @@
 struct Light
 {
     vec4 position;
-    vec4 irradiance;
+    vec4 irradiance; // radius stored in a component
 };
 
-layout(set = 0, binding = 1) uniform LightData
+layout(set = 0, binding = 2) uniform LightData
 {
     Light lights[MAX_LIGHTS];
 } lights;
@@ -22,12 +22,12 @@ layout(set = 1, binding = 0) uniform MaterialConstants
     vec4 diffuse;
     vec4 specular;
     int shininess;
-} constants;
+} properties;
 
 layout(location = 0) in vec3 camera_position;
 layout(location = 0) out vec4 out_color;
 
 void main()
 {
-    out_color = vec4(constants.diffuse.xyz, 1.0);
+    out_color = vec4(properties.diffuse.xyz, 1.0);
 }

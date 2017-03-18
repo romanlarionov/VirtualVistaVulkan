@@ -46,7 +46,7 @@ namespace vv
         void rotate(float yaw, float pitch);
 
         /*
-         *
+         * Used for updating descriptor data during main loop.
          */
         glm::mat4 getProjectionMatrix(float aspect) const;
         glm::mat4 getViewMatrix() const;

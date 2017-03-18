@@ -37,7 +37,7 @@ namespace vv
 		~VulkanImage();
 
         /*
-         * 
+         * Allocates device memory for an image buffer with the given specifications.
          */
         void create(VulkanDevice *device, VkExtent3D extent, VkFormat format, VkImageType type, VkImageCreateFlags flags,
                     VkImageAspectFlags aspect_flags, uint32_t mip_levels, uint32_t array_layers,
@@ -110,6 +110,9 @@ namespace vv
                                   VkImageLayout new_layout, VkPipelineStageFlags old_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                   VkPipelineStageFlags new_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
+        /*
+         * Determines the correct pair of src + dst memory access constraints to prepare for during image layout transformation.
+         */
         VkImageMemoryBarrier determineAccessMasks(VkImage image, VkImageSubresourceRange subresource_range,
                                                   VkImageLayout old_layout, VkImageLayout new_layout);
 	};

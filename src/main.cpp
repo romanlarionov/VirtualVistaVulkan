@@ -23,31 +23,27 @@ int main(int argc, char **argv)
 
     Camera *camera = scene->addCamera(glm::radians(90.0f), 0.1f, 1000.0f);
     scene->setActiveCamera(camera);
+    camera->translate(glm::vec3(0.0, 0.0, -2.0));
 
-    SkyBox *skybox = scene->addSkyBox("Canyon/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
+    //SkyBox *skybox = scene->addSkyBox("Canyon/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
+    //SkyBox *skybox = scene->addSkyBox("Factory/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
+    SkyBox *skybox = scene->addSkyBox("MonValley/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
+    //SkyBox *skybox = scene->addSkyBox("PaperMill/", "Unfiltered_HDR.dds", "Diffuse_HDR.dds", "Specular_HDR.dds", "FSchlick_DGGX_GSmith.dds");
     scene->setActiveSkyBox(skybox);
 
     /*Light *light = scene->addLight(glm::vec4(1.0f, 1.0f, 1.0f, 0.0f), 2.0f);
-    light->translate(glm::vec3(2.0f, 1.5f, 0.0f));
+    light->translate(glm::vec3(0.0f, 1.5f, 0.0f));*/
 
-    Light *light2 = scene->addLight(glm::vec4(1.0f, 0.1f, 0.1f, 0.0f), 3.0f);
-    light2->translate(glm::vec3(0.0f, 1.5f, 1.0f));
-
-    Light *light3 = scene->addLight(glm::vec4(0.1f, 0.1f, 1.0f, 0.0f), 2.0f);
-    light3->translate(glm::vec3(0.0f, 1.5f, -1.0f));*/
-
-    ///Model *model = scene->addModel("hammardillo/", "hammardillo.obj", "triangle");
-    //Model *model = scene->addModel("chalet/", "chalet.obj", "dummy");
     //Model *model = scene->addModel("sponza/", "sponza.obj", "phong");
-    //Model *model = scene->addModel("contemporary_bathroom/", "contemporary_bathroom.obj", "phong");
-    ///model->rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    ///model->rotate(glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
     //model->scale(glm::vec3(0.01f, 0.01f, 0.01f));
-    ///model->scale(glm::vec3(0.5f, 0.5f, 0.5f));
+
+    //Model *gun = scene->addModel("9mm_Pistol/", "9mm_Pistol.obj", "PBR_IBL");
+    Model *jeep = scene->addModel("jeep/", "Jeep_Wagoneer.obj", "PBR_IBL");
+    //jeep->rotate(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     auto input_handler = [](Scene *scene, float delta_time)
     {
-        float move_speed = 12.0f * delta_time;
+        float move_speed = 4.0f * delta_time;
         float rotate_speed = 2.0f * delta_time;
         Camera *camera = scene->getActiveCamera();
         if (InputManager::inst()->keyIsPressed(GLFW_KEY_W))

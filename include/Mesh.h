@@ -30,21 +30,19 @@ namespace vv
 		void shutDown();
 
         /*
-         *
+         * Binds all geometry data in preparation for rendering.
          */
         void bindBuffers(VkCommandBuffer command_buffer);
 
 
         /*
-         *
+         * Per mesh rendering using private vertex + index vulkan buffers.
          */
         void render(VkCommandBuffer command_buffer);
 
 	private:
         std::string _name;
 
-		// todo: prob don't want to have per mesh buffers. important optimization
-        //       is to batch together all geometry to single buffer prior to rendering.
 		VulkanBuffer _vertex_buffer;
 		VulkanBuffer _index_buffer;
 

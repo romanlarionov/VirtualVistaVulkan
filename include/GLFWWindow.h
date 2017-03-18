@@ -24,6 +24,7 @@ namespace vv
     class GLFWWindow
     {
         friend class InputManager;
+
     public:
 		GLFWwindow *window; // GLFW typedef
 		VkSurfaceKHR surface;
@@ -60,16 +61,6 @@ namespace vv
 		 * Returns whether GLFW received a termination signal.
 		 */
 		bool shouldClose();
-
-		/*
-		 *
-		 */
-		void addSurfaceDetails(VulkanDevice *device, VulkanSurfaceDetailsHandle details);
-
-		/*
-		 *
-		 */
-		void removeSurfaceDetails(VulkanDevice *device);
 
 	private:
 

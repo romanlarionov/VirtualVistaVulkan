@@ -92,15 +92,15 @@ namespace vv
             if (texels.empty())
                 throw std::runtime_error("HDR texture could not be loaded." + path + name);
 
-            VkFormat format = _gliToVulkanFormat.at(texels.format());
+            VkFormat fmt = _gliToVulkanFormat.at(texels.format());
 
             VkExtent3D extent = {};
             extent.width = static_cast<uint32_t>(texels.extent().x);
 			extent.height = static_cast<uint32_t>(texels.extent().y);
             extent.depth = 1;
-            uint32_t mip_levels = (create_mip_levels) ? std::floor(std::log2(std::max(extent.width, extent.height))) + 1 : 1;
+            uint32_t mip_levels = (create_mip_levels) ? static_cast<uint32_t>(texels.levels()) : 1;
 
-            _loaded_textures[path + name] = loadTexture(texels.data(), texels.size(), extent, format,
+            _loaded_textures[path + name] = loadTexture(texels.data(), texels.size(), extent, fmt,
                                             0, mip_levels, 1, VK_IMAGE_VIEW_TYPE_2D);
 
             return _loaded_textures[path + name];
@@ -127,7 +127,7 @@ namespace vv
             if (cube.empty())
                 throw std::runtime_error("Cube map could not be loaded." + path + name);
 
-            VkFormat format = _gliToVulkanFormat.at(cube.format());
+            VkFormat fmt = _gliToVulkanFormat.at(cube.format());
 
             VkExtent3D extent = {};
             extent.width = static_cast<uint32_t>(cube.extent().x);
@@ -135,7 +135,7 @@ namespace vv
             extent.depth = 1;
             uint32_t mip_levels = static_cast<uint32_t>(cube.levels());
 
-            _loaded_textures[path + name] = loadTexture(cube.data(), cube.size(), extent, format,
+            _loaded_textures[path + name] = loadTexture(cube.data(), cube.size(), extent, fmt,
                                             VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, mip_levels, 6, VK_IMAGE_VIEW_TYPE_CUBE);
 
             return _loaded_textures[path + name];

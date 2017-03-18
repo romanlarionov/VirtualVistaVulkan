@@ -59,7 +59,7 @@ namespace vv
         swap_chain_create_info.imageFormat = chosen_format.format;
         swap_chain_create_info.imageColorSpace = chosen_format.colorSpace;
         swap_chain_create_info.imageExtent = extent;
-        swap_chain_create_info.imageArrayLayers = 1; // todo: make dynamic. 2 would be for VR support
+        swap_chain_create_info.imageArrayLayers = 1;
         swap_chain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // VK_IMAGE_USAGE_TRANSFER_DST_BIT <- to do post processing
 
         if (device->graphics_family_index != device->display_family_index)
