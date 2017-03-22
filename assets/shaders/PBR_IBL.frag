@@ -64,8 +64,7 @@ void main()
     
     // interpolate incident fresnel by metalness %
     vec3 F0 = mix(vec3(0.04), albedo, metalness); 
-    float x = constants.total_mip_levels;
-    float specular_mip_level = roughness * roughness * float(constants.total_mip_levels - 1);
+    float specular_mip_level = roughness * float(constants.total_mip_levels - 1);
     vec3 Es = textureLod(s_irradiance_map, w_reflection, specular_mip_level).rgb;
 
     for (int i = 0; i < MAX_LIGHTS; ++i)

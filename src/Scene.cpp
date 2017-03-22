@@ -217,7 +217,7 @@ namespace vv
                 curr_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
             }
 
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, i, 1, &_scene_descriptor_sets[i], 0, nullptr);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, 0, 1, &_scene_descriptor_sets[i++], 0, nullptr);
 
             // Bind environment lighting descriptor sets
             if (model->material_template->uses_environment_lighting)
@@ -294,9 +294,9 @@ namespace vv
 
             VulkanPipeline *pipeline = new VulkanPipeline();
             if (curr_shader_name == "skybox")
-                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_COUNTER_CLOCKWISE, true, true); // todo: add option for settings passed.
+                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_CLOCKWISE, true, true); // todo: add option for settings passed.
             else
-                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_CLOCKWISE, true, true);
+                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_COUNTER_CLOCKWISE, true, true);
             material_template->pipeline = pipeline;
 
             // Finished
@@ -356,14 +356,14 @@ namespace vv
 		VkDescriptorSetAllocateInfo scene_alloc_info = {};
 		scene_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		scene_alloc_info.descriptorPool = _descriptor_pool;
-		scene_alloc_info.descriptorSetCount = _models.size();
+		scene_alloc_info.descriptorSetCount = 1;
 		scene_alloc_info.pSetLayouts = &_scene_descriptor_set_layout;
 
         _scene_descriptor_sets.resize(_models.size());
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &scene_alloc_info, _scene_descriptor_sets.data()));
 
         for (int i = 0; i < _models.size(); ++i)
         {
+		    VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &scene_alloc_info, &_scene_descriptor_sets[i]));
             std::array<VkWriteDescriptorSet, 3> write_sets;
 
 		    VkDescriptorBufferInfo scene_buffer_info = {};

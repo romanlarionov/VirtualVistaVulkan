@@ -35,10 +35,6 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic -std=c++11")
 endif()
 
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/build/")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/)
-endif()
-
 include_directories("include/"
                     "deps/glfw/include/"
                     "deps/glm/"

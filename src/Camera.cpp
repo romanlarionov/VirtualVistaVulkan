@@ -32,7 +32,7 @@ namespace vv
         _near_plane = near_plane;
         _far_plane = far_plane;
         _look_at_point = glm::vec3(0.0f, 0.0f, 1.0f);
-        _up_vec = glm::vec3(0.0f, -1.0f, 0.0f);
+        _up_vec = glm::vec3(0.0f, 1.0f, 0.0f);
 	}
 
 
@@ -72,7 +72,7 @@ namespace vv
         auto position = Entity::getPosition();
 
         // find component-wise rotation quaternions
-        glm::quat pitch_quat = glm::angleAxis(pitch, u);
+        glm::quat pitch_quat = glm::angleAxis(-pitch, u);
         glm::quat yaw_quat = glm::angleAxis(-yaw, _up_vec);
 
         // combine both components
@@ -83,7 +83,9 @@ namespace vv
 
     glm::mat4 Camera::getProjectionMatrix(float aspect) const
     {
-        return glm::perspective(_fov_y, aspect, _near_plane, _far_plane);
+        auto mat = glm::perspective(_fov_y, aspect, _near_plane, _far_plane);
+        mat[1][1] *= -1.f;
+        return mat;
     }
 
 
