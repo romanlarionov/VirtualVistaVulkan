@@ -29,6 +29,8 @@ git clone --recursive https://github.com/romanlarionov/VirtualVistaVulkan.git
 
 Build with CMake (It should just work)
 
+> any used shaders will have to be compiled prior to running executable
+
 This has been tested and runs on Windows 10 with an Nvidia GTX 970
 
 Dependencies

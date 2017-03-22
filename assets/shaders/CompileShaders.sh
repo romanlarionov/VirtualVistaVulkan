@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# usage example:
+# ./CompileShaders.sh skybox
+
+
 Shader_Name="$1"
 ${VULKAN_SDK}/Bin/glslangValidator.exe -V ${Shader_Name}.vert
 ${VULKAN_SDK}/Bin/glslangValidator.exe -V ${Shader_Name}.frag
