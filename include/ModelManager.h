@@ -9,7 +9,6 @@
 #include "VulkanRenderPass.h"
 #include "VulkanDevice.h"
 #include "TextureManager.h"
-#include "Shader.h"
 #include "Model.h"
 #include "Mesh.h"
 #include "Material.h"

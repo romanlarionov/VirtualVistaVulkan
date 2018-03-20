@@ -10,6 +10,3 @@
 [submodule "deps/gli"]
 	path = deps/gli
 	url = https://github.com/g-truc/gli.git
-[submodule "deps/openvr"]
-	path = deps/openvr
-	url = https://github.com/ValveSoftware/openvr.git

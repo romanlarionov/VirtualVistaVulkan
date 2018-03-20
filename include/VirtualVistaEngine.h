@@ -6,6 +6,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include "VulkanRenderer.h"
+#include "GLFWWindow.h"
 #include "Scene.h"
 
 namespace vv
@@ -35,14 +36,21 @@ namespace vv
         /*
          * Signals the Vulkan engine to construct render commands and begins all central processing.
          */
-		void beginMainLoop(std::function<void(Scene*, float)> input_handler);
+		void beginMainLoop();
 
 	private:
 		int _argc;
 		char **_argv;
 
+        const uint32_t _window_width = 800;
+        const uint32_t _window_height = 800;
+        const char *_application_name = "Virtual Vista";
+
+        GLFWWindow _window;
 		VulkanRenderer *_renderer;
         Scene *_scene;
+
+        void handleInput(float delta_time);
 	};
 }
 

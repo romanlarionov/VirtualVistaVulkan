@@ -46,81 +46,76 @@ namespace vv
 
     void Scene::shutDown()
     {
-        for (auto &t : material_templates)
+        for (auto &temp: material_templates)
         {
-            vkDestroyDescriptorSetLayout(_device->logical_device, t.second->material_descriptor_set_layout, nullptr);
-            t.second->shader->shutDown(); delete t.second->shader;
+            vkDestroyDescriptorSetLayout(_device->logical_device, temp.second.material_descriptor_set_layout, nullptr);
+            for (auto &shader : temp.second.shader_modules)
+                shader.shutDown();
 
-            vkDestroyPipelineLayout(_device->logical_device, t.second->pipeline_layout, nullptr);
-            t.second->pipeline->shutDown(); delete t.second->pipeline;
-
-            delete t.second;
+            vkDestroyPipelineLayout(_device->logical_device, temp.second.pipeline_layout, nullptr);
+            temp.second.pipeline->shutDown();
+            delete temp.second.pipeline;
         }
 
         for (auto &l : _lights)
-        {
-            l->shutDown();
-            delete l;
-        }
+            l.shutDown();
 
         for (auto &m : _models)
-        {
-            m->shutDown();
-            delete m;
-        }
+            m.shutDown();
 
         for (auto &c : _cameras)
-        {
-            c->shutDown();
-            delete c;
-        }
+            c.shutDown();
 
         for (auto &s : _skyboxes)
-        {
-            s->shutDown();
-            delete s;
-        }
+            s.shutDown();
 
-        _scene_uniform_buffer->shutDown(); delete _scene_uniform_buffer;
-        _lights_uniform_buffer->shutDown(); delete _lights_uniform_buffer;
+        _scene_uniform_buffer->shutDown();
+        delete _scene_uniform_buffer;
+
+        _lights_uniform_buffer->shutDown();
+        delete _lights_uniform_buffer;
+
         vkDestroyDescriptorSetLayout(_device->logical_device, _scene_descriptor_set_layout, nullptr);
         vkDestroyDescriptorSetLayout(_device->logical_device, _environment_descriptor_set_layout, nullptr);
         vkDestroyDescriptorSetLayout(_device->logical_device, _radiance_descriptor_set_layout, nullptr);
 
         vkDestroyDescriptorPool(_device->logical_device, _descriptor_pool, nullptr);
-        _texture_manager->shutDown(); delete _texture_manager;
-        _model_manager->shutDown(); delete _model_manager;
+
+        _texture_manager->shutDown();
+        delete _texture_manager;
+
+        _model_manager->shutDown();
+        delete _model_manager;
     }
 
 
     Light* Scene::addLight(glm::vec4 irradiance, float radius)
     {
         VV_ASSERT(_lights.size() < VV_MAX_LIGHTS, "ERROR: number of lights exceeds VV_MAX_LIGHTS.");
-        Light *light = new Light();
-        light->create(irradiance, radius);
+        Light light;
+        light.create(irradiance, radius);
         _lights.push_back(light);
-        return light;
+        return &_lights[_lights.size() - 1];
     }
 
 
     Model* Scene::addModel(std::string path, std::string name, std::string material_template)
     {
         VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding models");
-        VV_ASSERT(material_templates[material_template], "ERROR: material_template does not exist");
-        Model *model = new Model();
-        _model_manager->loadModel(path, name, material_templates[material_template], model);
-        _models.push_back(model);
-        return model;
+        VV_ASSERT(material_templates.find(material_template) != material_templates.end(), "ERROR: material_template does not exist");
+        _models.emplace_back(Model());
+        _model_manager->loadModel(path, name, &material_templates[material_template], &_models[_models.size() - 1]);
+        return &_models[_models.size() - 1];
     }
 
 
     Camera* Scene::addCamera(float fov_y, float near_plane, float far_plane)
     {
         VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding cameras");
-        Camera *camera = new Camera();
-        camera->create(fov_y, near_plane, far_plane);
+        Camera camera;
+        camera.create(fov_y, near_plane, far_plane);
         _cameras.push_back(camera);
-        return camera;
+        return &_cameras[_cameras.size() - 1];
     }
 
 
@@ -128,7 +123,7 @@ namespace vv
                              std::string specular_map_name, std::string brdf_lut_name)
     {
         VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding skyboxes");
-        SkyBox *skybox = new SkyBox();
+        _skyboxes.emplace_back();
 
         path = Settings::inst()->getTextureDirectory() + path;
         auto radiance_map = _texture_manager->loadCubeMap(path, radiance_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, false);
@@ -137,9 +132,8 @@ namespace vv
         auto brdf_lut = _texture_manager->load2DImage(path, brdf_lut_name, VK_FORMAT_R32G32_SFLOAT, false);
         auto sphere_mesh = _model_manager->getSphereMesh();
 
-        skybox->create(_device, _radiance_descriptor_set, _environment_descriptor_set, sphere_mesh, radiance_map, diffuse_map, specular_map, brdf_lut);
-        _skyboxes.push_back(skybox);
-        return skybox;
+        _skyboxes[_skyboxes.size() - 1].create(_device, _radiance_descriptor_set, _environment_descriptor_set, sphere_mesh, radiance_map, diffuse_map, specular_map, brdf_lut);
+        return &_skyboxes[_skyboxes.size() - 1];
     }
 
 
@@ -176,8 +170,8 @@ namespace vv
 
         for (auto i = 0; i < _lights.size(); ++i)
         {
-            _lights_ubo.lights[i].position = glm::vec4(_lights[i]->getPosition(), 0.0f);
-            _lights_ubo.lights[i].irradiance = _lights[i]->irradiance;
+            _lights_ubo.lights[i].position = glm::vec4(_lights[i].getPosition(), 0.0f);
+            _lights_ubo.lights[i].irradiance = _lights[i].irradiance;
         }
         _lights_uniform_buffer->updateAndTransfer(&_lights_ubo);
 
@@ -187,7 +181,7 @@ namespace vv
         _scene_uniform_buffer->updateAndTransfer(&_scene_ubo);
 
         for (auto &m : _models)
-            m->updateModelUBO();
+            m.updateModelUBO();
     }
 
 
@@ -199,10 +193,10 @@ namespace vv
         if (_has_active_skybox)
         {
             auto skybox_template = material_templates["skybox"];
-            skybox_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template->pipeline_layout, 0, 1, &_scene_descriptor_sets[0], 0, nullptr);
+            skybox_template.pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template.pipeline_layout, 0, 1, &_scene_descriptor_sets[0], 0, nullptr);
 
-            _active_skybox->bindSkyBoxDescriptorSets(command_buffer, skybox_template->pipeline_layout);
+            _active_skybox->bindSkyBoxDescriptorSets(command_buffer, skybox_template.pipeline_layout);
             _active_skybox->render(command_buffer);
         }
 
@@ -210,26 +204,26 @@ namespace vv
         for (auto &model : _models)
         {
             // reduce pipeline state switches as much as possible
-            if (first_run || (curr_template->name != model->material_template->name))
+            if (first_run || (curr_template->name != model.material_template->name))
             {
                 first_run = false;
-                curr_template = model->material_template;
+                curr_template = model.material_template;
                 curr_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
             }
 
             vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, 0, 1, &_scene_descriptor_sets[i++], 0, nullptr);
 
             // Bind environment lighting descriptor sets
-            if (model->material_template->uses_environment_lighting)
+            if (model.material_template->uses_environment_lighting)
             {
                 _active_skybox->bindIBLDescriptorSets(command_buffer, curr_template->pipeline_layout);
                 _active_skybox->submitMipLevelPushConstants(command_buffer, curr_template->pipeline_layout);
             }
 
             // Render all submeshes within this model
-            for (auto &mesh : _model_manager->_loaded_meshes[model->_data_handle])
+            for (auto &mesh : _model_manager->_loaded_meshes[model._data_handle])
             {
-                Material *material = _model_manager->_loaded_materials[model->_data_handle][model->_material_id_set][mesh->material_id];
+                Material *material = _model_manager->_loaded_materials[model._data_handle][model._material_id_set][mesh->material_id];
                 material->bindDescriptorSets(command_buffer);
                 mesh->bindBuffers(command_buffer);
                 mesh->render(command_buffer);
@@ -246,18 +240,26 @@ namespace vv
 
         VV_ASSERT(file.is_open(), "Failed to open shader_info.txt. Was it moved or renamed?");
 
+        // todo: shouldn't use this file parsing anymore. should just hardcode shader construction
         // loop through required shaders in info file and initialize them.
         std::string curr_shader_name;
         while (std::getline(file, curr_shader_name))
         {
-            MaterialTemplate *material_template = new MaterialTemplate();
-            material_template->name = curr_shader_name; // note: apply name to template based on name assigned to spriv shader
+            MaterialTemplate material_template;
+            material_template.name = curr_shader_name; // note: apply name to template based on name assigned to spriv shader
 
             // Construct shader
-            Shader *shader = new Shader();
-            shader->create(_device, material_template->name);
-            material_template->shader = shader;
-            material_template->uses_environment_lighting = shader->uses_environmental_lighting;
+
+            // todo: this removes all generality of this function. should place somewhere else.
+            material_template.shader_modules.emplace_back();
+            material_template.shader_modules[0].create(_device, material_template.name, "vert");
+            material_template.shader_modules[0].entrance_function = "main";
+
+            material_template.shader_modules.emplace_back();
+            material_template.shader_modules[1].create(_device, material_template.name, "frag");
+            material_template.shader_modules[1].entrance_function = "main";
+
+            material_template.uses_environment_lighting = material_template.shader_modules[1].uses_environmental_lighting;
 
             // Construct Descriptor Set Layouts
             std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
@@ -269,38 +271,50 @@ namespace vv
             {
                 std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
 
-                /// material descriptor layout
-                for (auto &o : shader->material_descriptor_orderings)
+                // material descriptor layout
+                for (auto &o : material_template.shader_modules[1].material_descriptor_orderings)
                     temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(o.binding, o.type, 1, o.shader_stage));
 
-                createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template->material_descriptor_set_layout);
-                descriptor_set_layouts.push_back(material_template->material_descriptor_set_layout);
+                createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template.material_descriptor_set_layout);
+                descriptor_set_layouts.push_back(material_template.material_descriptor_set_layout);
 
-                /// environment descriptor set layout
-                if (material_template->uses_environment_lighting)
+                // environment descriptor set layout
+                if (material_template.uses_environment_lighting)
                     descriptor_set_layouts.push_back(_environment_descriptor_set_layout);
             }
 
             // Construct Pipeline
             VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
-            pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipeline_layout_create_info.flags = 0;
-            pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
-            pipeline_layout_create_info.pSetLayouts = descriptor_set_layouts.data();
-            pipeline_layout_create_info.pPushConstantRanges = shader->push_constant_ranges.data();
-            pipeline_layout_create_info.pushConstantRangeCount = shader->push_constant_ranges.size();
+            pipeline_layout_create_info.sType                   = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            pipeline_layout_create_info.flags                   = 0;
+            pipeline_layout_create_info.setLayoutCount          = static_cast<uint32_t>(descriptor_set_layouts.size());
+            pipeline_layout_create_info.pSetLayouts             = descriptor_set_layouts.data();
+            pipeline_layout_create_info.pPushConstantRanges     = material_template.shader_modules[1].push_constant_ranges.data();
+            pipeline_layout_create_info.pushConstantRangeCount  = material_template.shader_modules[1].push_constant_ranges.size();
 
-            VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template->pipeline_layout));
+            VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template.pipeline_layout));
 
             VulkanPipeline *pipeline = new VulkanPipeline();
+            pipeline->createGraphicsPipeline(_device, material_template.pipeline_layout, _render_pass);
+            pipeline->addShaderStage(material_template.shader_modules[0]);
+            pipeline->addShaderStage(material_template.shader_modules[1]);
+            pipeline->addVertexInputState();
+            pipeline->addInputAssemblyState();
+            pipeline->addDepthStencilState(true, true);
+            pipeline->addViewportState();
+            pipeline->addMultisampleState();
+            pipeline->addColorBlendState();
+
             if (curr_shader_name == "skybox")
-                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_CLOCKWISE, true, true); // todo: add option for settings passed.
+                pipeline->addRasterizationState(VK_FRONT_FACE_CLOCKWISE);
             else
-                pipeline->create(_device, material_template->shader, material_template->pipeline_layout, _render_pass, VK_FRONT_FACE_COUNTER_CLOCKWISE, true, true);
-            material_template->pipeline = pipeline;
+                pipeline->addRasterizationState(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+
+            pipeline->commitGraphicsPipeline();
+            material_template.pipeline = pipeline;
 
             // Finished
-            material_templates[material_template->name] = material_template;
+            material_templates[material_template.name] = material_template;
         }
 
         // todo: bind all created pipelines at once to be more efficient.
@@ -393,7 +407,7 @@ namespace vv
 		    write_sets[1].pBufferInfo = &lights_buffer_info;
 
             VkDescriptorBufferInfo model_buffer_info = {};
-		    model_buffer_info.buffer = _models[i]->_model_uniform_buffer->buffer;
+		    model_buffer_info.buffer = _models[i]._model_uniform_buffer->buffer;
 		    model_buffer_info.offset = 0;
 		    model_buffer_info.range = sizeof(ModelUBO);
 

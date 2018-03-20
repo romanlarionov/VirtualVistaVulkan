@@ -45,30 +45,7 @@ int main(int argc, char **argv)
 
     Model *cerberus = scene->addModel("cerberus/", "cerberus.obj", "PBR_IBL");
     cerberus->translate(glm::vec3(-1.0f, 0.0f, 0.0f));
-
-    auto input_handler = [](Scene *scene, float delta_time)
-    {
-        float move_speed = 4.0f * delta_time;
-        float rotate_speed = 2.0f * delta_time;
-        Camera *camera = scene->getActiveCamera();
-        if (InputManager::inst()->keyIsPressed(GLFW_KEY_W))
-            camera->translate(move_speed * camera->getForwardDirection());
-
-        if (InputManager::inst()->keyIsPressed(GLFW_KEY_A))
-            camera->translate(-move_speed * camera->getSidewaysDirection());
-
-        if (InputManager::inst()->keyIsPressed(GLFW_KEY_S))
-            camera->translate(-move_speed * camera->getForwardDirection());
-
-        if (InputManager::inst()->keyIsPressed(GLFW_KEY_D))
-            camera->translate(move_speed * camera->getSidewaysDirection());
-
-        double delta_x, delta_y;
-        InputManager::inst()->getCursorGradient(delta_x, delta_y);
-        camera->rotate(delta_x * rotate_speed, delta_y * rotate_speed);
-    };
-
-    app.beginMainLoop(input_handler);
+    app.beginMainLoop();
     app.shutDown();
 
     return EXIT_SUCCESS;

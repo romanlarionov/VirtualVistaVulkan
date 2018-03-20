@@ -10,6 +10,7 @@
 #include "VulkanBuffer.h"
 #include "VulkanImageView.h"
 #include "VulkanPipeline.h"
+#include "VulkanShaderModule.h"
 
 namespace vv
 {
@@ -18,9 +19,9 @@ namespace vv
         std::string name;
         VkPipelineLayout pipeline_layout;
         VulkanPipeline *pipeline;
-        Shader *shader;
         VkDescriptorSetLayout material_descriptor_set_layout;
         bool uses_environment_lighting;
+        std::vector<VulkanShaderModule> shader_modules;
     };
 
     struct UBOStore

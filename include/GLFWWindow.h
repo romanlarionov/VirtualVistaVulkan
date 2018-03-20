@@ -9,17 +9,11 @@
 #include <vector>
 
 #include "InputManager.h"
+#include "VulkanTypes.h"
 
 namespace vv 
 {
 	struct VulkanDevice;
-
-	struct VulkanSurfaceDetailsHandle
-	{
-		VkSurfaceCapabilitiesKHR surface_capabilities;
-		std::vector<VkSurfaceFormatKHR> available_surface_formats;
-		std::vector<VkPresentModeKHR> available_surface_present_modes;
-	};
 
     class GLFWWindow
     {
@@ -31,6 +25,9 @@ namespace vv
 		std::unordered_map<VulkanDevice*, VulkanSurfaceDetailsHandle> surface_settings;
 		uint32_t glfw_extension_count;
 		const char** glfw_extensions;
+        uint32_t window_width;
+        uint32_t window_height;
+        char *application_name;
 
         GLFWWindow();
         ~GLFWWindow();
@@ -40,7 +37,7 @@ namespace vv
          *
          * todo: add resizing event handler. requires manually updating framebuffer
 		 */
-		void create();
+        void create(const int width, const int height, const char *application_name);
 
 		/*
 		 * Creates a Vulkan surface for generically communicating between Vulkan and the system window API.
@@ -57,6 +54,11 @@ namespace vv
 		 */
 		void run();
 
+        /*
+         * Tell GLFW when the window needs to close.
+         */
+        void setShouldClose(bool should_close);
+
 		/*
 		 * Returns whether GLFW received a termination signal.
 		 */
@@ -65,7 +67,6 @@ namespace vv
 	private:
 
         static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
         static void cursorPositionCallback(GLFWwindow* window, double xpos, double ypos);
     };
 }

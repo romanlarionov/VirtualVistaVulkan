@@ -16,7 +16,6 @@
 #include "Material.h"
 #include "ModelManager.h"
 #include "Mesh.h"
-#include "Shader.h"
 #include "Utils.h"
 
 namespace vv
@@ -30,7 +29,7 @@ namespace vv
 		/*
 		 * Initialize all necessary Vulkan internals.
 		 */
-		void create();
+		void create(GLFWWindow *window);
 
 		/*
 		 * Destroy all Vulkan internals in the correct order.
@@ -61,24 +60,24 @@ namespace vv
 		bool shouldStop();
 
 	private:
-		GLFWWindow *window_						    = nullptr;
-		VkInstance instance_					    = VK_NULL_HANDLE;
-		VkDebugReportCallbackEXT debug_callback_    = VK_NULL_HANDLE;
-		VulkanDevice* physical_device_              = nullptr;
+		GLFWWindow *_window						    = nullptr;
+		VkInstance _instance					    = VK_NULL_HANDLE;
+		VkDebugReportCallbackEXT _debug_callback    = VK_NULL_HANDLE;
+		VulkanDevice *_physical_device              = nullptr;
 		
-        VulkanSwapChain *swap_chain_;
-		std::vector<VkFramebuffer> frame_buffers_;
+        VulkanSwapChain *_swap_chain;
+		std::vector<VkFramebuffer> _frame_buffers;
 
-		VkSemaphore image_ready_semaphore_          = VK_NULL_HANDLE;
-		VkSemaphore rendering_complete_semaphore_   = VK_NULL_HANDLE;
+		VkSemaphore _image_ready_semaphore          = VK_NULL_HANDLE;
+		VkSemaphore _rendering_complete_semaphore   = VK_NULL_HANDLE;
 
-		VulkanRenderPass *render_pass_              = nullptr;
-		std::vector<VkCommandBuffer> command_buffers_;
+		VulkanRenderPass *_render_pass              = nullptr;
+		std::vector<VkCommandBuffer> _command_buffers;
 
-        Scene *scene_;
+        Scene *_scene;
 
-        std::vector<const char*> used_validation_layers_ = { "VK_LAYER_LUNARG_standard_validation" };
-		const std::vector<const char*> used_instance_extensions_ = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
+        std::vector<const char*> _used_validation_layers = { "VK_LAYER_LUNARG_standard_validation" };
+		const std::vector<const char*> _used_instance_extensions = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
 		/*
 		 * Creates the main Vulkan instance upon which the renderer rests.

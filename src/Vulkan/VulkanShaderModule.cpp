@@ -4,23 +4,12 @@
 #include <iostream>
 #include <algorithm>
 
-#include "Shader.h"
+#include "VulkanShaderModule.h"
 #include "Utils.h"
 
 namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
-	Shader::Shader() :
-        uses_environmental_lighting(false)
-	{
-	}
-
-
-	Shader::~Shader()
-	{
-	}
-
-
     std::vector<uint32_t> convert(std::vector<char> buf)
     {
         std::vector<uint32_t> output(buf.size() / sizeof(uint32_t));
@@ -29,34 +18,51 @@ namespace vv
     }
 
 
-	void Shader::create(VulkanDevice *device, std::string name)
+	void VulkanShaderModule::create(VulkanDevice *device, std::string name, std::string stage)
 	{
 		_device = device;
-		_name = name;
+		_filename = name;
+
+        if (stage == "vert")
+            shader_stage = VK_SHADER_STAGE_VERTEX_BIT;
+        else if (stage == "frag")
+            shader_stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        else if (stage == "comp")
+            shader_stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        else if (stage == "tess")
+            shader_stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; // todo: theres also tess_evaluation_bit
+        else if (stage == "geom")
+            shader_stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+        else if (stage == "glsl")
+            shader_stage = VK_SHADER_STAGE_ALL_GRAPHICS; // todo: dont know what to put here
 
         std::string dir = Settings::inst()->getShaderDirectory();
 
-		_vert_path = dir + name + "_vert" + ".spv";
-		_frag_path = dir + name + "_frag" + ".spv";
-        _vert_binary_data = loadSpirVBinary(_vert_path);
-		_frag_binary_data = loadSpirVBinary(_frag_path);
+		_filepath = dir + name + "_" + stage + ".spv";
+        _binary_data = loadSpirVBinary(_filepath);
 
-        reflectDescriptorTypes(convert(_frag_binary_data), VK_SHADER_STAGE_FRAGMENT_BIT);
+        if (stage == "frag")
+            reflectDescriptorTypes(convert(_binary_data), VK_SHADER_STAGE_FRAGMENT_BIT);
 
-		createShaderModule(_vert_binary_data, vert_module);
-		createShaderModule(_frag_binary_data, frag_module);
+		VkShaderModuleCreateInfo shader_module_create_info = {};
+		shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		shader_module_create_info.flags = 0;
+		shader_module_create_info.codeSize = _binary_data.size();
+		shader_module_create_info.pCode = (uint32_t *)_binary_data.data();
+
+		VV_CHECK_SUCCESS(vkCreateShaderModule(_device->logical_device, &shader_module_create_info, nullptr, &shader_module));
 	}
 
 
-	void Shader::shutDown()
+	void VulkanShaderModule::shutDown()
 	{
-		if (vert_module) vkDestroyShaderModule(_device->logical_device, vert_module, nullptr);
-		if (frag_module) vkDestroyShaderModule(_device->logical_device, frag_module, nullptr);
+		if (shader_module != VK_NULL_HANDLE)
+            vkDestroyShaderModule(_device->logical_device, shader_module, nullptr);
 	}
 
 	
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
-	std::vector<char> Shader::loadSpirVBinary(std::string file_name)
+	std::vector<char> VulkanShaderModule::loadSpirVBinary(std::string file_name)
 	{
 		std::ifstream file(file_name, std::ios::ate | std::ios::binary);
 		VV_ASSERT(file.is_open(), "Vulkan Error: failed to open Spir-V file: " + file_name);
@@ -73,19 +79,7 @@ namespace vv
 	}
 
 
-	void Shader::createShaderModule(const std::vector<char> byte_code, VkShaderModule &module)
-	{
-		VkShaderModuleCreateInfo shader_module_create_info = {};
-		shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		shader_module_create_info.flags = 0;
-		shader_module_create_info.codeSize = byte_code.size();
-		shader_module_create_info.pCode = (uint32_t *)byte_code.data();
-
-		VV_CHECK_SUCCESS(vkCreateShaderModule(_device->logical_device, &shader_module_create_info, nullptr, &module));
-	}
-
-
-    void Shader::reflectDescriptorTypes(std::vector<uint32_t> spirv_binary, VkShaderStageFlagBits shader_stage)
+    void VulkanShaderModule::reflectDescriptorTypes(std::vector<uint32_t> spirv_binary, VkShaderStageFlagBits shader_stage)
     {
         spirv_cross::CompilerGLSL glsl(spirv_binary);
         spirv_cross::ShaderResources resources = glsl.get_shader_resources();
@@ -109,10 +103,7 @@ namespace vv
             unsigned set = glsl.get_decoration(resource.id, spv::DecorationDescriptorSet);
             unsigned binding = glsl.get_decoration(resource.id, spv::DecorationBinding);
             std::string name = glsl.get_name(resource.id);
-
             DescriptorInfo descriptor_info = { binding, name, shader_stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER };
-
-            // todo: this is interesting -> glsl.get_declared_struct_size. can use to create dynamic ubo with correct offsets.
 
             if (set == 0)
             {
@@ -168,7 +159,8 @@ namespace vv
 
         // sort uniforms found by binding
         std::sort(material_descriptor_orderings.begin(), material_descriptor_orderings.end(),
-            [](DescriptorInfo &l, DescriptorInfo &r) {
+            [](DescriptorInfo &l, DescriptorInfo &r)
+            {
                 return l.binding < r.binding;
             }
         );

@@ -24,7 +24,7 @@ namespace vv
         friend class VulkanRenderer;
 
 	public:
-        std::unordered_map<std::string, MaterialTemplate *> material_templates;
+        std::unordered_map<std::string, MaterialTemplate> material_templates;
 
 		Scene();
 		~Scene();
@@ -138,10 +138,10 @@ namespace vv
         VkDescriptorSet _radiance_descriptor_set     = VK_NULL_HANDLE; // applied to skybox model
 
         // todo: think of better data structure. maybe something to help with culling
-		std::vector<Light *> _lights;
-		std::vector<Model *> _models;
-		std::vector<Camera *> _cameras;
-		std::vector<SkyBox *> _skyboxes;
+		std::vector<Light> _lights;
+		std::vector<Model> _models;
+		std::vector<Camera> _cameras;
+		std::vector<SkyBox> _skyboxes;
 
         Camera *_active_camera;
         SkyBox *_active_skybox;

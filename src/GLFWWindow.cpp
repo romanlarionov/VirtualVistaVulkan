@@ -19,18 +19,16 @@ namespace vv
 	}
 
     
-	void GLFWWindow::create()
+    void GLFWWindow::create(const int width, const int height, const char *application_name)
 	{
 		VV_ASSERT(glfwInit() != 0, "GLFW failed to init");
+        window_width = width;
+        window_height = height;
+        application_name = application_name;
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Don't use OpenGL
-
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-		std::string application_name = Settings::inst()->getApplicationName();
-		window = glfwCreateWindow(Settings::inst()->getWindowWidth(),
-								  Settings::inst()->getWindowHeight(),
-								  application_name.c_str(),
-								  nullptr, nullptr);
+		window = glfwCreateWindow(window_width, window_height, application_name, nullptr, nullptr);
 
 		glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
         glfwSetKeyCallback(window, keyCallback);
@@ -53,10 +51,17 @@ namespace vv
 		glfwTerminate();
 	}
 
+
 	void GLFWWindow::run()
 	{
 		glfwPollEvents();
 	}
+
+
+    void GLFWWindow::setShouldClose(bool should_close)
+    {
+        glfwSetWindowShouldClose(window, should_close);
+    }
 
 
 	bool GLFWWindow::shouldClose()

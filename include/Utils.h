@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 
+#include "VulkanTypes.h"
+
 #ifndef VIRTUALVISTA_UTILS_H
 #define VIRTUALVISTA_UTILS_H
 
@@ -91,9 +93,9 @@ namespace vv
 			return binding_description;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+		static VkVertexInputAttributeDescription* getAttributeDescriptions()
 		{
-			std::array<VkVertexInputAttributeDescription, 3> attribute_descriptions;
+			VkVertexInputAttributeDescription *attribute_descriptions = new VkVertexInputAttributeDescription[3];
 
 			attribute_descriptions[0].binding = 0;
 			attribute_descriptions[0].location = 0; // layout placement

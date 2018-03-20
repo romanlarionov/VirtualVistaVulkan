@@ -178,7 +178,7 @@ namespace vv
                 material->create(_device, material_template, _descriptor_pool);
 
                 // store required descriptor set data in correct binding order
-                auto orderings = material_template->shader->material_descriptor_orderings;
+                auto orderings = material_template->shader_modules[1].material_descriptor_orderings;
                 for (size_t i = 0; i < orderings.size(); ++i)
                 {
                     auto o = orderings[i];
@@ -213,6 +213,7 @@ namespace vv
                         else if (o.name == "emissiveness_map")
                             temp_name = m.emissive_texname;
 
+                        // todo: need to support more texture types
                         auto texture = _texture_manager->load2DImage(path, temp_name, VK_FORMAT_R8G8B8A8_UNORM, false);
                         material->addTexture(texture, o.binding);
                     }
@@ -236,7 +237,8 @@ namespace vv
 
                 //VV_ALERT("MTL file not found. Assuming PBR textures present.");
                 
-                auto orderings = material_template->shader->material_descriptor_orderings;
+                // todo: hardcoded access to fragment shader here. need to remove
+                auto orderings = material_template->shader_modules[1].material_descriptor_orderings;
                 for (size_t i = 0; i < orderings.size(); ++i)
                 {
                     auto o = orderings[i];
