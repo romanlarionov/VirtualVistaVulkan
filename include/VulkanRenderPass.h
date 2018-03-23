@@ -18,7 +18,7 @@ namespace vv
 		~VulkanRenderPass() = default;
 
 		/*
-		 * 
+		 * Uses binded attachments to generate a VkRenderPass.
 		 */
 		void create(VulkanDevice *device, VkPipelineBindPoint bind_point);
 
@@ -39,7 +39,7 @@ namespace vv
 		void endRenderPass(VkCommandBuffer command_buffer);
 
         /*
-		 * 
+		 * Before construction of the VkRenderPass can be completed, all necessary color, depth, stencil, etc image attachments should be added via this call.
 		 */
         void addAttachment(VkFormat format,
                            VkSampleCountFlagBits sample_count,
@@ -51,17 +51,7 @@ namespace vv
                            VkImageLayout output_layout);
 
         /*
-         *
-         */
-        void addSubpassDependency(uint32_t src_subpass,
-                                  uint32_t dst_subpass,
-                                  VkPipelineStageFlags src_pipeline_stage,
-                                  VkPipelineStageFlags dst_pipeline_stage,
-                                  VkAccessFlags src_access_flags,
-                                  VkAccessFlags dst_access_flags);
-
-        /*
-         *
+         * Generates a VkFramebuffer object once initialized.
          */
         VkFramebuffer createFramebuffer(std::vector<VkImageView> &attachments, VkExtent2D extent) const;
 

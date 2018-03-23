@@ -63,11 +63,15 @@ namespace vv
     {
         VV_ASSERT(_staging_buffer && buffer, "Buffers not allocated correctly. Perhaps create() wasn't called.");
 
+        bool use_transfer = false;
         auto command_pool_used = _device->command_pools["graphics"];
 
         // use transfer queue if available
         if (_device->command_pools.count("transfer") > 0)
+        {
             command_pool_used = _device->command_pools["transfer"];
+            use_transfer = true;
+        }
 
         auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
 
@@ -75,7 +79,7 @@ namespace vv
         buffer_copy.size = size;
         vkCmdCopyBuffer(command_buffer, _staging_buffer, buffer, 1, &buffer_copy);
 
-        if (_device->transfer_family_index != -1)
+        if (use_transfer)
             util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
         else
             util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);

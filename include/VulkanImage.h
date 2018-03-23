@@ -78,12 +78,33 @@ namespace vv
 
         std::unordered_map<VkFormat, FormatInfo> _format_info_table =
         {
-            { VK_FORMAT_R8G8B8A8_UNORM, { 4, { 1, 1, 1 } } },
-            { VK_FORMAT_R32G32_SFLOAT, { 8, { 1, 1, 1 } } },
-            { VK_FORMAT_R32G32B32A32_SFLOAT, { 16, { 1, 1, 1 } } },
-            { VK_FORMAT_BC3_UNORM_BLOCK, { 16, { 4, 4, 1 } } },
-            { VK_FORMAT_R8_UNORM, { 1, { 1, 1, 1 } } },
-            { VK_FORMAT_R8G8B8_UNORM, { 3, { 1, 1, 1 } } }
+              { VK_FORMAT_R8G8B8A8_UNORM, { 4, { 1, 1, 1 } } }
+            , { VK_FORMAT_R32G32_SFLOAT, { 8, { 1, 1, 1 } } }
+            , { VK_FORMAT_R32G32B32A32_SFLOAT, { 16, { 1, 1, 1 } } }
+            , { VK_FORMAT_BC3_UNORM_BLOCK, { 16, { 4, 4, 1 } } }
+            , { VK_FORMAT_R8_UNORM, { 1, { 1, 1, 1 } } }
+            , { VK_FORMAT_R8G8B8_UNORM, { 3, { 1, 1, 1 } } }
+        };
+
+        std::unordered_map<VkPipelineStageFlags, VkQueueFlags> _pipeline_stage_queue_support_lut =
+        {
+              { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT | VK_QUEUE_PROTECTED_BIT}
+            , { VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT }
+            , { VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_QUEUE_COMPUTE_BIT }
+            , { VK_PIPELINE_STAGE_TRANSFER_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT }
+            , { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT | VK_QUEUE_PROTECTED_BIT }
+            , { VK_PIPELINE_STAGE_HOST_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT | VK_QUEUE_PROTECTED_BIT }
+            , { VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_QUEUE_GRAPHICS_BIT }
+            , { VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT | VK_QUEUE_PROTECTED_BIT }
         };
 
         /*
@@ -102,13 +123,10 @@ namespace vv
 		 * Move the linearly stored staging image into an optimal texture storage layout.
 		 * https://www.khronos.org/registry/vulkan/specs/1.0/xhtml/vkspec.html#VkImageLayout
 		 */
-		void transformImageLayout(VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout,
-                                  VkImageLayout new_layout, VkPipelineStageFlags old_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                  VkPipelineStageFlags new_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		void transformImageLayout(VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout, VkImageLayout new_layout);
 
         void transformImageLayout(VkCommandBuffer command_buffer, VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout,
-                                  VkImageLayout new_layout, VkPipelineStageFlags old_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                  VkPipelineStageFlags new_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+                                  VkImageLayout new_layout);
 
         /*
          * Determines the correct pair of src + dst memory access constraints to prepare for during image layout transformation.

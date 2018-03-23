@@ -1,5 +1,6 @@
 
 #include "VulkanImage.h"
+#include "Utils.h"
 
 namespace vv
 {
@@ -254,45 +255,52 @@ namespace vv
 	}
 
 
-    void VulkanImage::transformImageLayout(VkCommandBuffer command_buffer, VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout,
-                                           VkImageLayout new_layout, VkPipelineStageFlags old_stage, VkPipelineStageFlags new_stage)
+    void VulkanImage::transformImageLayout(VkCommandBuffer command_buffer, VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout, VkImageLayout new_layout)
     {
         VkImageMemoryBarrier memory_barrier = determineAccessMasks(image, subresource_range, old_layout, new_layout);
+        VkPipelineStageFlags old_stage = util::determinePipelineStageFlag(memory_barrier.srcAccessMask);
+        VkPipelineStageFlags new_stage = util::determinePipelineStageFlag(memory_barrier.dstAccessMask);
 		vkCmdPipelineBarrier(command_buffer, old_stage, new_stage, 0, 0, nullptr, 0, nullptr, 1, &memory_barrier);
     }
 
 
-	void VulkanImage::transformImageLayout(VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout, VkImageLayout new_layout,
-                                           VkPipelineStageFlags old_stage, VkPipelineStageFlags new_stage)
+	void VulkanImage::transformImageLayout(VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout, VkImageLayout new_layout)
 	{
-        auto command_pool_used = _device->command_pools["graphics"];
-
-        // use transfer queue if available
-        if (_device->command_pools.count("transfer") > 0)
-            command_pool_used = _device->command_pools["transfer"];
-
-		auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
-
 		// using this ensures that writing is completed before reading.
         VkImageMemoryBarrier memory_barrier = determineAccessMasks(image, subresource_range, old_layout, new_layout);
+        VkPipelineStageFlags old_stage = util::determinePipelineStageFlag(memory_barrier.srcAccessMask);
+        VkPipelineStageFlags new_stage = util::determinePipelineStageFlag(memory_barrier.dstAccessMask);
+
+        bool use_transfer = false;
+        auto command_pool_used = _device->command_pools["graphics"];
+
+        // use transfer queue if it's available on this device and the old/new pipeline stages are compatible with it
+        if ((_pipeline_stage_queue_support_lut[old_stage] == VK_QUEUE_TRANSFER_BIT) &&
+            (_pipeline_stage_queue_support_lut[new_stage] == VK_QUEUE_TRANSFER_BIT) &&
+            _device->command_pools.count("transfer") > 0)
+        {
+            command_pool_used = _device->command_pools["transfer"];
+            use_transfer = true;
+        }
+
+		auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
 		vkCmdPipelineBarrier(command_buffer, old_stage, new_stage, 0, 0, nullptr, 0, nullptr, 1, &memory_barrier);
 
-        if (_device->transfer_family_index != -1)
+        if (use_transfer)
             util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
         else
 		    util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
 	}
 
 
-    VkImageMemoryBarrier VulkanImage::determineAccessMasks(VkImage image, VkImageSubresourceRange subresource_range,
-                                                           VkImageLayout old_layout, VkImageLayout new_layout)
+    VkImageMemoryBarrier VulkanImage::determineAccessMasks(VkImage image, VkImageSubresourceRange subresource_range, VkImageLayout old_layout, VkImageLayout new_layout)
     {
 		VkImageMemoryBarrier memory_barrier = {};
         memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		memory_barrier.oldLayout = old_layout;
 		memory_barrier.newLayout = new_layout;
-        memory_barrier.srcAccessMask = this->aspect_flags;
-        memory_barrier.dstAccessMask = this->aspect_flags;
+        //memory_barrier.srcAccessMask = this->aspect_flags;
+        //memory_barrier.dstAccessMask = this->aspect_flags;
 		memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memory_barrier.image = image;

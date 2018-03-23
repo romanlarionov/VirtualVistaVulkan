@@ -202,9 +202,42 @@ namespace vv
             return layout;
         }
 
-        static void destroyVulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout)
+        static VkPipelineStageFlags determinePipelineStageFlag(VkAccessFlags access_flags)
         {
-		    vkDestroyDescriptorSetLayout(device, layout, nullptr);
+            // https://www.khronos.org/registry/vulkan/specs/1.1/html/vkspec.html#synchronization-access-types-supported
+            switch (access_flags)
+            {
+                case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:          return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+                case VK_ACCESS_INDEX_READ_BIT:
+                case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:          return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+                case VK_ACCESS_SHADER_READ_BIT:
+                case VK_ACCESS_SHADER_WRITE_BIT:
+                case VK_ACCESS_UNIFORM_READ_BIT:                   return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                                                          VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
+                                                                          VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
+                                                                          VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                                                                          VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                                                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+                case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:          return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+                case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
+                case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:          return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+                case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
+                case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT: return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                                                          VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+                case VK_ACCESS_TRANSFER_READ_BIT:
+                case VK_ACCESS_TRANSFER_WRITE_BIT:                  return VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+                case VK_ACCESS_HOST_READ_BIT:
+                case VK_ACCESS_HOST_WRITE_BIT:                      return VK_PIPELINE_STAGE_HOST_BIT;
+
+                default:                                            return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            }
         }
 	}
 }

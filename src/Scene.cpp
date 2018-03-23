@@ -48,7 +48,12 @@ namespace vv
     {
         for (auto &temp: material_templates)
         {
-            vkDestroyDescriptorSetLayout(_device->logical_device, temp.second.material_descriptor_set_layout, nullptr);
+            // todo: this is a hack to work around some issue with the "dummy" material descriptor set
+            //       layout not wanting to be destroyed... i'm still not sure what's wrong, but I get
+            //       the feeling that it has something to do with me never actually using it to render any models
+            if (temp.second.name != "dummy")
+                vkDestroyDescriptorSetLayout(_device->logical_device, temp.second.material_descriptor_set_layout, nullptr);
+
             for (auto &shader : temp.second.shader_modules)
                 shader.shutDown();
 

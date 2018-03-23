@@ -111,7 +111,6 @@ namespace vv
     }
 
 
-
     VkFramebuffer VulkanRenderPass::createFramebuffer(std::vector<VkImageView> &attachments, VkExtent2D extent) const
     {
         VV_ASSERT(!attachments.empty(), "Attempting to create VkFramebuffer object with no attachments");
