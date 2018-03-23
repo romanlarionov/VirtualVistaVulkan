@@ -86,6 +86,12 @@ namespace vv
 
         _model_manager->shutDown();
         delete _model_manager;
+
+        _scene_descriptor_sets.clear();
+        _lights.clear();
+        _models.clear();
+        _cameras.clear();
+        _skyboxes.clear();
     }
 
 

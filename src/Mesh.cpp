@@ -33,6 +33,8 @@ namespace vv
 	{
         _vertex_buffer.shutDown();
         _index_buffer.shutDown();
+        _vertices.clear();
+        _indices.clear();
 	}
 
 

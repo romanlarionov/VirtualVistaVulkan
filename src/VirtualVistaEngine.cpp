@@ -3,7 +3,7 @@
 #include <chrono>
 
 #include "VirtualVistaEngine.h"
-#include "VulkanRenderer.h"
+#include "VulkanForwardRenderer.h"
 #include "InputManager.h"
 #include "Settings.h"
 
@@ -25,7 +25,7 @@ namespace vv
     {
         _window.create(_window_width, _window_height, _application_name);
 
-    	_renderer = new VulkanRenderer();
+    	_renderer = new VulkanForwardRenderer();
     	_renderer->create(&_window);
         _scene = _renderer->getScene();
     }

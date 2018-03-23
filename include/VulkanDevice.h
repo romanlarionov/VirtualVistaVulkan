@@ -31,9 +31,9 @@ namespace vv
 
 		// General, abstracted, consumable information
 		int32_t graphics_family_index = -1;
-		int32_t compute_family_index = -1;
+		int32_t compute_family_index  = -1;
 		int32_t transfer_family_index = -1;
-		int32_t display_family_index = -1;
+		int32_t display_family_index  = -1;
 
 		std::unordered_map<std::string, VkCommandPool> command_pools;
 
@@ -53,7 +53,7 @@ namespace vv
 		/*
 		 * Returns if this physical device will be suitable for all compute and rendering purposes.
          *
-		 * todo: fill out more.
+		 * todo: there could be multiple definitions of what is suitable for different renderers. move out of here
 		 */
 		bool isSuitable(VkSurfaceKHR surface, VulkanSurfaceDetailsHandle &surface_details);
 

@@ -11,8 +11,8 @@ namespace vv
 	class Camera : public Entity
 	{
 	public:
-		Camera();
-		~Camera();
+		Camera() = default;
+		~Camera() = default;
 
 		/*
 		 * Creates a perspective camera.

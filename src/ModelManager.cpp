@@ -48,6 +48,9 @@ namespace vv
                     material->shutDown();
                     delete material;
                 }
+
+        _loaded_meshes.clear();
+        _loaded_materials.clear();
 	}
 
 

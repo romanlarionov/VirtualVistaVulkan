@@ -44,6 +44,8 @@ namespace vv
 
 	void GLFWWindow::shutDown(VkInstance instance)
 	{
+        surface_settings.clear();
+
 		if (surface != VK_NULL_HANDLE)
 			vkDestroySurfaceKHR(instance, surface, nullptr);
 

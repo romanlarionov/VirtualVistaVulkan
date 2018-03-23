@@ -5,7 +5,8 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include "VulkanRenderer.h"
+#include "Renderer.h"
+//#include "VulkanForwardRenderer.h"
 #include "GLFWWindow.h"
 #include "Scene.h"
 
@@ -47,7 +48,7 @@ namespace vv
         const char *_application_name = "Virtual Vista";
 
         GLFWWindow _window;
-		VulkanRenderer *_renderer;
+		Renderer *_renderer;
         Scene *_scene;
 
         void handleInput(float delta_time);

@@ -3,8 +3,8 @@
 #define VIRTUALVISTA_VULKANRENDERPASS_H
 
 #include <vector>
+#include <algorithm>
 
-#include "VulkanSwapChain.h"
 #include "VulkanDevice.h"
 
 namespace vv
@@ -14,14 +14,13 @@ namespace vv
 	public:
 		VkRenderPass render_pass;
 
-		VulkanRenderPass();
-		~VulkanRenderPass();
+		VulkanRenderPass() = default;
+		~VulkanRenderPass() = default;
 
 		/*
-		 * Creates a single use case render pass to be used with a standard forward rendering design.
-         * No additional or dynamic subpass are currently available to be created.
+		 * 
 		 */
-		void create(VulkanDevice *device, VulkanSwapChain *swap_chain);
+		void create(VulkanDevice *device, VkPipelineBindPoint bind_point);
 
 		/*
 		 *
@@ -39,10 +38,68 @@ namespace vv
 		 */
 		void endRenderPass(VkCommandBuffer command_buffer);
 
+        /*
+		 * 
+		 */
+        void addAttachment(VkFormat format,
+                           VkSampleCountFlagBits sample_count,
+                           VkAttachmentLoadOp load_op,
+                           VkAttachmentStoreOp store_op,
+                           VkAttachmentLoadOp stencil_load_op,
+                           VkAttachmentStoreOp stencil_store_op,
+                           VkImageLayout input_layout,
+                           VkImageLayout output_layout);
+
+        /*
+         *
+         */
+        void addSubpassDependency(uint32_t src_subpass,
+                                  uint32_t dst_subpass,
+                                  VkPipelineStageFlags src_pipeline_stage,
+                                  VkPipelineStageFlags dst_pipeline_stage,
+                                  VkAccessFlags src_access_flags,
+                                  VkAccessFlags dst_access_flags);
+
+        /*
+         *
+         */
+        VkFramebuffer createFramebuffer(std::vector<VkImageView> &attachments, VkExtent2D extent) const;
+
 	private:
 		VulkanDevice *_device;
-		bool _initialized;
+        VkPipelineBindPoint _bind_point;
+		std::vector<VkAttachmentDescription> _attachment_descriptions;
 
+        bool hasDepth(VkAttachmentDescription description)
+        {
+            std::vector<VkFormat> formats =
+            {
+                VK_FORMAT_D16_UNORM,
+                VK_FORMAT_X8_D24_UNORM_PACK32,
+                VK_FORMAT_D32_SFLOAT,
+                VK_FORMAT_D16_UNORM_S8_UINT,
+                VK_FORMAT_D24_UNORM_S8_UINT,
+                VK_FORMAT_D32_SFLOAT_S8_UINT,
+            };
+            return std::find(formats.begin(), formats.end(), description.format) != std::end(formats);
+        }
+
+        bool hasStencil(VkAttachmentDescription description)
+        {
+            std::vector<VkFormat> formats =
+            {
+                VK_FORMAT_S8_UINT,
+                VK_FORMAT_D16_UNORM_S8_UINT,
+                VK_FORMAT_D24_UNORM_S8_UINT,
+                VK_FORMAT_D32_SFLOAT_S8_UINT,
+            };
+            return std::find(formats.begin(), formats.end(), description.format) != std::end(formats);
+        }
+
+        bool isDepthStencil(VkAttachmentDescription description)
+        {
+            return(hasDepth(description) || hasStencil(description));
+        }
 	};
 }
 

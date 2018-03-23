@@ -11,18 +11,6 @@
 namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
-	Camera::Camera()
-	{
-        _is_visible = false;
-        _is_renderable = false;
-	}
-
-
-	Camera::~Camera()
-	{
-	}
-
-
     void Camera::create(float fov, float near_plane, float far_plane)
 	{
         VV_ASSERT(fov > 0, "ERROR: fov has to be positive");

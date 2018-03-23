@@ -24,8 +24,8 @@ namespace vv
 
     protected:
         // todo: use for occlusion checking
-        bool _is_visible;
-        bool _is_renderable;
+        bool _is_visible    = false;
+        bool _is_renderable = false;
 
         glm::mat4 _pose;
 

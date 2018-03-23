@@ -45,6 +45,9 @@ namespace vv
 
 			vkDestroyDevice(logical_device, nullptr);
 		}
+
+        command_pools.clear();
+        queue_family_properties.clear();
 	}
 
 	

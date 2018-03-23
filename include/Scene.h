@@ -19,25 +19,26 @@
 
 namespace vv
 {
-	class Scene
-	{
-        friend class VulkanRenderer;
+    class Scene
+    {
+        friend class VulkanForwardRenderer;
+        friend class VulkanDeferredRenderer;
 
-	public:
+    public:
         std::unordered_map<std::string, MaterialTemplate> material_templates;
 
-		Scene();
-		~Scene();
+        Scene();
+        ~Scene();
 
-		/*
-		 * Loads all resources and templates needed for model loading and descriptor set updating.
-		 */
-		void create(VulkanDevice *device, VulkanRenderPass *render_pass);
+        /*
+         * Loads all resources and templates needed for model loading and descriptor set updating.
+         */
+        void create(VulkanDevice *device, VulkanRenderPass *render_pass);
 
-		/*
-		 *
-		 */
-		void shutDown();
+        /*
+         *
+         */
+        void shutDown();
 
         /*
          * Requests that a point light be created.
@@ -90,19 +91,19 @@ namespace vv
         /*
          * Recursively renders each model.
          *
-         * note: This will be automatically called within VulkanRenderer. There is no need in calling manually.
+         * note: This will be automatically called within one of the Renderer classes. There is no need in calling manually.
          */
         void render(VkCommandBuffer command_buffer);
 
-	private:
+    private:
         VulkanDevice *_device                       = nullptr;
         VulkanRenderPass *_render_pass              = nullptr;
         ModelManager *_model_manager                = nullptr;
         TextureManager *_texture_manager            = nullptr;
         bool _initialized                           = false;
 
-		VulkanSampler *_sampler                     = nullptr;
-		VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
+        VulkanSampler *_sampler                     = nullptr;
+        VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
 
         // General scene uniform
         struct SceneUBO
@@ -115,7 +116,7 @@ namespace vv
         VkDescriptorSetLayout _scene_descriptor_set_layout;
         std::vector<VkDescriptorSet> _scene_descriptor_sets;
         SceneUBO _scene_ubo;
-		VulkanBuffer *_scene_uniform_buffer         = nullptr;
+        VulkanBuffer *_scene_uniform_buffer = nullptr;
 
         // Light uniforms
         struct LightData
@@ -130,18 +131,18 @@ namespace vv
         };
 
         LightUBO _lights_ubo;
-		VulkanBuffer *_lights_uniform_buffer         = nullptr;
+        VulkanBuffer *_lights_uniform_buffer = nullptr;
 
         VkDescriptorSetLayout _environment_descriptor_set_layout;
         VkDescriptorSetLayout _radiance_descriptor_set_layout;
-        VkDescriptorSet _environment_descriptor_set  = VK_NULL_HANDLE; // used for IBL calculations
-        VkDescriptorSet _radiance_descriptor_set     = VK_NULL_HANDLE; // applied to skybox model
+        VkDescriptorSet _environment_descriptor_set = VK_NULL_HANDLE; // used for IBL calculations
+        VkDescriptorSet _radiance_descriptor_set    = VK_NULL_HANDLE; // applied to skybox model
 
         // todo: think of better data structure. maybe something to help with culling
-		std::vector<Light> _lights;
-		std::vector<Model> _models;
-		std::vector<Camera> _cameras;
-		std::vector<SkyBox> _skyboxes;
+        std::vector<Light> _lights;
+        std::vector<Model> _models;
+        std::vector<Camera> _cameras;
+        std::vector<SkyBox> _skyboxes;
 
         Camera *_active_camera;
         SkyBox *_active_skybox;
@@ -184,7 +185,7 @@ namespace vv
          * Utility function for defining descriptor set bindings.
          */
         VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding(uint32_t binding, VkDescriptorType descriptor_type, uint32_t count, VkShaderStageFlags shader_stage) const;
-	};
+    };
 }
 
 #endif // VIRTUALVISTA_SCENE_H

@@ -41,6 +41,10 @@ namespace vv
             delete ubo->buffer;
             delete ubo;
         }
+
+        _uniform_buffers.clear();
+        _textures.clear();
+        _write_sets.clear();
     }
 
 
