@@ -111,13 +111,13 @@ namespace vv
     }
 
 
-    VkResult VulkanSwapChain::acquireNextImage(VulkanDevice *device, VkSemaphore image_ready_semaphore, uint32_t &image_index)
+    void VulkanSwapChain::acquireNextImage(VulkanDevice *device, VkSemaphore image_ready_semaphore, uint32_t &image_index)
     {
-        return vkAcquireNextImageKHR(device->logical_device, swap_chain, UINT64_MAX, image_ready_semaphore, VK_NULL_HANDLE, &image_index);
+        VV_CHECK_SUCCESS(vkAcquireNextImageKHR(device->logical_device, swap_chain, UINT64_MAX, image_ready_semaphore, VK_NULL_HANDLE, &image_index));
     }
 
 
-    VkResult VulkanSwapChain::queuePresent(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore)
+    void VulkanSwapChain::present(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore)
     {
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -128,7 +128,7 @@ namespace vv
         present_info.pSwapchains = &swap_chain;
         present_info.pImageIndices = &image_index;
 
-        return vkQueuePresentKHR(queue, &present_info);
+        VV_CHECK_SUCCESS(vkQueuePresentKHR(queue, &present_info));
     }
 
 
@@ -136,7 +136,6 @@ namespace vv
     void VulkanSwapChain::createVulkanImageViews(VulkanDevice *device)
     {
     	// This is effectively creating a queue of frames to be displayed. 
-    	// todo: support VR by having multiple lists containing images/image views for each eye.
 
     	uint32_t swap_chain_image_count = 0;
     	VV_CHECK_SUCCESS(vkGetSwapchainImagesKHR(device->logical_device, swap_chain, &swap_chain_image_count, nullptr));

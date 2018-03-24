@@ -12,46 +12,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-#ifdef _WIN32
-    #define NOMINMAX  
-    #include <Windows.h>
-#endif
-
 namespace vv
 {
-VKAPI_ATTR VkBool32 VKAPI_CALL
-    vulkanDebugCallback(VkDebugReportFlagsEXT flags,
-        VkDebugReportObjectTypeEXT obj_type, // object that caused the error
-        uint64_t src_obj,
-        size_t location,
-        int32_t msg_code,
-        const char *layer_prefix,
-        const char *msg,
-        void *usr_data)
-{
-    std::ostringstream stream;
-    if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-        stream << "WARNING: ";
-    if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-        stream << "PERFORMANCE: ";
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        stream << "ERROR: ";
-    if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-        stream << "DEBUG: ";
-
-    stream << "@[" << layer_prefix << "]" << std::endl;
-    stream << msg << std::endl;
-    std::cout << stream.str() << std::endl;
-
-#ifdef _WIN32
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        MessageBox(NULL, stream.str().c_str(), "VirtualVista Vulkan Error", 0);
-#endif
-
-    return false;
-}
-
-	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	void VulkanForwardRenderer::create(GLFWWindow *window)
 	{
         _window = window;
@@ -156,7 +118,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
         submit_info.pSignalSemaphores = signal_semaphores.data();
 
         VV_CHECK_SUCCESS(vkQueueSubmit(_physical_device.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-        _swap_chain.queuePresent(_physical_device.graphics_queue, image_index, _rendering_complete_semaphore);
+        _swap_chain.present(_physical_device.graphics_queue, image_index, _rendering_complete_semaphore);
 	}
 
 
@@ -233,22 +195,22 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
         // Ensure required extensions are found.
         VV_ASSERT(checkInstanceExtensionSupport(), "Extensions requested, but are not available on this system.");
 
-        VkInstanceCreateInfo _instancecreate_info = {};
-        _instancecreate_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        _instancecreate_info.pApplicationInfo = &app_info;
+        VkInstanceCreateInfo _instance_create_info = {};
+        _instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        _instance_create_info.pApplicationInfo = &app_info;
 
         auto required_extensions = getRequiredExtensions();
-        _instancecreate_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
-        _instancecreate_info.ppEnabledExtensionNames = required_extensions.data();
+        _instance_create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
+        _instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
-        _instancecreate_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
-        _instancecreate_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
+        _instance_create_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
+        _instance_create_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
 #else
-        _instancecreate_info.enabledLayerCount = 0;
+        _instance_create_info.enabledLayerCount = 0;
 #endif
 
-        VV_CHECK_SUCCESS(vkCreateInstance(&_instancecreate_info, nullptr, &_instance));
+        VV_CHECK_SUCCESS(vkCreateInstance(&_instance_create_info, nullptr, &_instance));
 	}
 
 
@@ -320,6 +282,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
 	}
 
 
+    bool VulkanForwardRenderer::isVulkanDeviceSuitable(VulkanDevice &device)
+    {
+        return device.hasGraphicsQueue() && device.querySwapChainSupport(_window->surface).is_supported;
+    }
+
+
     void VulkanForwardRenderer::createVulkanDevices()
     {
         uint32_t _physical_device_count = 0;
@@ -335,13 +303,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL
         // Find any physical devices that might be suitable for on screen rendering.
         for (const auto& device : physical_devices)
         {
-            //_physical_device = new VulkanDevice;
             _physical_device.create(device);
-            VulkanSurfaceDetailsHandle surface_details_handle = {};
-            if (_physical_device.isSuitable(_window->surface, surface_details_handle))
+            if (isVulkanDeviceSuitable(_physical_device))
             {
-                _physical_device.createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT);
-                _window->surface_settings[&_physical_device] = surface_details_handle;
+                if (_physical_device.hasTransferQueue())
+                    _physical_device.createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT);
+                else
+                    _physical_device.createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT);
+
+                _window->surface_settings[&_physical_device] = _physical_device.querySwapChainSupport(_window->surface);
                 found = true;
                 break;
             }

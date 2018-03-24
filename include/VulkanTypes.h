@@ -7,6 +7,7 @@
 
 struct VulkanSurfaceDetailsHandle
 {
+    bool is_supported = false;
 	VkSurfaceCapabilitiesKHR surface_capabilities;
 	std::vector<VkSurfaceFormatKHR> available_surface_formats;
 	std::vector<VkPresentModeKHR> available_surface_present_modes;

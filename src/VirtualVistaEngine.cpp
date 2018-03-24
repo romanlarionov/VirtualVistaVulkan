@@ -4,28 +4,25 @@
 
 #include "VirtualVistaEngine.h"
 #include "VulkanForwardRenderer.h"
+#include "VulkanDeferredRenderer.h"
 #include "InputManager.h"
 #include "Settings.h"
 
 namespace vv
 {
-    VirtualVistaEngine::VirtualVistaEngine(int argc, char **argv)
-    : _argc(argc)
-    , _argv(argv)
+    void VirtualVistaEngine::create(int argc, char **argv, RendererType renderer_type)
     {
-    }
+        _argc = argc;
+        _argv = argv;
+        _renderer_type = _renderer_type;
 
-
-    VirtualVistaEngine::~VirtualVistaEngine()
-    {
-    }
-
-
-    void VirtualVistaEngine::create()
-    {
         _window.create(_window_width, _window_height, _application_name);
 
-    	_renderer = new VulkanForwardRenderer();
+        if (renderer_type == VULKAN_RENDERER_TYPE_FORWARD)
+    	    _renderer = new VulkanForwardRenderer;
+        else if (renderer_type == VULKAN_RENDERER_TYPE_DEFERRED)
+    	    _renderer = new VulkanDeferredRenderer;
+
     	_renderer->create(&_window);
         _scene = _renderer->getScene();
     }

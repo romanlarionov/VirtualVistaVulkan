@@ -8,16 +8,8 @@ using namespace vv;
 
 int main(int argc, char **argv)
 {
-    VirtualVistaEngine app(argc, argv);
-    try
-    {
-    	app.create();
-    }
-    catch (const std::runtime_error& e)
-    {
-    	std::cerr << e.what() << std::endl;
-    	return EXIT_FAILURE;
-    }
+    VirtualVistaEngine app;
+    app.create(argc, argv, VULKAN_RENDERER_TYPE_DEFERRED);
 
     Scene *scene = app.getScene();
 

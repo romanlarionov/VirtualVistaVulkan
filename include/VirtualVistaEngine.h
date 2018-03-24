@@ -6,7 +6,6 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
 #include "Renderer.h"
-//#include "VulkanForwardRenderer.h"
 #include "GLFWWindow.h"
 #include "Scene.h"
 
@@ -15,13 +14,13 @@ namespace vv
 	class VirtualVistaEngine
 	{
 	public:
-		VirtualVistaEngine(int argc, char **argv);
-		~VirtualVistaEngine();
+		VirtualVistaEngine() = default;
+		~VirtualVistaEngine() = default;
 
         /*
          * Initializes all essential components required by the engine.
          */
-		void create();
+		void create(int argc, char **argv, RendererType renderer_type);
 
         /*
          * Must be called at end of execution to ensure all allocated resources are successfully purged.
@@ -42,6 +41,7 @@ namespace vv
 	private:
 		int _argc;
 		char **_argv;
+        RendererType _renderer_type;
 
         const uint32_t _window_width = 800;
         const uint32_t _window_height = 800;

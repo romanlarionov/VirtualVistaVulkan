@@ -45,12 +45,12 @@ namespace vv
 		/*
 		 * Call for Vulkan to acquire the next image in the swap chain prior to rendering.
 		 */
-		VkResult acquireNextImage(VulkanDevice *device, VkSemaphore image_ready_semaphore, uint32_t &image_index);
+		void acquireNextImage(VulkanDevice *device, VkSemaphore image_ready_semaphore, uint32_t &image_index);
 
 		/*
 		 * Queue a loaded swap chain image for rendering.
 		 */
-		VkResult queuePresent(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore = VK_NULL_HANDLE);
+		void present(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore = VK_NULL_HANDLE);
 
 	private:
 		GLFWWindow *window_;

@@ -104,6 +104,11 @@ namespace vv
          * FOR DEBUGGING PURPOSES ONLY 
          */
         bool checkValidationLayerSupport();
+
+        /*
+         * Checks to see if all of the requirements for this type of renderer are met with any detected hardware devices.
+         */
+        bool isVulkanDeviceSuitable(VulkanDevice &device);
     };
 }
 
