@@ -27,8 +27,8 @@ namespace vv
 		VulkanImage *depth_image;
 		VulkanImageView *depth_image_view;
 
-		VulkanSwapChain();
-		~VulkanSwapChain();
+		VulkanSwapChain() = default;
+		~VulkanSwapChain() = default;
 	
 		/*
 		 * Creates the abstraction for the Vulkan swap chain.
@@ -53,7 +53,7 @@ namespace vv
 		void present(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore = VK_NULL_HANDLE);
 
 	private:
-		GLFWWindow *window_;
+		GLFWWindow *_window;
 
 		/*
 		 * Creates image views that explain to Vulkan what the list of images for the swap chain are meant to be.

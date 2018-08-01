@@ -18,10 +18,11 @@ namespace vv
     }
 
 
-	void VulkanShaderModule::create(VulkanDevice *device, std::string name, std::string stage)
+	void VulkanShaderModule::create(VulkanDevice *device, std::string name, std::string stage, std::string entrance_function)
 	{
 		_device = device;
 		_filename = name;
+        this->entrance_function = entrance_function;
 
         if (stage == "vert")
             shader_stage = VK_SHADER_STAGE_VERTEX_BIT;

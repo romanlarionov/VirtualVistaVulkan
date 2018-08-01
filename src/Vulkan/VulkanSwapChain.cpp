@@ -1,37 +1,22 @@
 
 #include "VulkanSwapChain.h"
 
-#ifdef _WIN32
-#define NOMINMAX
-#endif
-
 namespace vv
 {
-    ///////////////////////////////////////////////////////////////////////////////////////////// Public
-    VulkanSwapChain::VulkanSwapChain()
-    {
-    }
-
-
-    VulkanSwapChain::~VulkanSwapChain()
-    {
-    }
-
-
     void VulkanSwapChain::create(VulkanDevice *device, GLFWWindow *window)
     {
         VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
         VV_ASSERT(window != nullptr, "Window not present");
 
         VkSwapchainKHR old_swap_chain = swap_chain;
-        window_ = window;
+        _window = window;
 
         VkSurfaceFormatKHR chosen_format = chooseSurfaceFormat(device);
         VkPresentModeKHR chosen_present_mode = chooseSurfacePresentMode(device);
         format = chosen_format.format;
 
         // Swap Chain Extent
-        if (window_->surface_settings[device].surface_capabilities.currentExtent.width == (uint32_t)-1)
+        if (_window->surface_settings[device].surface_capabilities.currentExtent.width == (uint32_t)-1)
         {
             // If the surface size is undefined, the size is set to the size of the images requested.
             extent.width = Settings::inst()->getWindowWidth();
@@ -40,21 +25,21 @@ namespace vv
         else
         {
             // If the surface size is defined, the swap chain size must match.
-            extent = window_->surface_settings[device].surface_capabilities.currentExtent;
+            extent = _window->surface_settings[device].surface_capabilities.currentExtent;
             Settings::inst()->setWindowWidth(extent.width);
             Settings::inst()->setWindowHeight(extent.height);
         }
 
         // Queue length for swap chain. (How many images are kept waiting).
-        uint32_t image_count = window_->surface_settings[device].surface_capabilities.minImageCount;
-        if ((window_->surface_settings[device].surface_capabilities.maxImageCount > 0) &&
-            (image_count > window_->surface_settings[device].surface_capabilities.maxImageCount)) // if 0, maxImageCount doesn't have a limit.
-            image_count = window_->surface_settings[device].surface_capabilities.maxImageCount;
+        uint32_t image_count = _window->surface_settings[device].surface_capabilities.minImageCount;
+        if ((_window->surface_settings[device].surface_capabilities.maxImageCount > 0) &&
+            (image_count > _window->surface_settings[device].surface_capabilities.maxImageCount)) // if 0, maxImageCount doesn't have a limit.
+            image_count = _window->surface_settings[device].surface_capabilities.maxImageCount;
 
         VkSwapchainCreateInfoKHR swap_chain_create_info = {};
         swap_chain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         swap_chain_create_info.flags = 0;
-        swap_chain_create_info.surface = window_->surface;
+        swap_chain_create_info.surface = _window->surface;
         swap_chain_create_info.minImageCount = image_count;
         swap_chain_create_info.imageFormat = chosen_format.format;
         swap_chain_create_info.imageColorSpace = chosen_format.colorSpace;
@@ -76,7 +61,7 @@ namespace vv
             swap_chain_create_info.pQueueFamilyIndices = nullptr;
         }
 
-        swap_chain_create_info.preTransform = window_->surface_settings[device].surface_capabilities.currentTransform;
+        swap_chain_create_info.preTransform = _window->surface_settings[device].surface_capabilities.currentTransform;
         swap_chain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         swap_chain_create_info.presentMode = chosen_present_mode;
         swap_chain_create_info.clipped = VK_TRUE;
@@ -132,7 +117,6 @@ namespace vv
     }
 
 
-    ///////////////////////////////////////////////////////////////////////////////////////////// Public
     void VulkanSwapChain::createVulkanImageViews(VulkanDevice *device)
     {
     	// This is effectively creating a queue of frames to be displayed. 
@@ -157,6 +141,7 @@ namespace vv
     	    color_image_views[i] = curr_image_view;
     	}
 
+        // todo: consider moving this? depth attachment really has nothing to do with the swap chain. only for a forward renderer's trip through the pipeline
     	depth_image = new VulkanImage();
         depth_image->createDepthAttachment(device, extent, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
     	depth_image_view = new VulkanImageView();
@@ -167,17 +152,18 @@ namespace vv
     VkSurfaceFormatKHR VulkanSwapChain::chooseSurfaceFormat(VulkanDevice *device)
     {
         // The case when the surface has no preferred format. I choose to use standard sRGB for storage and 32 bit linear for computation.
-        if ((window_->surface_settings[device].available_surface_formats.size() == 1) && window_->surface_settings[device].available_surface_formats[0].format == VK_FORMAT_UNDEFINED)
+        if ((_window->surface_settings[device].available_surface_formats.size() == 1) &&
+             _window->surface_settings[device].available_surface_formats[0].format == VK_FORMAT_UNDEFINED)
             return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
 
         // Try to find the format specified above from the list of supported formats.
-        for (auto &format : window_->surface_settings[device].available_surface_formats)
+        for (auto &format : _window->surface_settings[device].available_surface_formats)
             if ((format.format == VK_FORMAT_B8G8R8A8_UNORM) && (format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR))
         	    return format;
 
         // If the desired format cannot be found, pick the first available one.
-        if (!window_->surface_settings[device].available_surface_formats.empty())
-            return window_->surface_settings[device].available_surface_formats[0];
+        if (!_window->surface_settings[device].available_surface_formats.empty())
+            return _window->surface_settings[device].available_surface_formats[0];
 
         return {};
     }
@@ -185,7 +171,7 @@ namespace vv
 
     VkPresentModeKHR VulkanSwapChain::chooseSurfacePresentMode(VulkanDevice *device)
     {
-        for (const auto &mode : window_->surface_settings[device].available_surface_present_modes)
+        for (const auto &mode : _window->surface_settings[device].available_surface_present_modes)
             if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
         	    return mode;
 

@@ -5,7 +5,6 @@ namespace vv
 {
     Settings* Settings::instance_ = nullptr;
 
-    ///////////////////////////////////////////////////////////////////////////////////////////// Public
     Settings* Settings::inst()
     {
         if (!instance_)
@@ -19,19 +18,18 @@ namespace vv
 
     void Settings::setDefault()
     {
-        _default = true;
-        _window_width = 1920;
-        _window_height = 1080;
-        _aspect = _window_width / static_cast<float>(_window_height);
-    
-        _application_name = "VirtualVistaVulkan";
-        _engine_name = "VirtualVista";
-        _asset_directory = ROOTPROJECTDIR "/assets/";
-        _model_directory = _asset_directory + "models/";
+        _default           = true;
+        _window_width      = 1920;
+        _window_height     = 1080;
+        _aspect            = _window_width / static_cast<float>(_window_height);
+        _application_name  = "VirtualVistaVulkan";
+        _engine_name       = "VirtualVista";
+        _asset_directory   = ROOTPROJECTDIR "/assets/";
+        _model_directory   = _asset_directory + "models/";
         _texture_directory = _asset_directory + "textures/";
-        _shader_directory = _asset_directory + "shaders/";
-
-        _compute_required = false;
+        _shader_directory  = _asset_directory + "shaders/";
+        
+        _compute_required  = false;
 
         _max_descriptor_sets = 100;
         _max_uniform_buffers = 100;
@@ -127,7 +125,4 @@ namespace vv
     {
         _window_height = height;
     }
-
-
-    ///////////////////////////////////////////////////////////////////////////////////////////// Private
 }

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Entity.h"
+#include "Utils.h"
 
 namespace vv
 {

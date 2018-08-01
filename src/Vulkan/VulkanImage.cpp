@@ -284,8 +284,13 @@ namespace vv
         }
 
 		auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
+
+        // todo: it might be best to use vkCmdWaitEvents here... it seems to be more non-blocking and pipeline barriers
+        //       which are more intended to stall and insert a command buffer between two directly dependent events on device
+        //       https://www.khronos.org/assets/uploads/developers/library/2016-vulkan-devday-uk/7-Keeping-your-GPU-fed.pdf (events section)
 		vkCmdPipelineBarrier(command_buffer, old_stage, new_stage, 0, 0, nullptr, 0, nullptr, 1, &memory_barrier);
 
+        // todo: maybe add way to defer this until data is required
         if (use_transfer)
             util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
         else

@@ -8,17 +8,6 @@
 
 namespace vv
 {
-	///////////////////////////////////////////////////////////////////////////////////////////// Public
-	GLFWWindow::GLFWWindow()
-	{
-	}
-
-
-	GLFWWindow::~GLFWWindow()
-	{
-	}
-
-    
     void GLFWWindow::create(const int width, const int height, const char *application_name)
 	{
 		VV_ASSERT(glfwInit() != 0, "GLFW failed to init");
@@ -72,7 +61,6 @@ namespace vv
 	}
 
 
-	///////////////////////////////////////////////////////////////////////////////////////////// Private
     void GLFWWindow::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
         InputManager::inst()->keyboardEventsCallback(window, key, scancode, action, mods);

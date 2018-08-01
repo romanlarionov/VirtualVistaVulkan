@@ -15,7 +15,7 @@ namespace vv
     public:
         VkShaderModule shader_module = VK_NULL_HANDLE;
         VkShaderStageFlagBits shader_stage;
-        char *entrance_function;
+        std::string entrance_function;
 
         // specifies the binding order of the model descriptor.
         std::vector<DescriptorInfo> material_descriptor_orderings;
@@ -30,7 +30,7 @@ namespace vv
         /*
          * Manages loading of binary Spir-V shader programs from file.
          */
-        void create(VulkanDevice *device, std::string name, std::string stage);
+        void create(VulkanDevice *device, std::string name, std::string stage, std::string entrance_function);
 
         /*
          *

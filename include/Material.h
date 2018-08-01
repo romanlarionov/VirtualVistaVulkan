@@ -75,7 +75,7 @@ namespace vv
         /*
          * Binds all descriptor sets this instance has ownership over. Should be called at render time.
          */
-        void bindDescriptorSets(VkCommandBuffer command_buffer) const;
+        void bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineBindPoint pipeline_bind_point) const;
 
 	private:
         VulkanDevice *_device;

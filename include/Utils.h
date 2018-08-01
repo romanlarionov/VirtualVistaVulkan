@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 
-#include "VulkanTypes.h"
+//#include "Settings.h"
 
 #ifndef VIRTUALVISTA_UTILS_H
 #define VIRTUALVISTA_UTILS_H
@@ -137,8 +137,65 @@ namespace vv
         VkDescriptorType type;
     };
 
+    struct VulkanSurfaceDetailsHandle
+    {
+        bool is_supported = false;
+    	VkSurfaceCapabilitiesKHR surface_capabilities;
+    	std::vector<VkSurfaceFormatKHR> available_surface_formats;
+    	std::vector<VkPresentModeKHR> available_surface_present_modes;
+    };
+
 	namespace util
 	{
+	    static bool checkInstanceExtensionSupport(std::vector<const char*> &required_extensions)
+	    {
+            uint32_t extension_count = 0;
+            VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr));
+            std::vector<VkExtensionProperties> available_extensions(extension_count);
+            VV_CHECK_SUCCESS(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions.data()));
+
+            // Compare found extensions with requested ones.
+            for (const auto& extension : required_extensions)
+            {
+                bool extension_found = false;
+                for (const auto& found_extension : available_extensions)
+                    if (strcmp(extension, found_extension.extensionName) == 0)
+                    {
+                        extension_found = true;
+                        break;
+                    }
+
+                if (!extension_found) return false;
+            }
+
+            return true;
+        }
+
+	    static bool checkValidationLayerSupport(std::vector<const char*> &used_validation_layers)
+	    {
+#ifdef _DEBUG
+            uint32_t layer_count = 0;
+            VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
+            std::vector<VkLayerProperties> available_layers(layer_count);
+            VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()));
+
+            // Compare found layers with requested ones.
+            for (const char* layer : used_validation_layers)
+            {
+                bool layer_found = false;
+                for (const auto& found_layer : available_layers)
+                    if (strcmp(layer, found_layer.layerName) == 0)
+                    {
+                        layer_found = true;
+                        break;
+                    }
+
+                if (!layer_found) return false;
+            }
+#endif
+            return true;
+	    }
+
 		static VkCommandBuffer beginSingleUseCommand(VkDevice device, VkCommandPool command_pool)
 		{
 			VkCommandBufferAllocateInfo allocate_info = {};
@@ -176,10 +233,10 @@ namespace vv
 
 		static VkSemaphore createVulkanSemaphore(VkDevice device)
 		{
-			VkSemaphore semaphore;
 			VkSemaphoreCreateInfo semaphore_create_info = {};
 			semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+			VkSemaphore semaphore;
 			VV_CHECK_SUCCESS(vkCreateSemaphore(device, &semaphore_create_info, nullptr, &semaphore));
 			return semaphore;
 		}
@@ -191,15 +248,54 @@ namespace vv
 
         static VkDescriptorSetLayout createVulkanDescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings)
         {
-            VkDescriptorSetLayout layout = {};
-
             VkDescriptorSetLayoutCreateInfo layout_create_info = {};
-		    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		    layout_create_info.bindingCount = static_cast<uint32_t>(bindings.size());
-		    layout_create_info.pBindings = bindings.data();
+		    layout_create_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		    layout_create_info.bindingCount = (uint32_t)bindings.size();
+		    layout_create_info.pBindings    = bindings.data();
 
+            VkDescriptorSetLayout layout = {};
 		    VV_CHECK_SUCCESS(vkCreateDescriptorSetLayout(device, &layout_create_info, nullptr, &layout));
             return layout;
+        }
+
+        static VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding(uint32_t binding, VkDescriptorType descriptor_type, uint32_t count, VkShaderStageFlags shader_stage)
+        {
+            VkDescriptorSetLayoutBinding layout_binding = {};
+            layout_binding.binding            = binding;
+	    	layout_binding.descriptorType     = descriptor_type;
+	    	layout_binding.descriptorCount    = count; // number of these elements in array sent to device
+	    	layout_binding.stageFlags         = shader_stage;
+	    	layout_binding.pImmutableSamplers = nullptr; // todo: figure out if I ever need this
+            return layout_binding;
+        }
+
+        static VkDescriptorPool createDescriptorPool(VkDevice device)
+        {
+            // todo: make more general
+            std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
+            pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            pool_sizes[0].descriptorCount = 100;
+            pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            pool_sizes[1].descriptorCount = 100; // todo: change!
+
+            VkDescriptorPoolCreateInfo create_info = {};
+            create_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            create_info.poolSizeCount = (uint32_t)pool_sizes.size();
+            create_info.pPoolSizes    = pool_sizes.data();
+            create_info.maxSets       = 100; // todo: change!
+            create_info.flags         = 0; // can be: VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+
+            VkDescriptorPool descriptor_pool;
+            VV_CHECK_SUCCESS(vkCreateDescriptorPool(device, &create_info, nullptr, &descriptor_pool));
+            return descriptor_pool;
+        }
+
+        static void destroyDescriptorPool(VkDevice device, VkDescriptorPool pool)
+        {
+            VV_ASSERT(device != VK_NULL_HANDLE, "Trying to destroy invalid descriptor pool");
+            VV_ASSERT(pool != VK_NULL_HANDLE, "Trying to destroy invalid descriptor pool");
+
+            vkDestroyDescriptorPool(device, pool, nullptr);
         }
 
         static VkPipelineStageFlags determinePipelineStageFlag(VkAccessFlags access_flags)
@@ -242,14 +338,15 @@ namespace vv
 	}
 }
 
-namespace std {
-	template<> struct hash<vv::Vertex> {
-		size_t operator()(vv::Vertex const& vertex) const {
-			return ((hash<glm::vec3>()(vertex.position) ^
-				(hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1);
-		}
-	};
+namespace std
+{
+    template<> struct hash<vv::Vertex>
+    {
+        size_t operator()(vv::Vertex const& vertex) const
+        {
+            return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.texCoord) << 1);
+        }
+    };
 }
 
 #endif // VIRTUALVISTA_UTILS_H

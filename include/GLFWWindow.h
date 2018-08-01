@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "InputManager.h"
-#include "VulkanTypes.h"
+#include "Utils.h"
 
 namespace vv 
 {
@@ -29,8 +29,8 @@ namespace vv
         uint32_t window_height;
         char *application_name;
 
-        GLFWWindow();
-        ~GLFWWindow();
+        GLFWWindow() = default;
+        ~GLFWWindow() = default;
 
 		/*
 		 * Initializes GLFW and creates the window wrapper.

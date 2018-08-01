@@ -6,8 +6,6 @@
 
 #define VV_MAX_LIGHTS 5
 
-#include "Utils.h"
-
 namespace vv 
 {
 	// todo: offload default settings to file. Read at application start.

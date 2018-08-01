@@ -80,8 +80,8 @@ namespace vv
     {
         VkDescriptorImageInfo image_info = {};
     	image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    	image_info.imageView = texture->image_view->image_view;
-    	image_info.sampler = texture->sampler->sampler;
+    	image_info.imageView   = texture->image_view->image_view;
+    	image_info.sampler     = texture->sampler->sampler;
 
         TextureStore *store = new TextureStore();
         store->info = image_info;
@@ -91,13 +91,13 @@ namespace vv
         _textures.push_back(store);
 
         VkWriteDescriptorSet write_set = {};
-        write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    	write_set.dstSet = _descriptor_set;
-    	write_set.dstBinding = binding; // location in layout
-    	write_set.dstArrayElement = 0; // if sending array of uniforms
-    	write_set.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    	write_set.descriptorCount = 1; // how many elements to update
-        write_set.pImageInfo = &_textures[position]->info;
+        write_set.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    	write_set.dstSet          = _descriptor_set;
+    	write_set.dstBinding      = binding;
+    	write_set.dstArrayElement = 0;
+    	write_set.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    	write_set.descriptorCount = 1;
+        write_set.pImageInfo      = &_textures[position]->info;
 
         _write_sets.push_back(write_set);
     }
@@ -109,11 +109,11 @@ namespace vv
     }
 
 
-    void Material::bindDescriptorSets(VkCommandBuffer command_buffer) const
+    void Material::bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineBindPoint pipeline_bind_point) const
     {
         if (material_template->material_descriptor_set_layout)
         {
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material_template->pipeline_layout, 1,
+            vkCmdBindDescriptorSets(command_buffer, pipeline_bind_point, material_template->pipeline_layout, 1,
                 1, &_descriptor_set, 0, nullptr);
         }
     }

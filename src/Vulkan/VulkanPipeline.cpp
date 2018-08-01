@@ -88,7 +88,7 @@ namespace vv
 	    shader_create_info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	    shader_create_info.stage  = shader_module.shader_stage;
 	    shader_create_info.module = shader_module.shader_module;
-	    shader_create_info.pName  = shader_module.entrance_function;
+	    shader_create_info.pName  = shader_module.entrance_function.c_str();
 
         _shader_state_create_info.push_back(shader_create_info);
         return true;
