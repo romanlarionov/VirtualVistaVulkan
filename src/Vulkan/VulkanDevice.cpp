@@ -23,7 +23,6 @@ namespace vv
         VV_ASSERT(graphics_family_index != -1, "Could not find required graphics queue index for rendering");
 	}
 
-
 	void VulkanDevice::shutDown()
 	{
 		if (logical_device != VK_NULL_HANDLE)
@@ -63,7 +62,7 @@ namespace vv
 			device_queue_create_infos.push_back(queue_create_info);
 		}
 
-		if (queue_types & VK_QUEUE_COMPUTE_BIT && compute_family_index != -1)
+		if (queue_types & VK_QUEUE_COMPUTE_BIT && hasComputeQueue())
 		{
 			VkDeviceQueueCreateInfo queue_create_info = {};
 			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -73,7 +72,7 @@ namespace vv
 			device_queue_create_infos.push_back(queue_create_info);
 		}
 
-		if (queue_types & VK_QUEUE_TRANSFER_BIT && transfer_family_index != -1)
+		if (queue_types & VK_QUEUE_TRANSFER_BIT && hasTransferQueue())
 		{
 			VkDeviceQueueCreateInfo queue_create_info = {};
 			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -109,10 +108,10 @@ namespace vv
         vkGetDeviceQueue(logical_device, graphics_family_index, 0, &graphics_queue);
 		createCommandPool("graphics", graphics_family_index, 0);
 
-		if (hasComputeQueue())
+		if (hasComputeQueue() && (queue_types & VK_QUEUE_COMPUTE_BIT))
 			vkGetDeviceQueue(logical_device, compute_family_index, 0, &compute_queue);
 
-        if (hasTransferQueue())
+        if (hasTransferQueue() && (queue_types & VK_QUEUE_TRANSFER_BIT))
         {
             vkGetDeviceQueue(logical_device, transfer_family_index, 0, &transfer_queue);
             createCommandPool("transfer", transfer_family_index, 0);

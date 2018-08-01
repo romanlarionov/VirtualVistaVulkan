@@ -52,7 +52,6 @@ namespace vv
         return false;
     }
 
-
     void DeferredRenderer::createDebugReportCallbackEXT(VkInstance instance, PFN_vkDebugReportCallbackEXT vulkan_debug_callback, const VkAllocationCallbacks* allocator)
     {
 #ifdef _DEBUG
@@ -84,7 +83,6 @@ namespace vv
             func(instance, _debug_callback, allocator);
 #endif
     }
-
 
 	void DeferredRenderer::create(GLFWWindow *window)
 	{
