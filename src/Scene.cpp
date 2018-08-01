@@ -11,19 +11,6 @@
 
 namespace vv
 {
-    ///////////////////////////////////////////////////////////////////////////////////////////// Public
-    Scene::Scene() :
-        _has_active_camera(false),
-        _has_active_skybox(false)
-    {
-    }
-
-
-    Scene::~Scene()
-    {
-    }
-
-
     void Scene::create(VulkanDevice *device, VulkanRenderPass *render_pass)
     {
         _device = device;
@@ -235,7 +222,7 @@ namespace vv
             for (auto &mesh : _model_manager->_loaded_meshes[model._data_handle])
             {
                 Material *material = _model_manager->_loaded_materials[model._data_handle][model._material_id_set][mesh->material_id];
-                material->bindDescriptorSets(command_buffer);
+                material->bindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
                 mesh->bindBuffers(command_buffer);
                 mesh->render(command_buffer);
             }
@@ -263,11 +250,11 @@ namespace vv
 
             // todo: this removes all generality of this function. should place somewhere else.
             material_template.shader_modules.emplace_back();
-            material_template.shader_modules[0].create(_device, material_template.name, "vert");
+            material_template.shader_modules[0].create(_device, material_template.name, "vert", "main");
             material_template.shader_modules[0].entrance_function = "main";
 
             material_template.shader_modules.emplace_back();
-            material_template.shader_modules[1].create(_device, material_template.name, "frag");
+            material_template.shader_modules[1].create(_device, material_template.name, "frag", "main");
             material_template.shader_modules[1].entrance_function = "main";
 
             material_template.uses_environment_lighting = material_template.shader_modules[1].uses_environmental_lighting;

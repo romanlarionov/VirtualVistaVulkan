@@ -21,14 +21,13 @@ namespace vv
 {
     class Scene
     {
-        friend class VulkanForwardRenderer;
-        friend class VulkanDeferredRenderer;
+        friend class DeferredRenderer;
 
     public:
         std::unordered_map<std::string, MaterialTemplate> material_templates;
 
-        Scene();
-        ~Scene();
+        Scene() = default;
+        ~Scene() = default;
 
         /*
          * Loads all resources and templates needed for model loading and descriptor set updating.
@@ -146,8 +145,8 @@ namespace vv
 
         Camera *_active_camera;
         SkyBox *_active_skybox;
-        bool _has_active_camera;
-        bool _has_active_skybox;
+        bool _has_active_camera = false;
+        bool _has_active_skybox = false;
 
         /*
          * Reads required shaders from file and creates all possible MaterialTemplates that can be used during execution.

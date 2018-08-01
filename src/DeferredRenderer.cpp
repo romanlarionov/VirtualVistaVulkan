@@ -7,21 +7,93 @@
 #include <chrono>
 #include <array>
 
-#include "VulkanForwardRenderer.h"
+#include "DeferredRenderer.h"
 #include "Settings.h"
+#include "Scene.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+#ifdef _WIN32
+    #define NOMINMAX  
+    #include <Windows.h>
+#endif
+
 namespace vv
 {
-	void VulkanForwardRenderer::create(GLFWWindow *window)
+    VKAPI_ATTR VkBool32 VKAPI_CALL
+        vulkanDebugCallback(VkDebugReportFlagsEXT flags,
+            VkDebugReportObjectTypeEXT obj_type, // object that caused the error
+            uint64_t src_obj,
+            size_t location,
+            int32_t msg_code,
+            const char *layer_prefix,
+            const char *msg,
+            void *usr_data)
+    {
+        std::ostringstream stream;
+        if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+            stream << "WARNING: ";
+        if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+            stream << "PERFORMANCE: ";
+        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+            stream << "ERROR: ";
+        if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+            stream << "DEBUG: ";
+
+        stream << "@[" << layer_prefix << "]" << std::endl;
+        stream << msg << std::endl;
+        std::cout << stream.str() << std::endl;
+
+    #ifdef _WIN32
+        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+            MessageBox(NULL, stream.str().c_str(), "VirtualVista Vulkan Error", 0);
+    #endif
+
+        return false;
+    }
+
+
+    void DeferredRenderer::createDebugReportCallbackEXT(VkInstance instance, PFN_vkDebugReportCallbackEXT vulkan_debug_callback, const VkAllocationCallbacks* allocator)
+    {
+#ifdef _DEBUG
+        auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+
+        VkDebugReportCallbackCreateInfoEXT _debug_callback_create_info = {};
+        _debug_callback_create_info.sType       = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+        _debug_callback_create_info.pfnCallback = vulkan_debug_callback;
+        _debug_callback_create_info.flags       = VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
+                                                 VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                                                 VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+                                                 VK_DEBUG_REPORT_ERROR_BIT_EXT |
+                                                 VK_DEBUG_REPORT_DEBUG_BIT_EXT |
+                                                 VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT;
+
+        VkResult result = VK_ERROR_EXTENSION_NOT_PRESENT;
+        if (func != nullptr)
+            result = func(instance, &_debug_callback_create_info, allocator, &_debug_callback);
+
+        VV_CHECK_SUCCESS(result);
+#endif
+    }
+
+    void DeferredRenderer::destroyDebugReportCallbackEXT(VkInstance instance, const VkAllocationCallbacks* allocator)
+    {
+#ifdef _DEBUG
+        auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+        if (func != nullptr)
+            func(instance, _debug_callback, allocator);
+#endif
+    }
+
+
+	void DeferredRenderer::create(GLFWWindow *window)
 	{
         _window = window;
 
         createVulkanInstance();
         _window->createSurface(_instance);
 
-        Renderer::createDebugReportCallbackEXT(_instance, vulkanDebugCallback, nullptr);
+        DeferredRenderer::createDebugReportCallbackEXT(_instance, vulkanDebugCallback, nullptr);
         createVulkanDevices();
 
         _swap_chain.create(&_physical_device, _window);
@@ -65,7 +137,7 @@ namespace vv
 	}
 
 
-	void VulkanForwardRenderer::shutDown()
+	void DeferredRenderer::shutDown()
 	{
         // accounts for the issue of a logical device that might be executing commands when a terminating command is issued.
         vkDeviceWaitIdle(_physical_device.logical_device);
@@ -85,12 +157,12 @@ namespace vv
         _physical_device.shutDown();
 
         _window->shutDown(_instance);
-        Renderer::destroyDebugReportCallbackEXT(_instance, nullptr);
+        DeferredRenderer::destroyDebugReportCallbackEXT(_instance, nullptr);
         vkDestroyInstance(_instance, nullptr);
 	}
 
 
-	void VulkanForwardRenderer::run(float delta_time)
+	void DeferredRenderer::run(float delta_time)
 	{
         _scene.updateUniformData(_swap_chain.extent, delta_time);
 
@@ -122,7 +194,7 @@ namespace vv
 	}
 
 
-    void VulkanForwardRenderer::recordCommandBuffers()
+    void DeferredRenderer::recordCommandBuffers()
     {
         _command_buffers.resize(_frame_buffers.size());
 
@@ -163,20 +235,20 @@ namespace vv
     }
 
 
-    Scene* VulkanForwardRenderer::getScene() const
+    Scene* DeferredRenderer::getScene() const
     {
         return (Scene*)&_scene;
     }
 
 
-	bool VulkanForwardRenderer::shouldStop()
+	bool DeferredRenderer::shouldStop()
 	{
         return _window->shouldClose();
 	}
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private
-	void VulkanForwardRenderer::createVulkanInstance()
+	void DeferredRenderer::createVulkanInstance()
 	{
         VV_ASSERT(checkValidationLayerSupport(), "Validation layers requested are not available on this system.");
 
@@ -195,26 +267,26 @@ namespace vv
         // Ensure required extensions are found.
         VV_ASSERT(checkInstanceExtensionSupport(), "Extensions requested, but are not available on this system.");
 
-        VkInstanceCreateInfo _instance_create_info = {};
-        _instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        _instance_create_info.pApplicationInfo = &app_info;
+        VkInstanceCreateInfo _instancecreate_info = {};
+        _instancecreate_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        _instancecreate_info.pApplicationInfo = &app_info;
 
         auto required_extensions = getRequiredExtensions();
-        _instance_create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
-        _instance_create_info.ppEnabledExtensionNames = required_extensions.data();
+        _instancecreate_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
+        _instancecreate_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
-        _instance_create_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
-        _instance_create_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
+        _instancecreate_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
+        _instancecreate_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
 #else
-        _instance_create_info.enabledLayerCount = 0;
+        _instancecreate_info.enabledLayerCount = 0;
 #endif
 
-        VV_CHECK_SUCCESS(vkCreateInstance(&_instance_create_info, nullptr, &_instance));
+        VV_CHECK_SUCCESS(vkCreateInstance(&_instancecreate_info, nullptr, &_instance));
 	}
 
 
-	std::vector<const char*> VulkanForwardRenderer::getRequiredExtensions()
+	std::vector<const char*> DeferredRenderer::getRequiredExtensions()
 	{
         std::vector<const char*> extensions;
 
@@ -230,7 +302,7 @@ namespace vv
 	}
 
 
-	bool VulkanForwardRenderer::checkInstanceExtensionSupport()
+	bool DeferredRenderer::checkInstanceExtensionSupport()
 	{
         std::vector<const char*> required_extensions = getRequiredExtensions();
 
@@ -257,7 +329,7 @@ namespace vv
 	}
 
 
-	bool VulkanForwardRenderer::checkValidationLayerSupport()
+	bool DeferredRenderer::checkValidationLayerSupport()
 	{
         uint32_t layer_count = 0;
         VV_CHECK_SUCCESS(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
@@ -282,13 +354,13 @@ namespace vv
 	}
 
 
-    bool VulkanForwardRenderer::isVulkanDeviceSuitable(VulkanDevice &device)
+    bool DeferredRenderer::isVulkanDeviceSuitable(VulkanDevice &device)
     {
         return device.hasGraphicsQueue() && device.querySwapChainSupport(_window->surface).is_supported;
     }
 
 
-    void VulkanForwardRenderer::createVulkanDevices()
+    void DeferredRenderer::createVulkanDevices()
     {
         uint32_t _physical_device_count = 0;
         vkEnumeratePhysicalDevices(_instance, &_physical_device_count, nullptr);

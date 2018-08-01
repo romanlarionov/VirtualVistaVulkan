@@ -3,25 +3,20 @@
 #include <chrono>
 
 #include "VirtualVistaEngine.h"
-#include "VulkanForwardRenderer.h"
-#include "VulkanDeferredRenderer.h"
 #include "InputManager.h"
 #include "Settings.h"
 
 namespace vv
 {
-    void VirtualVistaEngine::create(int argc, char **argv, RendererType renderer_type)
+    void VirtualVistaEngine::create(int argc, char **argv)
     {
         _argc = argc;
         _argv = argv;
-        _renderer_type = _renderer_type;
 
         _window.create(_window_width, _window_height, _application_name);
 
-        if (renderer_type == VULKAN_RENDERER_TYPE_FORWARD)
-    	    _renderer = new VulkanForwardRenderer;
-        else if (renderer_type == VULKAN_RENDERER_TYPE_DEFERRED)
-    	    _renderer = new VulkanDeferredRenderer;
+        // todo: does this need to be malloced?
+    	_renderer = new DeferredRenderer;
 
     	_renderer->create(&_window);
         _scene = _renderer->getScene();

@@ -1,36 +1,49 @@
 
-#ifndef VIRTUALVISTA_VULKANDEFERREDRENDERER_H
-#define VIRTUALVISTA_VULKANDEFERREDRENDERER_H
+#ifndef VIRTUALVISTA_DEFERREDRENDERER_H
+#define VIRTUALVISTA_DEFERREDRENDERER_H
 
 #include <vector>
 #include <array>
 
-#include "Renderer.h"
-#include "GLFWWindow.h"
-#include "VulkanSwapChain.h"
-#include "VulkanImageView.h"
-#include "VulkanPipeline.h"
-#include "VulkanRenderPass.h"
-#include "VulkanBuffer.h"
-#include "VulkanDevice.h"
+//#include "GLFWWindow.h"
+//#include "VulkanSwapChain.h"
+//#include "VulkanImageView.h"
+//#include "VulkanPipeline.h"
+//#include "VulkanRenderPass.h"
+//#include "VulkanBuffer.h"
+//#include "VulkanDevice.h"
+//#include "Scene.h"
+//#include "Material.h"
+//#include "ModelManager.h"
+//#include "Mesh.h"
+//#include "Utils.h"
+
 #include "Scene.h"
-#include "Material.h"
-#include "ModelManager.h"
-#include "Mesh.h"
+#include "GLFWWindow.h"
 #include "Utils.h"
 
 namespace vv
 {
-    class VulkanDeferredRenderer : public Renderer
+    VKAPI_ATTR VkBool32 VKAPI_CALL
+        vulkanDebugCallback(VkDebugReportFlagsEXT flags,
+            VkDebugReportObjectTypeEXT obj_type, // object that caused the error
+            uint64_t src_obj,
+            size_t location,
+            int32_t msg_code,
+            const char *layer_prefix,
+            const char *msg,
+            void *usr_data);
+
+    class DeferredRenderer
     {
     public:
-        VulkanDeferredRenderer() = default;
-        virtual ~VulkanDeferredRenderer() = default;
+        DeferredRenderer() = default;
+        ~DeferredRenderer() = default;
 
         /*
          * Initialize all necessary Vulkan internals.
          */
-        virtual void create(GLFWWindow *window);
+        void create(GLFWWindow *window);
 
         /*
          * Destroy all Vulkan internals in the correct order.
@@ -38,29 +51,34 @@ namespace vv
          * note: this needs to be called at application termination to ensure that all corresponding Vulkan pieces
          *       are destroyed in the proper order. This is needed because of C++'s lack of destructor guarantees.
          */
-        virtual void shutDown();
+        void shutDown();
 
         /*
          * Submits all command buffers to the various vulkan queues for execution.
          */
-        virtual void run(float delta_time);
+        void run(float delta_time);
 
         /*
          * Signals the renderer to start recording vulkan command buffers once the scene has been properly populated.
          */
-        virtual void recordCommandBuffers();
+        void recordCommandBuffers();
 
         /*
          * Returns a scene object used to store entities with physical presence.
          */
-        virtual Scene* getScene() const;
+        Scene* getScene() const;
 
         /*
          * Returns whether the renderer should stop execution.
          */
-        virtual bool shouldStop();
+        bool shouldStop();
 
-    private:
+    protected:
+        VkDebugReportCallbackEXT _debug_callback = VK_NULL_HANDLE;
+
+        void createDebugReportCallbackEXT(VkInstance instance, PFN_vkDebugReportCallbackEXT vulkan_debug_callback, const VkAllocationCallbacks* allocator);
+        void destroyDebugReportCallbackEXT(VkInstance instance, const VkAllocationCallbacks* allocator);
+
         GLFWWindow *_window						    = nullptr;
         VkInstance _instance					    = VK_NULL_HANDLE;
         VulkanDevice _physical_device;
@@ -114,7 +132,8 @@ namespace vv
          * Creates the 
          */
         void createFullscreenQuad();
+
     };
 }
 
-#endif // VIRTUALVISTA_VULKANDEFERREDRENDERER_H
+#endif // VIRTUALVISTA_DEFERREDRENDERER_H

@@ -9,7 +9,7 @@ using namespace vv;
 int main(int argc, char **argv)
 {
     VirtualVistaEngine app;
-    app.create(argc, argv, VULKAN_RENDERER_TYPE_DEFERRED);
+    app.create(argc, argv);
 
     Scene *scene = app.getScene();
 
