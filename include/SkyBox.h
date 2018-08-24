@@ -59,25 +59,26 @@ namespace vv
         void render(VkCommandBuffer command_buffer);
 	
 	private:
-		VulkanDevice *_device;
-        Mesh *_mesh;
-        uint32_t _max_mip_levels;
+		VulkanDevice *m_device;
+        Mesh *m_mesh;
+        uint32_t m_max_mip_levels;
 	
-        SampledTexture *_brdf_lut;
-        SampledTexture *_radiance_map;
-        SampledTexture *_diffuse_irradiance_map;
-        SampledTexture *_specular_irradiance_map;
+        SampledTexture *m_brdf_lut;
+        SampledTexture *m_radiance_map;
+        SampledTexture *m_diffuse_irradiance_map;
+        SampledTexture *m_specular_irradiance_map;
 
-        VkDescriptorSet _radiance_descriptor_set    = VK_NULL_HANDLE;
-        VkDescriptorSet _environment_descriptor_set = VK_NULL_HANDLE;
+        VkDescriptorSet m_radiance_descriptor_set    = VK_NULL_HANDLE;
+        VkDescriptorSet m_environment_descriptor_set = VK_NULL_HANDLE;
 
-        VkWriteDescriptorSet _rad_write_set;
-        std::array<VkWriteDescriptorSet, 4> _write_sets;
+        VkWriteDescriptorSet m_rad_write_set;
+        std::array<VkWriteDescriptorSet, 4> m_write_sets;
 
-        VkDescriptorImageInfo _radiance_image_info = {};
-        VkDescriptorImageInfo _diffuse_image_info  = {};
-        VkDescriptorImageInfo _specular_image_info = {};
-        VkDescriptorImageInfo _brdf_image_info     = {};
+        VkDescriptorImageInfo m_radiance_image_info = {};
+        VkDescriptorImageInfo m_diffuse_image_info  = {};
+        VkDescriptorImageInfo m_specular_image_info = {};
+        VkDescriptorImageInfo m_brdf_image_info     = {};
+
 	};
 }
 

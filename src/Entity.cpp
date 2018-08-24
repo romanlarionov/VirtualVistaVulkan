@@ -5,7 +5,7 @@ namespace vv
 {
 	///////////////////////////////////////////////////////////////////////////////////////////// Public
 	Entity::Entity() :
-        _pose(glm::mat4())
+        m_pose(glm::mat4())
 	{
 	}
 
@@ -17,31 +17,31 @@ namespace vv
 
 	glm::vec3 Entity::getPosition() const
 	{
-        return glm::vec3(_pose[3]);
+        return glm::vec3(m_pose[3]);
 	}
 
 
     glm::mat3 Entity::getRotation() const
 	{
-        return glm::mat3(_pose);
+        return glm::mat3(m_pose);
 	}
 
 
     void Entity::translate(glm::vec3 translation)
 	{
-        _pose = glm::translate(_pose, translation);
+        m_pose = glm::translate(m_pose, translation);
 	}
 
 
     void Entity::rotate(float angle, glm::vec3 axis)
 	{
-        _pose = glm::rotate(_pose, angle, axis);
+        m_pose = glm::rotate(m_pose, angle, axis);
 	}
 
 
     void Entity::scale(glm::vec3 scaling)
 	{
-        _pose = glm::scale(_pose, scaling);
+        m_pose = glm::scale(m_pose, scaling);
 	}
 
 

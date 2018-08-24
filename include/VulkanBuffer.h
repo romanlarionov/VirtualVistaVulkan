@@ -47,11 +47,11 @@ namespace vv
 		void transferToDevice();
 		
 	private:
-		VulkanDevice *_device;
-		VkBuffer _staging_buffer = VK_NULL_HANDLE;
-		VkDeviceMemory _staging_memory = VK_NULL_HANDLE;
-		VkDeviceMemory _buffer_memory;
-		VkBufferUsageFlags _usage_flags;
+		VulkanDevice *m_device;
+		VkBuffer m_staging_buffer = VK_NULL_HANDLE;
+		VkDeviceMemory m_staging_memory = VK_NULL_HANDLE;
+		VkDeviceMemory m_buffer_memory;
+		VkBufferUsageFlags m_usage_flags;
 
 		/*
 		 * Creates the Vulkan abstraction for a data buffer with the given specifications.

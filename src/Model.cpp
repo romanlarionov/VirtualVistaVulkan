@@ -23,26 +23,26 @@ namespace vv
 	{
         this->name = name;
         this->material_template = material_template;
-        _data_handle = data_handle;
-        _material_id_set = material_id_set;
+        m_data_handle = data_handle;
+        m_material_id_set = material_id_set;
 
-        _model_ubo = { glm::mat4(), glm::mat4() };
-        _model_uniform_buffer = new VulkanBuffer();
-        _model_uniform_buffer->create(device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ModelUBO));
+        m_model_ubo = { glm::mat4(), glm::mat4() };
+        m_model_uniform_buffer = new VulkanBuffer();
+        m_model_uniform_buffer->create(device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(ModelUBO));
 	}
 
 
 	void Model::shutDown()
 	{
-        _model_uniform_buffer->shutDown();
-        delete _model_uniform_buffer;
+        m_model_uniform_buffer->shutDown();
+        delete m_model_uniform_buffer;
 	}
 
 
     void Model::updateModelUBO()
     {
-        _model_ubo = { _pose, glm::transpose(glm::inverse(_pose)) };
-        _model_uniform_buffer->updateAndTransfer(&_model_ubo);
+        m_model_ubo = { m_pose, glm::transpose(glm::inverse(m_pose)) };
+        m_model_uniform_buffer->updateAndTransfer(&m_model_ubo);
     }
 
 

@@ -23,25 +23,25 @@ namespace vv
 
 	void TextureManager::create(VulkanDevice *device)
 	{
-        _device = device;
-        _texture_directory = Settings::inst()->getTextureDirectory();
+        m_device = device;
+        m_texture_directory = Settings::inst()->getTextureDirectory();
 
         // load dummy texture
-        SampledTexture *dummy_texture = load2DImage(_texture_directory, "dummy.png", VK_FORMAT_R8G8B8A8_UNORM, false);
+        SampledTexture *dummy_texture = load2DImage(m_texture_directory, "dummy.png", VK_FORMAT_R8G8B8A8_UNORM, false);
         VV_ASSERT(dummy_texture, "Dummy texture couldn't be loaded. Do you move something?");
 	}
 
 
 	void TextureManager::shutDown()
 	{
-        for (auto &t : _loaded_textures)
+        for (auto &t : m_loaded_textures)
         {
             t.second->image->shutDown(); delete t.second->image;
             t.second->image_view->shutDown(); delete t.second->image_view;
             t.second->sampler->shutDown(); delete t.second->sampler;
         }
 
-        for (auto &d : _ldr_texture_array_data_cache)
+        for (auto &d : m_ldr_texture_array_data_cache)
             stbi_image_free(d.second);
 	}
 
@@ -51,11 +51,11 @@ namespace vv
         std::string file_type = name.substr(name.find_first_of('.') + 1);
 
         // check if geometry has already been loaded
-        if (_loaded_textures.count(path + name) > 0)
-            return _loaded_textures[path + name];
+        if (m_loaded_textures.count(path + name) > 0)
+            return m_loaded_textures[path + name];
 
         if (name == "")
-            return _loaded_textures[_texture_directory + "dummy.png"];
+            return m_loaded_textures[m_texture_directory + "dummy.png"];
 
         if (file_type == "png" || file_type == "jpg")
         {
@@ -68,10 +68,10 @@ namespace vv
             if (!texels)
             {
                 VV_ASSERT(false, "Could not load texture at location: " + path + name);
-                return _loaded_textures[_texture_directory + "dummy.png"];
+                return m_loaded_textures[m_texture_directory + "dummy.png"];
             }
 
-            _ldr_texture_array_data_cache[path + name] = texels;
+            m_ldr_texture_array_data_cache[path + name] = texels;
 
             uint32_t size = width * height * 4;
             VkExtent3D extent = {};
@@ -80,19 +80,19 @@ namespace vv
             extent.depth = 1;
             uint32_t mip_levels = (create_mip_levels) ? std::floor(std::log2(std::max(extent.width, extent.height))) + 1 : 1;
 
-            _loaded_textures[path + name] = loadTexture(texels, size, extent, format, 0, 1, 1, VK_IMAGE_VIEW_TYPE_2D);
-            return _loaded_textures[path + name];
+            m_loaded_textures[path + name] = loadTexture(texels, size, extent, format, 0, 1, 1, VK_IMAGE_VIEW_TYPE_2D);
+            return m_loaded_textures[path + name];
         }
         else if (file_type == "dds" || file_type == "ktx")
         {
             gli::texture_cube texels(gli::load((path + name).c_str()));
-            _hdr_texture_array_data_cache[path + name] = static_cast<float *>(texels.data());
+            m_hdr_texture_array_data_cache[path + name] = static_cast<float *>(texels.data());
 
             // todo: should implement a fallback
             if (texels.empty())
                 throw std::runtime_error("HDR texture could not be loaded." + path + name);
 
-            VkFormat fmt = _gliToVulkanFormat.at(texels.format());
+            VkFormat fmt = m_gli_to_vulkan_format_map.at(texels.format());
 
             VkExtent3D extent = {};
             extent.width = static_cast<uint32_t>(texels.extent().x);
@@ -100,10 +100,10 @@ namespace vv
             extent.depth = 1;
             uint32_t mip_levels = (create_mip_levels) ? static_cast<uint32_t>(texels.levels()) : 1;
 
-            _loaded_textures[path + name] = loadTexture(texels.data(), texels.size(), extent, fmt,
+            m_loaded_textures[path + name] = loadTexture(texels.data(), texels.size(), extent, fmt,
                                             0, mip_levels, 1, VK_IMAGE_VIEW_TYPE_2D);
 
-            return _loaded_textures[path + name];
+            return m_loaded_textures[path + name];
         }
                 
         VV_ASSERT(false, "File type: " + file_type + " not supported");
@@ -116,8 +116,8 @@ namespace vv
         std::string file_type = name.substr(name.find_first_of('.') + 1);
 
         // check if geometry has already been loaded
-        if (_loaded_textures.count(path + name) > 0)
-            return _loaded_textures[path + name];
+        if (m_loaded_textures.count(path + name) > 0)
+            return m_loaded_textures[path + name];
 
         if (file_type == "dds" || file_type == "ktx")
         {
@@ -127,7 +127,7 @@ namespace vv
             if (cube.empty())
                 throw std::runtime_error("Cube map could not be loaded." + path + name);
 
-            VkFormat fmt = _gliToVulkanFormat.at(cube.format());
+            VkFormat fmt = m_gli_to_vulkan_format_map.at(cube.format());
 
             VkExtent3D extent = {};
             extent.width = static_cast<uint32_t>(cube.extent().x);
@@ -135,10 +135,10 @@ namespace vv
             extent.depth = 1;
             uint32_t mip_levels = static_cast<uint32_t>(cube.levels());
 
-            _loaded_textures[path + name] = loadTexture(cube.data(), cube.size(), extent, fmt,
+            m_loaded_textures[path + name] = loadTexture(cube.data(), cube.size(), extent, fmt,
                                             VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, mip_levels, 6, VK_IMAGE_VIEW_TYPE_CUBE);
 
-            return _loaded_textures[path + name];
+            return m_loaded_textures[path + name];
         }
 
         return nullptr;
@@ -151,17 +151,17 @@ namespace vv
         SampledTexture *texture = new SampledTexture();
 
         texture->image = new VulkanImage();
-        texture->image->create(_device, extent, format, VK_IMAGE_TYPE_2D, flags, VK_IMAGE_ASPECT_COLOR_BIT, 
+        texture->image->create(m_device, extent, format, VK_IMAGE_TYPE_2D, flags, VK_IMAGE_ASPECT_COLOR_BIT, 
                       mip_levels, array_layers, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_SAMPLE_COUNT_1_BIT);
         texture->image->updateAndTransfer(data, size_in_bytes);
         
         // create image views for each mip level
         texture->image_view = new VulkanImageView();
-        texture->image_view->create(_device, texture->image, image_view_type, 0);
+        texture->image_view->create(m_device, texture->image, image_view_type, 0);
         
         // todo: fix sampler creation. I have it hardcoded atm.
         texture->sampler = new VulkanSampler();
-        texture->sampler->create(_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        texture->sampler->create(m_device, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, true, 16, VK_SAMPLER_MIPMAP_MODE_LINEAR,
             0.f, 0.f, float(mip_levels - 1), false);
 

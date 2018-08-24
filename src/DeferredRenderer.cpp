@@ -86,17 +86,17 @@ namespace vv
 
 	void DeferredRenderer::create(GLFWWindow *window)
 	{
-        _window = window;
+        m_window = window;
 
         createVulkanInstance();
-        _window->createSurface(_instance);
+        m_window->createSurface(m_instance);
 
-        DeferredRenderer::createDebugReportCallbackEXT(_instance, vulkanDebugCallback, nullptr);
+        DeferredRenderer::createDebugReportCallbackEXT(m_instance, vulkanDebugCallback, nullptr);
         createVulkanDevices();
 
-        _swap_chain.create(&_physical_device, _window);
+        _swap_chain.create(&_physical_device, m_window);
 
-        _render_pass.addAttachment
+        m_render_pass.addAttachment
         (
               _swap_chain.format
             , VK_SAMPLE_COUNT_1_BIT
@@ -108,7 +108,7 @@ namespace vv
             , VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
         );
 
-        _render_pass.addAttachment
+        m_render_pass.addAttachment
         (
               _swap_chain.depth_image->format
             , VK_SAMPLE_COUNT_1_BIT
@@ -120,18 +120,18 @@ namespace vv
             , VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
         );
 
-        _render_pass.create(&_physical_device, VK_PIPELINE_BIND_POINT_GRAPHICS);
+        m_render_pass.create(&_physical_device, VK_PIPELINE_BIND_POINT_GRAPHICS);
 
         for (std::size_t i = 0; i < _swap_chain.color_image_views.size(); ++i)
         {
             std::vector<VkImageView> attachments = { _swap_chain.color_image_views[i]->image_view, _swap_chain.depth_image_view->image_view };
-            _frame_buffers.push_back(_render_pass.createFramebuffer(attachments, _swap_chain.extent));
+            _frame_buffers.push_back(m_render_pass.createFramebuffer(attachments, _swap_chain.extent));
         }
 
         _image_ready_semaphore = util::createVulkanSemaphore(this->_physical_device.logical_device);
         _rendering_complete_semaphore = util::createVulkanSemaphore(this->_physical_device.logical_device);
 
-        _scene.create(&_physical_device, &_render_pass);
+        m_scene.create(&_physical_device, &m_render_pass);
 	}
 
 
@@ -143,9 +143,9 @@ namespace vv
         vkDestroySemaphore(_physical_device.logical_device, _image_ready_semaphore, nullptr);
         vkDestroySemaphore(_physical_device.logical_device, _rendering_complete_semaphore, nullptr);
 
-        _scene.shutDown();
+        m_scene.shutDown();
 
-        _render_pass.shutDown();
+        m_render_pass.shutDown();
 
         for (std::size_t j = 0; j < _frame_buffers.size(); ++j)
             vkDestroyFramebuffer(_physical_device.logical_device, _frame_buffers[j], nullptr);
@@ -154,15 +154,15 @@ namespace vv
 
         _physical_device.shutDown();
 
-        _window->shutDown(_instance);
-        DeferredRenderer::destroyDebugReportCallbackEXT(_instance, nullptr);
-        vkDestroyInstance(_instance, nullptr);
+        m_window->shutDown(m_instance);
+        DeferredRenderer::destroyDebugReportCallbackEXT(m_instance, nullptr);
+        vkDestroyInstance(m_instance, nullptr);
 	}
 
 
 	void DeferredRenderer::run(float delta_time)
 	{
-        _scene.updateUniformData(_swap_chain.extent, delta_time);
+        m_scene.updateUniformData(_swap_chain.extent, delta_time);
 
         // Draw Frame
         /// Acquire an image from the swap chain
@@ -213,7 +213,7 @@ namespace vv
         clear_values.push_back(color_value);
         clear_values.push_back(depth_value);
 
-        _scene.allocateSceneDescriptorSets();
+        m_scene.allocateSceneDescriptorSets();
 
         for (std::size_t i = 0; i < _command_buffers.size(); ++i)
         {
@@ -223,11 +223,11 @@ namespace vv
             command_buffer_begin_info.pInheritanceInfo = nullptr; // for if this is a secondary buffer
             VV_CHECK_SUCCESS(vkBeginCommandBuffer(_command_buffers[i], &command_buffer_begin_info));
 
-            _render_pass.beginRenderPass(_command_buffers[i], VK_SUBPASS_CONTENTS_INLINE, _frame_buffers[i], _swap_chain.extent, clear_values);
+            m_render_pass.beginRenderPass(_command_buffers[i], VK_SUBPASS_CONTENTS_INLINE, _frame_buffers[i], _swap_chain.extent, clear_values);
 
-            _scene.render(_command_buffers[i]);
+            m_scene.render(_command_buffers[i]);
 
-            _render_pass.endRenderPass(_command_buffers[i]);
+            m_render_pass.endRenderPass(_command_buffers[i]);
             VV_CHECK_SUCCESS(vkEndCommandBuffer(_command_buffers[i]));
         }
     }
@@ -235,13 +235,13 @@ namespace vv
 
     Scene* DeferredRenderer::getScene() const
     {
-        return (Scene*)&_scene;
+        return (Scene*)&m_scene;
     }
 
 
 	bool DeferredRenderer::shouldStop()
 	{
-        return _window->shouldClose();
+        return m_window->shouldClose();
 	}
 
 
@@ -265,22 +265,22 @@ namespace vv
         // Ensure required extensions are found.
         VV_ASSERT(checkInstanceExtensionSupport(), "Extensions requested, but are not available on this system.");
 
-        VkInstanceCreateInfo _instancecreate_info = {};
-        _instancecreate_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        _instancecreate_info.pApplicationInfo = &app_info;
+        VkInstanceCreateInfo instance_create_info = {};
+        instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_create_info.pApplicationInfo = &app_info;
 
         auto required_extensions = getRequiredExtensions();
-        _instancecreate_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
-        _instancecreate_info.ppEnabledExtensionNames = required_extensions.data();
+        instance_create_info.enabledExtensionCount = static_cast<uint32_t>(required_extensions.size());
+        instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
 #ifdef _DEBUG
-        _instancecreate_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
-        _instancecreate_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
+        instance_create_info.enabledLayerCount = static_cast<uint32_t>(_used_validation_layers.size());
+        instance_create_info.ppEnabledLayerNames = const_cast<const char* const*>(_used_validation_layers.data());
 #else
-        _instancecreate_info.enabledLayerCount = 0;
+        instance_create_info.enabledLayerCount = 0;
 #endif
 
-        VV_CHECK_SUCCESS(vkCreateInstance(&_instancecreate_info, nullptr, &_instance));
+        VV_CHECK_SUCCESS(vkCreateInstance(&instance_create_info, nullptr, &m_instance));
 	}
 
 
@@ -289,8 +289,8 @@ namespace vv
         std::vector<const char*> extensions;
 
         // GLFW specific
-        for (uint32_t i = 0; i < _window->glfw_extension_count; i++)
-            extensions.push_back(_window->glfw_extensions[i]);
+        for (uint32_t i = 0; i < m_window->glfw_extension_count; i++)
+            extensions.push_back(m_window->glfw_extensions[i]);
 
         // System wide required (hardcoded)
         for (auto extension : _used_instance_extensions)
@@ -354,19 +354,19 @@ namespace vv
 
     bool DeferredRenderer::isVulkanDeviceSuitable(VulkanDevice &device)
     {
-        return device.hasGraphicsQueue() && device.querySwapChainSupport(_window->surface).is_supported;
+        return device.hasGraphicsQueue() && device.querySwapChainSupport(m_window->surface).is_supported;
     }
 
 
     void DeferredRenderer::createVulkanDevices()
     {
         uint32_t _physical_device_count = 0;
-        vkEnumeratePhysicalDevices(_instance, &_physical_device_count, nullptr);
+        vkEnumeratePhysicalDevices(m_instance, &_physical_device_count, nullptr);
 
         VV_ASSERT(_physical_device_count != 0, "Vulkan Error: no gpu with Vulkan support found");
 
         std::vector<VkPhysicalDevice> physical_devices(_physical_device_count);
-        vkEnumeratePhysicalDevices(_instance, &_physical_device_count, physical_devices.data());
+        vkEnumeratePhysicalDevices(m_instance, &_physical_device_count, physical_devices.data());
 
         bool found = false;
 
@@ -381,7 +381,7 @@ namespace vv
                 else
                     _physical_device.createLogicalDevice(true, VK_QUEUE_GRAPHICS_BIT);
 
-                _window->surface_settings[&_physical_device] = _physical_device.querySwapChainSupport(_window->surface);
+                m_window->surface_settings[&_physical_device] = _physical_device.querySwapChainSupport(m_window->surface);
                 found = true;
                 break;
             }

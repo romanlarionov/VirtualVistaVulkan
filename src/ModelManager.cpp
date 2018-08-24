@@ -21,9 +21,9 @@ namespace vv
 
 	void ModelManager::create(VulkanDevice *device, TextureManager *texture_manager, VkDescriptorPool descriptor_pool)
 	{
-		_device = device;
-        _texture_manager = texture_manager;
-        _descriptor_pool = descriptor_pool;
+		m_device = device;
+        m_texture_manager = texture_manager;
+        m_descriptor_pool = descriptor_pool;
 
         // load primitive mesh to cache
         Model *temp_model = new Model();
@@ -34,14 +34,14 @@ namespace vv
 
 	void ModelManager::shutDown()
 	{
-        for (auto &m : _loaded_meshes)
+        for (auto &m : m_loaded_meshes)
             for (auto &mesh : m.second)
             {
                 mesh->shutDown();
                 delete mesh;
             }
 
-        for (auto &m : _loaded_materials)
+        for (auto &m : m_loaded_materials)
             for (auto &mat : m.second)
                 for (auto & material : mat.second)
                 {
@@ -49,8 +49,8 @@ namespace vv
                     delete material;
                 }
 
-        _loaded_meshes.clear();
-        _loaded_materials.clear();
+        m_loaded_meshes.clear();
+        m_loaded_materials.clear();
 	}
 
 
@@ -61,13 +61,13 @@ namespace vv
         std::string file_type = name.substr(name.find_first_of('.') + 1);
 
         // check if geometry has already been loaded
-        if (_loaded_meshes.count(path + name) > 0)
+        if (m_loaded_meshes.count(path + name) > 0)
         {
             // materials have been loaded as well
-            if (_loaded_materials[path + name].count(material_template->name) > 0)
+            if (m_loaded_materials[path + name].count(material_template->name) > 0)
             {
-                auto mat_templ = _loaded_materials[path + name][material_template->name][0]->material_template;
-                model->create(_device, "", path + name, material_template->name, mat_templ);
+                auto mat_templ = m_loaded_materials[path + name][material_template->name][0]->material_template;
+                model->create(m_device, "", path + name, material_template->name, mat_templ);
                 return true;
             }
             else
@@ -90,7 +90,7 @@ namespace vv
 
     Mesh* ModelManager::getSphereMesh() const
     {
-        return _loaded_meshes.at(Settings::inst()->getModelDirectory() + "primitives/sphere.obj")[0];
+        return m_loaded_meshes.at(Settings::inst()->getModelDirectory() + "primitives/sphere.obj")[0];
     }
 
 
@@ -166,11 +166,11 @@ namespace vv
             int curr_material_id = shape.mesh.material_ids[0];
 
             Mesh *mesh = new Mesh();
-            mesh->create(_device, shape.name, vertices, indices, ((curr_material_id < 0) ? 0 : curr_material_id));
+            mesh->create(m_device, shape.name, vertices, indices, ((curr_material_id < 0) ? 0 : curr_material_id));
             meshes.push_back(mesh);
 		}
 
-        _loaded_meshes[path + name] = meshes;
+        m_loaded_meshes[path + name] = meshes;
 
         if (material_template)
         {
@@ -178,7 +178,7 @@ namespace vv
             for (const auto &m : tiny_materials)
             {
                 Material *material = new Material();
-                material->create(_device, material_template, _descriptor_pool);
+                material->create(m_device, material_template, m_descriptor_pool);
 
                 // store required descriptor set data in correct binding order
                 auto orderings = material_template->shader_modules[1].material_descriptor_orderings;
@@ -193,7 +193,7 @@ namespace vv
                         MaterialProperties properties = { amb, dif, spec, static_cast<int>(m.shininess) };
 
                         VulkanBuffer *buffer = new VulkanBuffer();
-                        buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(properties));
+                        buffer->create(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(properties));
                         buffer->updateAndTransfer(&properties);
 
                         material->addUniformBuffer(buffer, o.binding);
@@ -217,7 +217,7 @@ namespace vv
                             temp_name = m.emissive_texname;
 
                         // todo: need to support more texture types
-                        auto texture = _texture_manager->load2DImage(path, temp_name, VK_FORMAT_R8G8B8A8_UNORM, false);
+                        auto texture = m_texture_manager->load2DImage(path, temp_name, VK_FORMAT_R8G8B8A8_UNORM, false);
                         material->addTexture(texture, o.binding);
                     }
                     else // descriptor type not populated
@@ -236,7 +236,7 @@ namespace vv
             if (tiny_materials.empty())
             {
                 Material *material = new Material();
-                material->create(_device, material_template, _descriptor_pool);
+                material->create(m_device, material_template, m_descriptor_pool);
 
                 //VV_ALERT("MTL file not found. Assuming PBR textures present.");
                 
@@ -260,7 +260,7 @@ namespace vv
                     else if (o.name == "ambient_occlusion_map")
                         temp_name = "ambient_occlusion.dds";
 
-                    auto texture = _texture_manager->load2DImage(path + "textures/", temp_name);
+                    auto texture = m_texture_manager->load2DImage(path + "textures/", temp_name);
                     material->addTexture(texture, o.binding);
                 }
 
@@ -268,8 +268,8 @@ namespace vv
                 materials.push_back(material);
             }
 
-            _loaded_materials[path + name][material_template->name] = materials;
-            model->create(_device, name, path + name, material_template->name, material_template);
+            m_loaded_materials[path + name][material_template->name] = materials;
+            model->create(m_device, name, path + name, material_template->name, material_template);
         }
 
         return success;

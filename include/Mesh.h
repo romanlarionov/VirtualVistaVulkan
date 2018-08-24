@@ -41,13 +41,14 @@ namespace vv
         void render(VkCommandBuffer command_buffer);
 
 	private:
-        std::string _name;
+        std::string m_name;
 
-		VulkanBuffer _vertex_buffer;
-		VulkanBuffer _index_buffer;
+		VulkanBuffer m_vertex_buffer;
+		VulkanBuffer m_index_buffer;
 
-		std::vector<Vertex> _vertices;
-		std::vector<uint32_t> _indices;
+		std::vector<Vertex> m_vertices;
+		std::vector<uint32_t> m_indices;
+
 	};
 }
 

@@ -49,11 +49,11 @@ namespace vv
 	private:
         // note: acts as hash key for ModelManager's data caches. this is used by scene during render-time.
         //       in reality this is simply the path + name of the file originally queried.
-        std::string _data_handle;
-        std::string _material_id_set;
+        std::string m_data_handle;
+        std::string m_material_id_set;
 
-        ModelUBO _model_ubo;
-		VulkanBuffer *_model_uniform_buffer = nullptr;
+        ModelUBO m_model_ubo;
+		VulkanBuffer *m_model_uniform_buffer = nullptr;
 
 	};
 }

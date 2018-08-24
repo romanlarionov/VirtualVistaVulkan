@@ -53,15 +53,15 @@ namespace vv
         glm::mat4 getViewMatrix() const;
 		
 	private:
-        float _fov_y;
-        float _near_plane;
-        float _far_plane;
+        float m_fov_y;
+        float m_near_plane;
+        float m_far_plane;
 
-        glm::mat4 _projection_mat;
-        glm::mat4 _view_mat;
+        glm::mat4 m_projection_mat;
+        glm::mat4 m_view_mat;
 
-        glm::vec3 _look_at_point;
-        glm::vec3 _up_vec;
+        glm::vec3 m_look_at_point;
+        glm::vec3 m_up_vec;
 
         virtual void rotate(float angle, glm::vec3 axis) {};
 	};

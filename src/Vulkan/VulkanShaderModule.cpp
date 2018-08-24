@@ -20,8 +20,8 @@ namespace vv
 
 	void VulkanShaderModule::create(VulkanDevice *device, std::string name, std::string stage, std::string entrance_function)
 	{
-		_device = device;
-		_filename = name;
+		m_device = device;
+		m_filename = name;
         this->entrance_function = entrance_function;
 
         if (stage == "vert")
@@ -39,26 +39,26 @@ namespace vv
 
         std::string dir = Settings::inst()->getShaderDirectory();
 
-		_filepath = dir + name + "_" + stage + ".spv";
-        _binary_data = loadSpirVBinary(_filepath);
+		m_filepath = dir + name + "_" + stage + ".spv";
+        m_binary_data = loadSpirVBinary(m_filepath);
 
         if (stage == "frag")
-            reflectDescriptorTypes(convert(_binary_data), VK_SHADER_STAGE_FRAGMENT_BIT);
+            reflectDescriptorTypes(convert(m_binary_data), VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		VkShaderModuleCreateInfo shader_module_create_info = {};
 		shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		shader_module_create_info.flags = 0;
-		shader_module_create_info.codeSize = _binary_data.size();
-		shader_module_create_info.pCode = (uint32_t *)_binary_data.data();
+		shader_module_create_info.codeSize = m_binary_data.size();
+		shader_module_create_info.pCode = (uint32_t *)m_binary_data.data();
 
-		VV_CHECK_SUCCESS(vkCreateShaderModule(_device->logical_device, &shader_module_create_info, nullptr, &shader_module));
+		VV_CHECK_SUCCESS(vkCreateShaderModule(m_device->logical_device, &shader_module_create_info, nullptr, &shader_module));
 	}
 
 
 	void VulkanShaderModule::shutDown()
 	{
 		if (shader_module != VK_NULL_HANDLE)
-            vkDestroyShaderModule(_device->logical_device, shader_module, nullptr);
+            vkDestroyShaderModule(m_device->logical_device, shader_module, nullptr);
 	}
 
 	
@@ -141,8 +141,8 @@ namespace vv
             else if (set == 1)
             {
                 // if descriptor name found is a white listed material descriptor
-                if (std::find(_accepted_material_descriptors.begin(), _accepted_material_descriptors.end(), name)
-                              != _accepted_material_descriptors.end())
+                if (std::find(m_accepted_material_descriptors.begin(), m_accepted_material_descriptors.end(), name)
+                              != m_accepted_material_descriptors.end())
                     material_descriptor_orderings.push_back(descriptor_info);
 
                 else

@@ -56,9 +56,9 @@ namespace vv
         VkFramebuffer createFramebuffer(std::vector<VkImageView> &attachments, VkExtent2D extent) const;
 
 	private:
-		VulkanDevice *_device;
-        VkPipelineBindPoint _bind_point;
-		std::vector<VkAttachmentDescription> _attachment_descriptions;
+		VulkanDevice *m_device;
+        VkPipelineBindPoint m_bind_point;
+		std::vector<VkAttachmentDescription> m_attachment_descriptions;
 
         bool hasDepth(VkAttachmentDescription description)
         {

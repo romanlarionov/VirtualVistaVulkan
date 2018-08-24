@@ -95,14 +95,14 @@ namespace vv
         void render(VkCommandBuffer command_buffer);
 
     private:
-        VulkanDevice *_device                       = nullptr;
-        VulkanRenderPass *_render_pass              = nullptr;
-        ModelManager *_model_manager                = nullptr;
-        TextureManager *_texture_manager            = nullptr;
-        bool _initialized                           = false;
+        VulkanDevice *m_device                       = nullptr;
+        VulkanRenderPass *m_render_pass              = nullptr;
+        ModelManager *m_model_manager                = nullptr;
+        TextureManager *m_texture_manager            = nullptr;
+        bool m_initialized                           = false;
 
-        VulkanSampler *_sampler                     = nullptr;
-        VkDescriptorPool _descriptor_pool           = VK_NULL_HANDLE;
+        VulkanSampler *m_sampler                     = nullptr;
+        VkDescriptorPool m_descriptor_pool           = VK_NULL_HANDLE;
 
         // General scene uniform
         struct SceneUBO
@@ -112,10 +112,10 @@ namespace vv
             glm::vec4 camera_position;
         };
 
-        VkDescriptorSetLayout _scene_descriptor_set_layout;
-        std::vector<VkDescriptorSet> _scene_descriptor_sets;
-        SceneUBO _scene_ubo;
-        VulkanBuffer *_scene_uniform_buffer = nullptr;
+        VkDescriptorSetLayout m_scene_descriptor_set_layout;
+        std::vector<VkDescriptorSet> m_scene_descriptor_sets;
+        SceneUBO m_scene_ubo;
+        VulkanBuffer *m_scene_uniform_buffer = nullptr;
 
         // Light uniforms
         struct LightData
@@ -129,24 +129,24 @@ namespace vv
             LightData lights[VV_MAX_LIGHTS];
         };
 
-        LightUBO _lights_ubo;
-        VulkanBuffer *_lights_uniform_buffer = nullptr;
+        LightUBO m_lights_ubo;
+        VulkanBuffer *m_lights_uniform_buffer = nullptr;
 
-        VkDescriptorSetLayout _environment_descriptor_set_layout;
-        VkDescriptorSetLayout _radiance_descriptor_set_layout;
-        VkDescriptorSet _environment_descriptor_set = VK_NULL_HANDLE; // used for IBL calculations
-        VkDescriptorSet _radiance_descriptor_set    = VK_NULL_HANDLE; // applied to skybox model
+        VkDescriptorSetLayout m_environment_descriptor_set_layout;
+        VkDescriptorSetLayout m_radiance_descriptor_set_layout;
+        VkDescriptorSet m_environment_descriptor_set = VK_NULL_HANDLE; // used for IBL calculations
+        VkDescriptorSet m_radiance_descriptor_set    = VK_NULL_HANDLE; // applied to skybox model
 
         // todo: think of better data structure. maybe something to help with culling
-        std::vector<Light> _lights;
-        std::vector<Model> _models;
-        std::vector<Camera> _cameras;
-        std::vector<SkyBox> _skyboxes;
+        std::vector<Light> m_lights;
+        std::vector<Model> m_models;
+        std::vector<Camera> m_cameras;
+        std::vector<SkyBox> m_skyboxes;
 
-        Camera *_active_camera;
-        SkyBox *_active_skybox;
-        bool _has_active_camera = false;
-        bool _has_active_skybox = false;
+        Camera *m_active_camera;
+        SkyBox *m_active_skybox;
+        bool m_has_active_camera = false;
+        bool m_has_active_skybox = false;
 
         /*
          * Reads required shaders from file and creates all possible MaterialTemplates that can be used during execution.

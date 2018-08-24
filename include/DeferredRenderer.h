@@ -79,8 +79,8 @@ namespace vv
         void createDebugReportCallbackEXT(VkInstance instance, PFN_vkDebugReportCallbackEXT vulkan_debug_callback, const VkAllocationCallbacks* allocator);
         void destroyDebugReportCallbackEXT(VkInstance instance, const VkAllocationCallbacks* allocator);
 
-        GLFWWindow *_window						    = nullptr;
-        VkInstance _instance					    = VK_NULL_HANDLE;
+        GLFWWindow *m_window						    = nullptr;
+        VkInstance m_instance					    = VK_NULL_HANDLE;
         VulkanDevice _physical_device;
     
         VulkanSwapChain _swap_chain;
@@ -89,10 +89,10 @@ namespace vv
         VkSemaphore _image_ready_semaphore          = VK_NULL_HANDLE;
         VkSemaphore _rendering_complete_semaphore   = VK_NULL_HANDLE;
 
-        VulkanRenderPass _render_pass;
+        VulkanRenderPass m_render_pass;
         std::vector<VkCommandBuffer> _command_buffers;
 
-        Scene _scene;
+        Scene m_scene;
 
         std::vector<const char*> _used_validation_layers = { "VK_LAYER_LUNARG_standard_validation" };
         const std::vector<const char*> _used_instance_extensions = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };

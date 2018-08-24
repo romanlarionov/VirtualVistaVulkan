@@ -20,7 +20,7 @@ namespace vv
                              VkImageLayout initial_layout, VkSampleCountFlagBits sample_count)
     {
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
-		_device = device;
+		m_device = device;
 		this->format = format;
         this->width = extent.width;
         this->height = extent.height;
@@ -33,7 +33,7 @@ namespace vv
         this->initial_layout = initial_layout;
 
         allocateMemory(VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            flags, initial_layout, sample_count, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, _image_memory);
+            flags, initial_layout, sample_count, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, m_image_memory);
     }
 
 
@@ -41,7 +41,7 @@ namespace vv
                                       uint32_t mip_levels, uint32_t array_layers)
 	{
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
-		_device = device;
+		m_device = device;
 		this->image = image;
 		this->format = format;
 		this->aspect_flags = aspect_flags;
@@ -53,7 +53,7 @@ namespace vv
 	void VulkanImage::createDepthAttachment(VulkanDevice *device, VkExtent2D extent, VkImageTiling tiling, VkFormatFeatureFlags features)
 	{
 		VV_ASSERT(device != VK_NULL_HANDLE, "VulkanDevice not present");
-		this->_device = device;
+		this->m_device = device;
 		this->format = format;
 		this->aspect_flags = VK_IMAGE_ASPECT_DEPTH_BIT;
         this->type = VK_IMAGE_TYPE_2D;
@@ -83,7 +83,7 @@ namespace vv
 		}
 
 		allocateMemory(VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, VK_IMAGE_LAYOUT_UNDEFINED,
-                       VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, _image_memory);
+                       VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, m_image_memory);
 
 		if (hasStencilComponent())
 			this->aspect_flags |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -98,15 +98,15 @@ namespace vv
 
 	void VulkanImage::shutDown()
 	{
-		vkDestroyImage(_device->logical_device, image, nullptr);
-		vkFreeMemory(_device->logical_device, _image_memory, nullptr);
+		vkDestroyImage(m_device->logical_device, image, nullptr);
+		vkFreeMemory(m_device->logical_device, m_image_memory, nullptr);
 	}
 
     
     void VulkanImage::updateAndTransfer(void *data, VkDeviceSize size_in_bytes)
     {
-        auto command_pool_used = _device->command_pools["graphics"];
-        auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
+        auto command_pool_used = m_device->command_pools["graphics"];
+        auto command_buffer = util::beginSingleUseCommand(m_device->logical_device, command_pool_used);
 
         VkImageSubresourceRange subresource_range = {};
         subresource_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -119,12 +119,12 @@ namespace vv
         // move host data to transfer buffer
         allocateTransferMemory(size_in_bytes);
         void *mapped_data;
-        vkMapMemory(_device->logical_device, _staging_memory, 0, size_in_bytes, 0, &mapped_data);
+        vkMapMemory(m_device->logical_device, m_staging_memory, 0, size_in_bytes, 0, &mapped_data);
         memcpy(mapped_data, data, size_in_bytes);
-        vkUnmapMemory(_device->logical_device, _staging_memory);
+        vkUnmapMemory(m_device->logical_device, m_staging_memory);
         mapped_data = nullptr;
 
-        const auto &format_info = _format_info_table.at(format);
+        const auto &format_info = m_format_info_table.at(format);
 		const uint32_t block_size = format_info.block_size;
 		const uint32_t block_width = format_info.block_extent.width;
 		const uint32_t block_height = format_info.block_extent.height;
@@ -159,14 +159,14 @@ namespace vv
 			}
 		}
 
-		vkCmdCopyBufferToImage(command_buffer, _staging_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		vkCmdCopyBufferToImage(command_buffer, m_staging_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                static_cast<uint32_t>(buffer_copy_regions.size()), buffer_copy_regions.data());
 
         transformImageLayout(command_buffer, image, subresource_range, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
+        util::endSingleUseCommand(m_device->logical_device, command_pool_used, command_buffer, m_device->graphics_queue);
 
-        vkDestroyBuffer(_device->logical_device, _staging_buffer, nullptr);
-        vkFreeMemory(_device->logical_device, _staging_memory, nullptr);
+        vkDestroyBuffer(m_device->logical_device, m_staging_buffer, nullptr);
+        vkFreeMemory(m_device->logical_device, m_staging_memory, nullptr);
     }
 
 
@@ -186,17 +186,17 @@ namespace vv
 		buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		VV_CHECK_SUCCESS(vkCreateBuffer(_device->logical_device, &buffer_create_info, nullptr, &_staging_buffer));
+		VV_CHECK_SUCCESS(vkCreateBuffer(m_device->logical_device, &buffer_create_info, nullptr, &m_staging_buffer));
 
 		VkMemoryRequirements memory_requirements = {};
-		vkGetBufferMemoryRequirements(_device->logical_device, _staging_buffer, &memory_requirements);
+		vkGetBufferMemoryRequirements(m_device->logical_device, m_staging_buffer, &memory_requirements);
 
         VkMemoryAllocateInfo memory_alloc_info = {};
         memory_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		memory_alloc_info.allocationSize = memory_requirements.size;
-		memory_alloc_info.memoryTypeIndex = _device->findMemoryTypeIndex(memory_requirements.memoryTypeBits,  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		VV_CHECK_SUCCESS(vkAllocateMemory(_device->logical_device, &memory_alloc_info, nullptr, &_staging_memory));
-		VV_CHECK_SUCCESS(vkBindBufferMemory(_device->logical_device, _staging_buffer, _staging_memory, 0));
+		memory_alloc_info.memoryTypeIndex = m_device->findMemoryTypeIndex(memory_requirements.memoryTypeBits,  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		VV_CHECK_SUCCESS(vkAllocateMemory(m_device->logical_device, &memory_alloc_info, nullptr, &m_staging_memory));
+		VV_CHECK_SUCCESS(vkBindBufferMemory(m_device->logical_device, m_staging_buffer, m_staging_memory, 0));
     }
 
 
@@ -219,13 +219,13 @@ namespace vv
         image_create_info.initialLayout = initial_layout;
         image_create_info.samples = sample_count;
 
-        if (_device->transfer_family_index != -1)
+        if (m_device->transfer_family_index != -1)
         {
             image_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
             image_create_info.queueFamilyIndexCount = 2;
             std::array<uint32_t, 2> queue_family_indices = {
-                static_cast<uint32_t>(_device->graphics_family_index),
-                static_cast<uint32_t>(_device->transfer_family_index)
+                static_cast<uint32_t>(m_device->graphics_family_index),
+                static_cast<uint32_t>(m_device->transfer_family_index)
             };
             image_create_info.pQueueFamilyIndices = queue_family_indices.data();
         }
@@ -233,16 +233,16 @@ namespace vv
         {
             image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             image_create_info.queueFamilyIndexCount = 1;
-            uint32_t queue_index = static_cast<uint32_t>(_device->graphics_family_index);
+            uint32_t queue_index = static_cast<uint32_t>(m_device->graphics_family_index);
             image_create_info.pQueueFamilyIndices = &queue_index;
         }
 
-		VV_CHECK_SUCCESS(vkCreateImage(_device->logical_device, &image_create_info, nullptr, &image));
+		VV_CHECK_SUCCESS(vkCreateImage(m_device->logical_device, &image_create_info, nullptr, &image));
 
 		// Determine requirements for memory (where it's allocated, type of memory, etc.)
 		VkMemoryRequirements memory_requirements = {};
-		vkGetImageMemoryRequirements(_device->logical_device, image, &memory_requirements);
-		auto memory_type = _device->findMemoryTypeIndex(memory_requirements.memoryTypeBits, memory_properties);
+		vkGetImageMemoryRequirements(m_device->logical_device, image, &memory_requirements);
+		auto memory_type = m_device->findMemoryTypeIndex(memory_requirements.memoryTypeBits, memory_properties);
 
 		// Allocate and bind buffer memory.
 		VkMemoryAllocateInfo memory_allocate_info = {};
@@ -250,8 +250,8 @@ namespace vv
 		memory_allocate_info.allocationSize = memory_requirements.size;
 		memory_allocate_info.memoryTypeIndex = memory_type;
 
-		VV_CHECK_SUCCESS(vkAllocateMemory(_device->logical_device, &memory_allocate_info, nullptr, &memory));
-		VV_CHECK_SUCCESS(vkBindImageMemory(_device->logical_device, image, memory, 0));
+		VV_CHECK_SUCCESS(vkAllocateMemory(m_device->logical_device, &memory_allocate_info, nullptr, &memory));
+		VV_CHECK_SUCCESS(vkBindImageMemory(m_device->logical_device, image, memory, 0));
 	}
 
 
@@ -272,18 +272,18 @@ namespace vv
         VkPipelineStageFlags new_stage = util::determinePipelineStageFlag(memory_barrier.dstAccessMask);
 
         bool use_transfer = false;
-        auto command_pool_used = _device->command_pools["graphics"];
+        auto command_pool_used = m_device->command_pools["graphics"];
 
         // use transfer queue if it's available on this device and the old/new pipeline stages are compatible with it
-        if ((_pipeline_stage_queue_support_lut[old_stage] == VK_QUEUE_TRANSFER_BIT) &&
-            (_pipeline_stage_queue_support_lut[new_stage] == VK_QUEUE_TRANSFER_BIT) &&
-            _device->command_pools.count("transfer") > 0)
+        if ((m_pipeline_stage_queue_support_lut[old_stage] == VK_QUEUE_TRANSFER_BIT) &&
+            (m_pipeline_stage_queue_support_lut[new_stage] == VK_QUEUE_TRANSFER_BIT) &&
+            m_device->command_pools.count("transfer") > 0)
         {
-            command_pool_used = _device->command_pools["transfer"];
+            command_pool_used = m_device->command_pools["transfer"];
             use_transfer = true;
         }
 
-		auto command_buffer = util::beginSingleUseCommand(_device->logical_device, command_pool_used);
+		auto command_buffer = util::beginSingleUseCommand(m_device->logical_device, command_pool_used);
 
         // todo: it might be best to use vkCmdWaitEvents here... it seems to be more non-blocking and pipeline barriers
         //       which are more intended to stall and insert a command buffer between two directly dependent events on device
@@ -292,9 +292,9 @@ namespace vv
 
         // todo: maybe add way to defer this until data is required
         if (use_transfer)
-            util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->transfer_queue);
+            util::endSingleUseCommand(m_device->logical_device, command_pool_used, command_buffer, m_device->transfer_queue);
         else
-		    util::endSingleUseCommand(_device->logical_device, command_pool_used, command_buffer, _device->graphics_queue);
+		    util::endSingleUseCommand(m_device->logical_device, command_pool_used, command_buffer, m_device->graphics_queue);
 	}
 
 

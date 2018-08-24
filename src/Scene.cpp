@@ -13,21 +13,21 @@ namespace vv
 {
     void Scene::create(VulkanDevice *device, VulkanRenderPass *render_pass)
     {
-        _device = device;
-        _render_pass = render_pass;
+        m_device = device;
+        m_render_pass = render_pass;
 
         createDescriptorPool();
         createSceneDescriptorSetLayout();
         createEnvironmentUniforms();
         createMaterialTemplates(); // Load material templates to prepare for model loading queries
 
-        _texture_manager = new TextureManager();
-        _texture_manager->create(_device);
+        m_texture_manager = new TextureManager();
+        m_texture_manager->create(m_device);
 
-        _model_manager = new ModelManager();
-        _model_manager->create(_device, _texture_manager, _descriptor_pool);
+        m_model_manager = new ModelManager();
+        m_model_manager->create(m_device, m_texture_manager, m_descriptor_pool);
 
-        _initialized = true;
+        m_initialized = true;
     }
 
 
@@ -39,146 +39,146 @@ namespace vv
             //       layout not wanting to be destroyed... i'm still not sure what's wrong, but I get
             //       the feeling that it has something to do with me never actually using it to render any models
             if (temp.second.name != "dummy")
-                vkDestroyDescriptorSetLayout(_device->logical_device, temp.second.material_descriptor_set_layout, nullptr);
+                vkDestroyDescriptorSetLayout(m_device->logical_device, temp.second.material_descriptor_set_layout, nullptr);
 
             for (auto &shader : temp.second.shader_modules)
                 shader.shutDown();
 
-            vkDestroyPipelineLayout(_device->logical_device, temp.second.pipeline_layout, nullptr);
+            vkDestroyPipelineLayout(m_device->logical_device, temp.second.pipeline_layout, nullptr);
             temp.second.pipeline->shutDown();
             delete temp.second.pipeline;
         }
 
-        for (auto &l : _lights)
+        for (auto &l : m_lights)
             l.shutDown();
 
-        for (auto &m : _models)
+        for (auto &m : m_models)
             m.shutDown();
 
-        for (auto &c : _cameras)
+        for (auto &c : m_cameras)
             c.shutDown();
 
-        for (auto &s : _skyboxes)
+        for (auto &s : m_skyboxes)
             s.shutDown();
 
-        _scene_uniform_buffer->shutDown();
-        delete _scene_uniform_buffer;
+        m_scene_uniform_buffer->shutDown();
+        delete m_scene_uniform_buffer;
 
-        _lights_uniform_buffer->shutDown();
-        delete _lights_uniform_buffer;
+        m_lights_uniform_buffer->shutDown();
+        delete m_lights_uniform_buffer;
 
-        vkDestroyDescriptorSetLayout(_device->logical_device, _scene_descriptor_set_layout, nullptr);
-        vkDestroyDescriptorSetLayout(_device->logical_device, _environment_descriptor_set_layout, nullptr);
-        vkDestroyDescriptorSetLayout(_device->logical_device, _radiance_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device->logical_device, m_scene_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device->logical_device, m_environment_descriptor_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device->logical_device, m_radiance_descriptor_set_layout, nullptr);
 
-        vkDestroyDescriptorPool(_device->logical_device, _descriptor_pool, nullptr);
+        vkDestroyDescriptorPool(m_device->logical_device, m_descriptor_pool, nullptr);
 
-        _texture_manager->shutDown();
-        delete _texture_manager;
+        m_texture_manager->shutDown();
+        delete m_texture_manager;
 
-        _model_manager->shutDown();
-        delete _model_manager;
+        m_model_manager->shutDown();
+        delete m_model_manager;
 
-        _scene_descriptor_sets.clear();
-        _lights.clear();
-        _models.clear();
-        _cameras.clear();
-        _skyboxes.clear();
+        m_scene_descriptor_sets.clear();
+        m_lights.clear();
+        m_models.clear();
+        m_cameras.clear();
+        m_skyboxes.clear();
     }
 
 
     Light* Scene::addLight(glm::vec4 irradiance, float radius)
     {
-        VV_ASSERT(_lights.size() < VV_MAX_LIGHTS, "ERROR: number of lights exceeds VV_MAX_LIGHTS.");
+        VV_ASSERT(m_lights.size() < VV_MAX_LIGHTS, "ERROR: number of lights exceeds VV_MAX_LIGHTS.");
         Light light;
         light.create(irradiance, radius);
-        _lights.push_back(light);
-        return &_lights[_lights.size() - 1];
+        m_lights.push_back(light);
+        return &m_lights[m_lights.size() - 1];
     }
 
 
     Model* Scene::addModel(std::string path, std::string name, std::string material_template)
     {
-        VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding models");
+        VV_ASSERT(m_initialized, "ERROR: scene needs to be initialized before adding models");
         VV_ASSERT(material_templates.find(material_template) != material_templates.end(), "ERROR: material_template does not exist");
-        _models.emplace_back(Model());
-        _model_manager->loadModel(path, name, &material_templates[material_template], &_models[_models.size() - 1]);
-        return &_models[_models.size() - 1];
+        m_models.emplace_back(Model());
+        m_model_manager->loadModel(path, name, &material_templates[material_template], &m_models[m_models.size() - 1]);
+        return &m_models[m_models.size() - 1];
     }
 
 
     Camera* Scene::addCamera(float fov_y, float near_plane, float far_plane)
     {
-        VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding cameras");
+        VV_ASSERT(m_initialized, "ERROR: scene needs to be initialized before adding cameras");
         Camera camera;
         camera.create(fov_y, near_plane, far_plane);
-        _cameras.push_back(camera);
-        return &_cameras[_cameras.size() - 1];
+        m_cameras.push_back(camera);
+        return &m_cameras[m_cameras.size() - 1];
     }
 
 
     SkyBox* Scene::addSkyBox(std::string path, std::string radiance_map_name, std::string diffuse_map_name,
                              std::string specular_map_name, std::string brdf_lut_name)
     {
-        VV_ASSERT(_initialized, "ERROR: scene needs to be initialized before adding skyboxes");
-        _skyboxes.emplace_back();
+        VV_ASSERT(m_initialized, "ERROR: scene needs to be initialized before adding skyboxes");
+        m_skyboxes.emplace_back();
 
         path = Settings::inst()->getTextureDirectory() + path;
-        auto radiance_map = _texture_manager->loadCubeMap(path, radiance_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, false);
-        auto diffuse_map = _texture_manager->loadCubeMap(path, diffuse_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, true);
-        auto specular_map = _texture_manager->loadCubeMap(path, specular_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, true);
-        auto brdf_lut = _texture_manager->load2DImage(path, brdf_lut_name, VK_FORMAT_R32G32_SFLOAT, false);
-        auto sphere_mesh = _model_manager->getSphereMesh();
+        auto radiance_map = m_texture_manager->loadCubeMap(path, radiance_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, false);
+        auto diffuse_map = m_texture_manager->loadCubeMap(path, diffuse_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, true);
+        auto specular_map = m_texture_manager->loadCubeMap(path, specular_map_name, VK_FORMAT_R32G32B32A32_SFLOAT, true);
+        auto brdf_lut = m_texture_manager->load2DImage(path, brdf_lut_name, VK_FORMAT_R32G32_SFLOAT, false);
+        auto sphere_mesh = m_model_manager->getSphereMesh();
 
-        _skyboxes[_skyboxes.size() - 1].create(_device, _radiance_descriptor_set, _environment_descriptor_set, sphere_mesh, radiance_map, diffuse_map, specular_map, brdf_lut);
-        return &_skyboxes[_skyboxes.size() - 1];
+        m_skyboxes[m_skyboxes.size() - 1].create(m_device, m_radiance_descriptor_set, m_environment_descriptor_set, sphere_mesh, radiance_map, diffuse_map, specular_map, brdf_lut);
+        return &m_skyboxes[m_skyboxes.size() - 1];
     }
 
 
     Camera* Scene::getActiveCamera() const
     {
-        return _active_camera;
+        return m_active_camera;
     }
 
 
     SkyBox* Scene::getActiveSkyBox() const
     {
-        return _active_skybox;
+        return m_active_skybox;
     }
 
 
     void Scene::setActiveCamera(Camera *camera)
     {
-        _has_active_camera = true;
-        _active_camera = camera;
+        m_has_active_camera = true;
+        m_active_camera = camera;
     }
 
 
     void Scene::setActiveSkyBox(SkyBox *skybox)
     {
-        _has_active_skybox = true;
+        m_has_active_skybox = true;
         skybox->updateDescriptorSet();
-        _active_skybox = skybox;
+        m_active_skybox = skybox;
     }
 
 
     void Scene::updateUniformData(VkExtent2D extent, float delta_time)
     {
-        VV_ASSERT(_active_camera != nullptr, "ERROR: main camera has not been initialized");
+        VV_ASSERT(m_active_camera != nullptr, "ERROR: main camera has not been initialized");
 
-        for (auto i = 0; i < _lights.size(); ++i)
+        for (auto i = 0; i < m_lights.size(); ++i)
         {
-            _lights_ubo.lights[i].position = glm::vec4(_lights[i].getPosition(), 0.0f);
-            _lights_ubo.lights[i].irradiance = _lights[i].irradiance;
+            m_lights_ubo.lights[i].position = glm::vec4(m_lights[i].getPosition(), 0.0f);
+            m_lights_ubo.lights[i].irradiance = m_lights[i].irradiance;
         }
-        _lights_uniform_buffer->updateAndTransfer(&_lights_ubo);
+        m_lights_uniform_buffer->updateAndTransfer(&m_lights_ubo);
 
-        _scene_ubo.view_mat = _active_camera->getViewMatrix();
-        _scene_ubo.projection_mat = _active_camera->getProjectionMatrix(extent.width / static_cast<float>(extent.height));
-        _scene_ubo.camera_position = glm::vec4(_active_camera->getPosition(), 1.0);
-        _scene_uniform_buffer->updateAndTransfer(&_scene_ubo);
+        m_scene_ubo.view_mat = m_active_camera->getViewMatrix();
+        m_scene_ubo.projection_mat = m_active_camera->getProjectionMatrix(extent.width / static_cast<float>(extent.height));
+        m_scene_ubo.camera_position = glm::vec4(m_active_camera->getPosition(), 1.0);
+        m_scene_uniform_buffer->updateAndTransfer(&m_scene_ubo);
 
-        for (auto &m : _models)
+        for (auto &m : m_models)
             m.updateModelUBO();
     }
 
@@ -188,18 +188,18 @@ namespace vv
         bool first_run = true;
         MaterialTemplate *curr_template = nullptr;
 
-        if (_has_active_skybox)
+        if (m_has_active_skybox)
         {
             auto skybox_template = material_templates["skybox"];
             skybox_template.pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template.pipeline_layout, 0, 1, &_scene_descriptor_sets[0], 0, nullptr);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, skybox_template.pipeline_layout, 0, 1, &m_scene_descriptor_sets[0], 0, nullptr);
 
-            _active_skybox->bindSkyBoxDescriptorSets(command_buffer, skybox_template.pipeline_layout);
-            _active_skybox->render(command_buffer);
+            m_active_skybox->bindSkyBoxDescriptorSets(command_buffer, skybox_template.pipeline_layout);
+            m_active_skybox->render(command_buffer);
         }
 
         int i = 0;
-        for (auto &model : _models)
+        for (auto &model : m_models)
         {
             // reduce pipeline state switches as much as possible
             if (first_run || (curr_template->name != model.material_template->name))
@@ -209,19 +209,19 @@ namespace vv
                 curr_template->pipeline->bind(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
             }
 
-            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, 0, 1, &_scene_descriptor_sets[i++], 0, nullptr);
+            vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, curr_template->pipeline_layout, 0, 1, &m_scene_descriptor_sets[i++], 0, nullptr);
 
             // Bind environment lighting descriptor sets
             if (model.material_template->uses_environment_lighting)
             {
-                _active_skybox->bindIBLDescriptorSets(command_buffer, curr_template->pipeline_layout);
-                _active_skybox->submitMipLevelPushConstants(command_buffer, curr_template->pipeline_layout);
+                m_active_skybox->bindIBLDescriptorSets(command_buffer, curr_template->pipeline_layout);
+                m_active_skybox->submitMipLevelPushConstants(command_buffer, curr_template->pipeline_layout);
             }
 
             // Render all submeshes within this model
-            for (auto &mesh : _model_manager->_loaded_meshes[model._data_handle])
+            for (auto &mesh : m_model_manager->m_loaded_meshes[model.m_data_handle])
             {
-                Material *material = _model_manager->_loaded_materials[model._data_handle][model._material_id_set][mesh->material_id];
+                Material *material = m_model_manager->m_loaded_materials[model.m_data_handle][model.m_material_id_set][mesh->material_id];
                 material->bindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
                 mesh->bindBuffers(command_buffer);
                 mesh->render(command_buffer);
@@ -250,21 +250,21 @@ namespace vv
 
             // todo: this removes all generality of this function. should place somewhere else.
             material_template.shader_modules.emplace_back();
-            material_template.shader_modules[0].create(_device, material_template.name, "vert", "main");
+            material_template.shader_modules[0].create(m_device, material_template.name, "vert", "main");
             material_template.shader_modules[0].entrance_function = "main";
 
             material_template.shader_modules.emplace_back();
-            material_template.shader_modules[1].create(_device, material_template.name, "frag", "main");
+            material_template.shader_modules[1].create(m_device, material_template.name, "frag", "main");
             material_template.shader_modules[1].entrance_function = "main";
 
             material_template.uses_environment_lighting = material_template.shader_modules[1].uses_environmental_lighting;
 
             // Construct Descriptor Set Layouts
             std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
-            descriptor_set_layouts.push_back(_scene_descriptor_set_layout);
+            descriptor_set_layouts.push_back(m_scene_descriptor_set_layout);
 
             if (curr_shader_name == "skybox")
-                descriptor_set_layouts.push_back(_radiance_descriptor_set_layout);
+                descriptor_set_layouts.push_back(m_radiance_descriptor_set_layout);
             else
             {
                 std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
@@ -273,12 +273,12 @@ namespace vv
                 for (auto &o : material_template.shader_modules[1].material_descriptor_orderings)
                     temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(o.binding, o.type, 1, o.shader_stage));
 
-                createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, material_template.material_descriptor_set_layout);
+                createVulkanDescriptorSetLayout(m_device->logical_device, temp_bindings_buffer, material_template.material_descriptor_set_layout);
                 descriptor_set_layouts.push_back(material_template.material_descriptor_set_layout);
 
                 // environment descriptor set layout
                 if (material_template.uses_environment_lighting)
-                    descriptor_set_layouts.push_back(_environment_descriptor_set_layout);
+                    descriptor_set_layouts.push_back(m_environment_descriptor_set_layout);
             }
 
             // Construct Pipeline
@@ -290,10 +290,10 @@ namespace vv
             pipeline_layout_create_info.pPushConstantRanges     = material_template.shader_modules[1].push_constant_ranges.data();
             pipeline_layout_create_info.pushConstantRangeCount  = material_template.shader_modules[1].push_constant_ranges.size();
 
-            VV_CHECK_SUCCESS(vkCreatePipelineLayout(_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template.pipeline_layout));
+            VV_CHECK_SUCCESS(vkCreatePipelineLayout(m_device->logical_device, &pipeline_layout_create_info, nullptr, &material_template.pipeline_layout));
 
             VulkanPipeline *pipeline = new VulkanPipeline();
-            pipeline->createGraphicsPipeline(_device, material_template.pipeline_layout, _render_pass);
+            pipeline->createGraphicsPipeline(m_device, material_template.pipeline_layout, m_render_pass);
             pipeline->addShaderStage(material_template.shader_modules[0]);
             pipeline->addShaderStage(material_template.shader_modules[1]);
             pipeline->addVertexInputState();
@@ -336,30 +336,30 @@ namespace vv
         create_info.flags = 0; // can be: VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
 
         // set up global descriptor pool
-        VV_CHECK_SUCCESS(vkCreateDescriptorPool(_device->logical_device, &create_info, nullptr, &_descriptor_pool));
+        VV_CHECK_SUCCESS(vkCreateDescriptorPool(m_device->logical_device, &create_info, nullptr, &m_descriptor_pool));
     }
 
 
     void Scene::createSceneDescriptorSetLayout()
     {
         // MVP matrix data
-        _scene_ubo = { glm::mat4(), glm::mat4(), glm::vec4() };
-        _scene_uniform_buffer = new VulkanBuffer();
-        _scene_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(SceneUBO));
+        m_scene_ubo = { glm::mat4(), glm::mat4(), glm::vec4() };
+        m_scene_uniform_buffer = new VulkanBuffer();
+        m_scene_uniform_buffer->create(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(SceneUBO));
 
         // Lights data
         for (auto i = 0; i < VV_MAX_LIGHTS; ++i)
-            _lights_ubo.lights[i] = { glm::vec4(), glm::vec4() };
+            m_lights_ubo.lights[i] = { glm::vec4(), glm::vec4() };
 
-        _lights_uniform_buffer = new VulkanBuffer();
-        _lights_uniform_buffer->create(_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(LightUBO));
+        m_lights_uniform_buffer = new VulkanBuffer();
+        m_lights_uniform_buffer->create(m_device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(LightUBO));
 
         /// Layout
         std::vector<VkDescriptorSetLayoutBinding> temp_bindings_buffer;
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT));
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT));
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
-        createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, _scene_descriptor_set_layout);
+        createVulkanDescriptorSetLayout(m_device->logical_device, temp_bindings_buffer, m_scene_descriptor_set_layout);
     }
 
 
@@ -367,24 +367,24 @@ namespace vv
     {
 		VkDescriptorSetAllocateInfo scene_alloc_info = {};
 		scene_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		scene_alloc_info.descriptorPool = _descriptor_pool;
+		scene_alloc_info.descriptorPool = m_descriptor_pool;
 		scene_alloc_info.descriptorSetCount = 1;
-		scene_alloc_info.pSetLayouts = &_scene_descriptor_set_layout;
+		scene_alloc_info.pSetLayouts = &m_scene_descriptor_set_layout;
 
-        _scene_descriptor_sets.resize(_models.size());
+        m_scene_descriptor_sets.resize(m_models.size());
 
-        for (int i = 0; i < _models.size(); ++i)
+        for (int i = 0; i < m_models.size(); ++i)
         {
-		    VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &scene_alloc_info, &_scene_descriptor_sets[i]));
+		    VV_CHECK_SUCCESS(vkAllocateDescriptorSets(m_device->logical_device, &scene_alloc_info, &m_scene_descriptor_sets[i]));
             std::array<VkWriteDescriptorSet, 3> write_sets;
 
 		    VkDescriptorBufferInfo scene_buffer_info = {};
-		    scene_buffer_info.buffer = _scene_uniform_buffer->buffer;
+		    scene_buffer_info.buffer = m_scene_uniform_buffer->buffer;
 		    scene_buffer_info.offset = 0;
 		    scene_buffer_info.range = sizeof(SceneUBO);
 
 		    write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		    write_sets[0].dstSet = _scene_descriptor_sets[i];
+		    write_sets[0].dstSet = m_scene_descriptor_sets[i];
 		    write_sets[0].dstBinding = 0;
 		    write_sets[0].dstArrayElement = 0;
 		    write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -392,12 +392,12 @@ namespace vv
 		    write_sets[0].pBufferInfo = &scene_buffer_info;
 
             VkDescriptorBufferInfo lights_buffer_info = {};
-		    lights_buffer_info.buffer = _lights_uniform_buffer->buffer;
+		    lights_buffer_info.buffer = m_lights_uniform_buffer->buffer;
 		    lights_buffer_info.offset = 0;
             lights_buffer_info.range = sizeof(LightUBO);
 
 		    write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		    write_sets[1].dstSet = _scene_descriptor_sets[i];
+		    write_sets[1].dstSet = m_scene_descriptor_sets[i];
 		    write_sets[1].dstBinding = 2;
 		    write_sets[1].dstArrayElement = 0;
 		    write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -405,19 +405,19 @@ namespace vv
 		    write_sets[1].pBufferInfo = &lights_buffer_info;
 
             VkDescriptorBufferInfo model_buffer_info = {};
-		    model_buffer_info.buffer = _models[i]._model_uniform_buffer->buffer;
+		    model_buffer_info.buffer = m_models[i].m_model_uniform_buffer->buffer;
 		    model_buffer_info.offset = 0;
 		    model_buffer_info.range = sizeof(ModelUBO);
 
             write_sets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		    write_sets[2].dstSet = _scene_descriptor_sets[i];
+		    write_sets[2].dstSet = m_scene_descriptor_sets[i];
 		    write_sets[2].dstBinding = 1;
 		    write_sets[2].dstArrayElement = 0;
 		    write_sets[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		    write_sets[2].descriptorCount = 1;
 		    write_sets[2].pBufferInfo = &model_buffer_info;
 		
-            vkUpdateDescriptorSets(_device->logical_device, 3, write_sets.data(), 0, nullptr);
+            vkUpdateDescriptorSets(m_device->logical_device, 3, write_sets.data(), 0, nullptr);
         }
     }
 
@@ -428,28 +428,28 @@ namespace vv
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
-        createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, _environment_descriptor_set_layout);
+        createVulkanDescriptorSetLayout(m_device->logical_device, temp_bindings_buffer, m_environment_descriptor_set_layout);
 
         temp_bindings_buffer.clear();
         temp_bindings_buffer.push_back(createDescriptorSetLayoutBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT));
-        createVulkanDescriptorSetLayout(_device->logical_device, temp_bindings_buffer, _radiance_descriptor_set_layout);
+        createVulkanDescriptorSetLayout(m_device->logical_device, temp_bindings_buffer, m_radiance_descriptor_set_layout);
 
         /// Descriptor Sets
 		VkDescriptorSetAllocateInfo env_alloc_info = {};
 		env_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		env_alloc_info.descriptorPool = _descriptor_pool;
+		env_alloc_info.descriptorPool = m_descriptor_pool;
 		env_alloc_info.descriptorSetCount = 1;
-		env_alloc_info.pSetLayouts = &_environment_descriptor_set_layout;
+		env_alloc_info.pSetLayouts = &m_environment_descriptor_set_layout;
 
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &env_alloc_info, &_environment_descriptor_set));
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(m_device->logical_device, &env_alloc_info, &m_environment_descriptor_set));
 
         VkDescriptorSetAllocateInfo rad_alloc_info = {};
 		rad_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		rad_alloc_info.descriptorPool = _descriptor_pool;
+		rad_alloc_info.descriptorPool = m_descriptor_pool;
 		rad_alloc_info.descriptorSetCount = 1;
-		rad_alloc_info.pSetLayouts = &_radiance_descriptor_set_layout;
+		rad_alloc_info.pSetLayouts = &m_radiance_descriptor_set_layout;
 
-		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(_device->logical_device, &rad_alloc_info, &_radiance_descriptor_set));
+		VV_CHECK_SUCCESS(vkAllocateDescriptorSets(m_device->logical_device, &rad_alloc_info, &m_radiance_descriptor_set));
 	}
 
 

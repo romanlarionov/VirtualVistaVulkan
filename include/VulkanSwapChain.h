@@ -53,7 +53,7 @@ namespace vv
 		void present(VkQueue queue, uint32_t &image_index, VkSemaphore wait_semaphore = VK_NULL_HANDLE);
 
 	private:
-		GLFWWindow *_window;
+		GLFWWindow *m_window;
 
 		/*
 		 * Creates image views that explain to Vulkan what the list of images for the swap chain are meant to be.

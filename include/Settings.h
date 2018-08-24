@@ -36,24 +36,24 @@ namespace vv
         void setWindowHeight(int height);
 
     private:
-        static Settings* instance_;
+        static Settings* m_instance;
 
-        bool _default;
-        int _window_width;
-        int _window_height;
-        float _aspect;
-        std::string _application_name;
-        std::string _engine_name;
-        std::string _shader_directory;
-        std::string _asset_directory;
-        std::string _model_directory;
-        std::string _texture_directory;
+        bool m_default;
+        int m_window_width;
+        int m_window_height;
+        float m_aspect;
+        std::string m_application_name;
+        std::string m_engine_name;
+        std::string m_shader_directory;
+        std::string m_asset_directory;
+        std::string m_model_directory;
+        std::string m_texture_directory;
 
-        bool _compute_required;
+        bool m_compute_required;
 
-        uint32_t _max_descriptor_sets;
-        uint32_t _max_uniform_buffers;
-        uint32_t _max_combined_image_samplers;
+        uint32_t m_max_descriptor_sets;
+        uint32_t m_max_uniform_buffers;
+        uint32_t m_max_combined_image_samplers;
 
         Settings() {};
         Settings(const Settings& s) {};

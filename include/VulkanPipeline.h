@@ -101,22 +101,22 @@ namespace vv
 
 
 	private:
-		VulkanDevice *_device;
-        VulkanRenderPass *_render_pass;
-        std::vector<VulkanShaderModule> _shader_modules;
+		VulkanDevice *m_device;
+        VulkanRenderPass *m_render_pass;
+        std::vector<VulkanShaderModule> m_shader_modules;
 
-        bool _is_graphics_pipeline = true;
+        bool m_is_graphics_pipeline = true;
 
-        std::vector<VkPipelineShaderStageCreateInfo> _shader_state_create_info;
-        VkPipelineVertexInputStateCreateInfo _vertex_input_state_create_info        = {};
-        VkPipelineInputAssemblyStateCreateInfo _input_assembly_state_create_info    = {};
-        VkPipelineViewportStateCreateInfo _viewport_state_create_info               = {};
-        VkPipelineRasterizationStateCreateInfo _rasterization_state_create_info     = {};
-        VkPipelineDynamicStateCreateInfo _dynamic_state_create_info                 = {};
-        VkPipelineTessellationStateCreateInfo _tessellation_state_create_info       = {};
-        VkPipelineMultisampleStateCreateInfo _multisample_state_create_info         = {};
-        VkPipelineDepthStencilStateCreateInfo _depth_stencil_state_create_info      = {};
-        VkPipelineColorBlendStateCreateInfo _color_blend_state_create_info          = {};
+        std::vector<VkPipelineShaderStageCreateInfo> m_shader_state_create_info;
+        VkPipelineVertexInputStateCreateInfo m_vertex_input_state_create_info        = {};
+        VkPipelineInputAssemblyStateCreateInfo m_input_assembly_state_create_info    = {};
+        VkPipelineViewportStateCreateInfo m_viewport_state_create_info               = {};
+        VkPipelineRasterizationStateCreateInfo m_rasterization_state_create_info     = {};
+        VkPipelineDynamicStateCreateInfo m_dynamic_state_create_info                 = {};
+        VkPipelineTessellationStateCreateInfo m_tessellation_state_create_info       = {};
+        VkPipelineMultisampleStateCreateInfo m_multisample_state_create_info         = {};
+        VkPipelineDepthStencilStateCreateInfo m_depth_stencil_state_create_info      = {};
+        VkPipelineColorBlendStateCreateInfo m_color_blend_state_create_info          = {};
 
 	};
 }

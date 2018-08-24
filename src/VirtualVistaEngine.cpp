@@ -10,36 +10,37 @@ namespace vv
 {
     void VirtualVistaEngine::create(int argc, char **argv)
     {
-        _argc = argc;
-        _argv = argv;
+        m_argc = argc;
+        m_argv = argv;
 
-        _window.create(_window_width, _window_height, _application_name);
+        m_window.create(m_window_width, m_window_height, m_application_name);
 
         // todo: does this need to be malloced?
-    	_renderer = new DeferredRenderer;
+    	m_renderer = new DeferredRenderer;
 
-    	_renderer->create(&_window);
-        _scene = _renderer->getScene();
+    	m_renderer->create(&m_window);
+        m_scene = m_renderer->getScene();
     }
 
 
     void VirtualVistaEngine::shutDown()
     {
-    	_renderer->shutDown();
+    	m_renderer->shutDown();
     }
 
 
     Scene* VirtualVistaEngine::getScene() const
     {
-        return _scene;
+        return m_scene;
     }
 
 
     void VirtualVistaEngine::handleInput(float delta_time)
     {
-        float move_speed = 4.0f * delta_time;
-        float rotate_speed = 2.0f * delta_time;
-        Camera *camera = _scene->getActiveCamera();
+        float move_speed = m_move_speed * delta_time;
+        float rotate_speed = m_rotate_speed * delta_time;
+
+        Camera *camera = m_scene->getActiveCamera();
         if (InputManager::inst()->keyIsPressed(GLFW_KEY_W))
             camera->translate(move_speed * camera->getForwardDirection());
 
@@ -53,7 +54,7 @@ namespace vv
             camera->translate(move_speed * camera->getSidewaysDirection());
 
         if (InputManager::inst()->keyIsPressed(GLFW_KEY_ESCAPE))
-            _window.setShouldClose(true);
+            m_window.setShouldClose(true);
 
         double delta_x, delta_y;
         InputManager::inst()->getCursorGradient(delta_x, delta_y);
@@ -63,20 +64,20 @@ namespace vv
 
     void VirtualVistaEngine::beginMainLoop()
     {
-        _renderer->recordCommandBuffers();
+        m_renderer->recordCommandBuffers();
 
         auto last_time = glfwGetTime();
 
-    	while (!_renderer->shouldStop())
+    	while (!m_renderer->shouldStop())
     	{
             auto curr_time = glfwGetTime();
             float delta_time = curr_time - last_time;
             last_time = curr_time;
 
-            _window.run();
+            m_window.run();
 
             handleInput(delta_time);
-    		_renderer->run(delta_time);
+    		m_renderer->run(delta_time);
     	}
     }
 }

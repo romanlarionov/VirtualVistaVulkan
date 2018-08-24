@@ -78,12 +78,13 @@ namespace vv
         void bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineBindPoint pipeline_bind_point) const;
 
 	private:
-        VulkanDevice *_device;
-        std::vector<VkWriteDescriptorSet> _write_sets;
-        VkDescriptorSet _descriptor_set;
+        VulkanDevice *m_device;
+        std::vector<VkWriteDescriptorSet> m_write_sets;
+        VkDescriptorSet m_descriptor_set;
 
-        std::vector<UBOStore *> _uniform_buffers;
-        std::vector<TextureStore *> _textures;
+        std::vector<UBOStore *> m_uniform_buffers;
+        std::vector<TextureStore *> m_textures;
+
 	};
 }
 

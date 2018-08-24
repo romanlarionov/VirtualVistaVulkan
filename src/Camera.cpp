@@ -16,11 +16,11 @@ namespace vv
         VV_ASSERT(fov > 0, "ERROR: fov has to be positive");
         VV_ASSERT(near_plane > 0, "ERROR: near plane has to be positive");
 
-        _fov_y = fov;
-        _near_plane = near_plane;
-        _far_plane = far_plane;
-        _look_at_point = glm::vec3(0.0f, 0.0f, 1.0f);
-        _up_vec = glm::vec3(0.0f, 1.0f, 0.0f);
+        m_fov_y = fov;
+        m_near_plane = near_plane;
+        m_far_plane = far_plane;
+        m_look_at_point = glm::vec3(0.0f, 0.0f, 1.0f);
+        m_up_vec = glm::vec3(0.0f, 1.0f, 0.0f);
 	}
 
 
@@ -31,20 +31,20 @@ namespace vv
 
     glm::vec3 Camera::getForwardDirection() const
     {
-        return glm::normalize(_look_at_point - Entity::getPosition());
+        return glm::normalize(m_look_at_point - Entity::getPosition());
     }
 
 
     glm::vec3 Camera::getSidewaysDirection() const
     {
-        return glm::normalize(glm::cross(getForwardDirection(), _up_vec));
+        return glm::normalize(glm::cross(getForwardDirection(), m_up_vec));
     }
 
 
     void Camera::translate(glm::vec3 translation)
     {
         Entity::translate(translation);
-        _look_at_point += translation;
+        m_look_at_point += translation;
     }
 
 
@@ -61,17 +61,17 @@ namespace vv
 
         // find component-wise rotation quaternions
         glm::quat pitch_quat = glm::angleAxis(-pitch, u);
-        glm::quat yaw_quat = glm::angleAxis(-yaw, _up_vec);
+        glm::quat yaw_quat = glm::angleAxis(-yaw, m_up_vec);
 
         // combine both components
         glm::quat combined_rotations = glm::normalize(glm::cross(pitch_quat, yaw_quat));
-        _look_at_point = glm::rotate(combined_rotations, _look_at_point - position) + position;
+        m_look_at_point = glm::rotate(combined_rotations, m_look_at_point - position) + position;
     }
 
 
     glm::mat4 Camera::getProjectionMatrix(float aspect) const
     {
-        auto mat = glm::perspective(_fov_y, aspect, _near_plane, _far_plane);
+        auto mat = glm::perspective(m_fov_y, aspect, m_near_plane, m_far_plane);
         mat[1][1] *= -1.f;
         return mat;
     }
@@ -79,7 +79,7 @@ namespace vv
 
     glm::mat4 Camera::getViewMatrix() const
     {
-        return glm::lookAt(Entity::getPosition(), _look_at_point, _up_vec);
+        return glm::lookAt(Entity::getPosition(), m_look_at_point, m_up_vec);
     }
 
 	///////////////////////////////////////////////////////////////////////////////////////////// Private

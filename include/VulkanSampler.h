@@ -39,7 +39,7 @@ namespace vv
 		void shutDown();
 
     private:
-		VulkanDevice *_device;
+		VulkanDevice *m_device;
 	};
 }
 

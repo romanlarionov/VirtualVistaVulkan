@@ -15,8 +15,8 @@ namespace vv
 
 	void VulkanImageView::create(VulkanDevice *device, VulkanImage *image, VkImageViewType image_view_type, uint32_t base_mip_level)
 	{
-		_device = device;
-		_image = image;
+		m_device = device;
+		m_image = image;
         type = image_view_type;
 
 		VkImageViewCreateInfo image_view_create_info = {};
@@ -44,6 +44,6 @@ namespace vv
 
 	void VulkanImageView::shutDown()
 	{
-        vkDestroyImageView(_device->logical_device, image_view, nullptr);
+        vkDestroyImageView(m_device->logical_device, image_view, nullptr);
 	}
 }

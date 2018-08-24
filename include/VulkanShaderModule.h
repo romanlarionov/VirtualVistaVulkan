@@ -38,13 +38,13 @@ namespace vv
         void shutDown();
 
     private:
-        VulkanDevice *_device;
+        VulkanDevice *m_device;
 
-        std::string _filename;
-        std::string _filepath;
-        std::vector<char> _binary_data;
+        std::string m_filename;
+        std::string m_filepath;
+        std::vector<char> m_binary_data;
 
-        std::vector<const char *> _accepted_material_descriptors =
+        std::vector<const char *> m_accepted_material_descriptors =
         {
             "ambient_map",
             "diffuse_map",

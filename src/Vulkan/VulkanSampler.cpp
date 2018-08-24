@@ -30,7 +30,7 @@ namespace vv
             VV_ASSERT(!enable_anisotropy, "VulkanSampler doesn't support anisotropy when using unnormalized coordinates");
         }
 
-        _device = device;
+        m_device = device;
         this->mag_filter = mag_filter;
         this->min_filter = min_filter;
         this->u_address_mode = u;
@@ -65,13 +65,13 @@ namespace vv
 		sampler_create_info.minLod = min_lod;
 		sampler_create_info.maxLod = max_lod; // todo: figure out how lod works with these things
 
-		VV_CHECK_SUCCESS(vkCreateSampler(_device->logical_device, &sampler_create_info, nullptr, &sampler));
+		VV_CHECK_SUCCESS(vkCreateSampler(m_device->logical_device, &sampler_create_info, nullptr, &sampler));
     }
 
 
 	void VulkanSampler::shutDown()
 	{
-        vkDestroySampler(_device->logical_device, sampler, nullptr);
+        vkDestroySampler(m_device->logical_device, sampler, nullptr);
 	}
 
 

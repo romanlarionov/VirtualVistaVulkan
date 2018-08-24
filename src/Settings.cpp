@@ -3,126 +3,126 @@
 
 namespace vv
 {
-    Settings* Settings::instance_ = nullptr;
+    Settings* Settings::m_instance = nullptr;
 
     Settings* Settings::inst()
     {
-        if (!instance_)
+        if (!m_instance)
         {
-            instance_ = new Settings;
-            instance_->setDefault();
+            m_instance = new Settings;
+            m_instance->setDefault();
         }
-        return instance_;
+        return m_instance;
     }
 
 
     void Settings::setDefault()
     {
-        _default           = true;
-        _window_width      = 1920;
-        _window_height     = 1080;
-        _aspect            = _window_width / static_cast<float>(_window_height);
-        _application_name  = "VirtualVistaVulkan";
-        _engine_name       = "VirtualVista";
-        _asset_directory   = ROOTPROJECTDIR "/assets/";
-        _model_directory   = _asset_directory + "models/";
-        _texture_directory = _asset_directory + "textures/";
-        _shader_directory  = _asset_directory + "shaders/";
+        m_default           = true;
+        m_window_width      = 1920;
+        m_window_height     = 1080;
+        m_aspect            = m_window_width / static_cast<float>(m_window_height);
+        m_application_name  = "VirtualVistaVulkan";
+        m_engine_name       = "VirtualVista";
+        m_asset_directory   = ROOTPROJECTDIR "/assets/";
+        m_model_directory   = m_asset_directory + "models/";
+        m_texture_directory = m_asset_directory + "textures/";
+        m_shader_directory  = m_asset_directory + "shaders/";
         
-        _compute_required  = false;
+        m_compute_required  = false;
 
-        _max_descriptor_sets = 100;
-        _max_uniform_buffers = 100;
-        _max_combined_image_samplers = 100;
+        m_max_descriptor_sets = 100;
+        m_max_uniform_buffers = 100;
+        m_max_combined_image_samplers = 100;
     }
 
 
     int Settings::getWindowWidth() const
     {
-        return _window_width;
+        return m_window_width;
     }
 
 
     int Settings::getWindowHeight() const
     {
-        return _window_height;
+        return m_window_height;
     }
 
 
     float Settings::getAspect() const
     {
-        return _aspect;
+        return m_aspect;
     }
 
 
     std::string Settings::getApplicationName() const
     {
-        return _application_name;
+        return m_application_name;
     }
 
 
     std::string Settings::getEngineName() const
     {
-        return _engine_name;
+        return m_engine_name;
     }
 
 
     std::string Settings::getShaderDirectory() const
     {
-        return _shader_directory;
+        return m_shader_directory;
     }
 
 
     std::string Settings::getAssetDirectory() const
     {
-        return _asset_directory;
+        return m_asset_directory;
     }
 
 
     std::string Settings::getModelDirectory() const
     {
-        return _model_directory;
+        return m_model_directory;
     }
 
 
     std::string Settings::getTextureDirectory() const
     {
-        return _texture_directory;
+        return m_texture_directory;
     }
 
 
     uint32_t Settings::getMaxDescriptorSets() const
     {
-        return _max_descriptor_sets;
+        return m_max_descriptor_sets;
     }
 
 
     uint32_t Settings::getMaxUniformBuffers() const
     {
-        return _max_uniform_buffers;
+        return m_max_uniform_buffers;
     }
 
 
     uint32_t Settings::getMaxCombinedImageSamplers() const
     {
-        return _max_combined_image_samplers;
+        return m_max_combined_image_samplers;
     }
 
 
     bool Settings::isComputeRequired() const
     {
-        return _compute_required;
+        return m_compute_required;
     }
 
 
     void Settings::setWindowWidth(int width)
     {
-        _window_width = width;
+        m_window_width = width;
     }
 
 
     void Settings::setWindowHeight(int height)
     {
-        _window_height = height;
+        m_window_height = height;
     }
 }

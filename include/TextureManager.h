@@ -54,17 +54,17 @@ namespace vv
                                     bool create_mip_levels = true);
 
 	private:
-		VulkanDevice *_device;
-        std::string _texture_directory;
+		VulkanDevice *m_device;
+        std::string m_texture_directory;
 
         // Stores constructed textures/cube maps this class creates and is in current use.
-        std::unordered_map<std::string, SampledTexture *> _loaded_textures;
+        std::unordered_map<std::string, SampledTexture *> m_loaded_textures;
 
         // Stores raw texture data on host memory.
-        std::unordered_map<std::string, unsigned char *> _ldr_texture_array_data_cache;
-        std::unordered_map<std::string, float *> _hdr_texture_array_data_cache;
+        std::unordered_map<std::string, unsigned char *> m_ldr_texture_array_data_cache;
+        std::unordered_map<std::string, float *> m_hdr_texture_array_data_cache;
 
-        std::unordered_map<gli::format, VkFormat> _gliToVulkanFormat =
+        std::unordered_map<gli::format, VkFormat> m_gli_to_vulkan_format_map =
 		{
 			{ gli::FORMAT_RGBA8_UNORM_PACK8, VK_FORMAT_R8G8B8A8_UNORM },
 			{ gli::FORMAT_RGBA32_SFLOAT_PACK32, VK_FORMAT_R32G32B32A32_SFLOAT },

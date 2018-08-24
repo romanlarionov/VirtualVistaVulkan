@@ -47,13 +47,13 @@ namespace vv
         Mesh* getSphereMesh() const;
 
     private:
-		VulkanDevice *_device;
-        VkDescriptorPool _descriptor_pool;
-        TextureManager *_texture_manager;
+		VulkanDevice *m_device;
+        VkDescriptorPool m_descriptor_pool;
+        TextureManager *m_texture_manager;
 
         // todo: can have global array of geometry and material data that constantly updates.
-        std::unordered_map<std::string, std::vector<Mesh *> > _loaded_meshes;
-        std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Material *> > > _loaded_materials;
+        std::unordered_map<std::string, std::vector<Mesh *> > m_loaded_meshes;
+        std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Material *> > > m_loaded_materials;
 
         /*
          * Loads obj + mtl files for a single model. Returns a model abstraction with references to raw loaded geometry + material data.

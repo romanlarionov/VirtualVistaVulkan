@@ -23,14 +23,14 @@ namespace vv
         attachment_description.initialLayout  = input_layout;
         attachment_description.finalLayout    = output_layout;
 
-        _attachment_descriptions.push_back(attachment_description);
+        m_attachment_descriptions.push_back(attachment_description);
     }
 
 
     void VulkanRenderPass::create(VulkanDevice *device, VkPipelineBindPoint bind_point)
     {
         VV_ASSERT(device != nullptr, "Vulkan Device is NULL");
-        _device = device;
+        m_device = device;
 
         std::vector<VkAttachmentReference> color_references;
         VkAttachmentReference depth_reference;
@@ -38,7 +38,7 @@ namespace vv
         bool has_depth = false;
         uint32_t attachment_idx = 0;
 
-        for (auto &attach : _attachment_descriptions)
+        for (auto &attach : m_attachment_descriptions)
         {
             // note: if i need to attach any fancy stuff, i can always add additional
             //       conditions here and differentiate by setting the layout parameter
@@ -91,8 +91,8 @@ namespace vv
         VkRenderPassCreateInfo render_pass_create_info = {};
         render_pass_create_info.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         render_pass_create_info.flags           = 0;
-        render_pass_create_info.attachmentCount = (uint32_t)_attachment_descriptions.size();
-        render_pass_create_info.pAttachments    = _attachment_descriptions.data();
+        render_pass_create_info.attachmentCount = (uint32_t)m_attachment_descriptions.size();
+        render_pass_create_info.pAttachments    = m_attachment_descriptions.data();
         render_pass_create_info.subpassCount    = 1;
         render_pass_create_info.pSubpasses      = &subpass_description;
         render_pass_create_info.dependencyCount = (uint32_t)subpass_dependencies.size();
@@ -105,9 +105,9 @@ namespace vv
     void VulkanRenderPass::shutDown()
     {
         if (render_pass != VK_NULL_HANDLE)
-            vkDestroyRenderPass(_device->logical_device, render_pass, nullptr);
+            vkDestroyRenderPass(m_device->logical_device, render_pass, nullptr);
 
-        _attachment_descriptions.clear();
+        m_attachment_descriptions.clear();
     }
 
 
@@ -126,7 +126,7 @@ namespace vv
         frame_buffer_create_info.layers          = 1;
 
         VkFramebuffer frame_buffer;
-        VV_CHECK_SUCCESS(vkCreateFramebuffer(_device->logical_device, &frame_buffer_create_info, nullptr, &frame_buffer));
+        VV_CHECK_SUCCESS(vkCreateFramebuffer(m_device->logical_device, &frame_buffer_create_info, nullptr, &frame_buffer));
         return frame_buffer;
     }
 

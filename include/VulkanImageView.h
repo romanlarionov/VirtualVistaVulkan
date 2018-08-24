@@ -30,8 +30,8 @@ namespace vv
 		void shutDown();
 
 	private:
-		VulkanDevice *_device;
-		VulkanImage *_image;
+		VulkanDevice *m_device;
+		VulkanImage *m_image;
 
 	};
 }

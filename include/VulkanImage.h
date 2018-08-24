@@ -70,13 +70,13 @@ namespace vv
 		bool hasStencilComponent();
 
 	private:
-		VulkanDevice *_device;
-		VkImage _staging_image			= VK_NULL_HANDLE;
-        VkBuffer _staging_buffer        = VK_NULL_HANDLE;
-		VkDeviceMemory _staging_memory	= VK_NULL_HANDLE;
-		VkDeviceMemory _image_memory	= VK_NULL_HANDLE;
+		VulkanDevice *m_device;
+		VkImage m_staging_image			= VK_NULL_HANDLE;
+        VkBuffer m_staging_buffer       = VK_NULL_HANDLE;
+		VkDeviceMemory m_staging_memory	= VK_NULL_HANDLE;
+		VkDeviceMemory m_image_memory	= VK_NULL_HANDLE;
 
-        std::unordered_map<VkFormat, FormatInfo> _format_info_table =
+        std::unordered_map<VkFormat, FormatInfo> m_format_info_table =
         {
               { VK_FORMAT_R8G8B8A8_UNORM, { 4, { 1, 1, 1 } } }
             , { VK_FORMAT_R32G32_SFLOAT, { 8, { 1, 1, 1 } } }
@@ -86,7 +86,7 @@ namespace vv
             , { VK_FORMAT_R8G8B8_UNORM, { 3, { 1, 1, 1 } } }
         };
 
-        std::unordered_map<VkPipelineStageFlags, VkQueueFlags> _pipeline_stage_queue_support_lut =
+        std::unordered_map<VkPipelineStageFlags, VkQueueFlags> m_pipeline_stage_queue_support_lut =
         {
               { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT | VK_QUEUE_PROTECTED_BIT}
             , { VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT }
