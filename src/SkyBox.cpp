@@ -34,6 +34,7 @@ namespace vv
     	m_radiance_image_info.sampler = radiance_map->sampler->sampler;
 
         m_rad_write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        m_rad_write_set.pNext = NULL;
     	m_rad_write_set.dstSet = m_radiance_descriptor_set;
     	m_rad_write_set.dstBinding = 0;
     	m_rad_write_set.dstArrayElement = 0;
@@ -47,6 +48,7 @@ namespace vv
     	m_diffuse_image_info.sampler = diffuse_map->sampler->sampler;
 
         m_write_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        m_write_sets[0].pNext = NULL;
     	m_write_sets[0].dstSet = m_environment_descriptor_set;
     	m_write_sets[0].dstBinding = 0;
     	m_write_sets[0].dstArrayElement = 0;
@@ -60,6 +62,7 @@ namespace vv
     	m_specular_image_info.sampler = specular_map->sampler->sampler;
 
         m_write_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        m_write_sets[1].pNext = NULL;
     	m_write_sets[1].dstSet = m_environment_descriptor_set;
     	m_write_sets[1].dstBinding = 1;
     	m_write_sets[1].dstArrayElement = 0;
@@ -73,6 +76,7 @@ namespace vv
     	m_brdf_image_info.sampler = brdf_lut->sampler->sampler;
 
         m_write_sets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        m_write_sets[2].pNext = NULL;
     	m_write_sets[2].dstSet = m_environment_descriptor_set;
     	m_write_sets[2].dstBinding = 2;
     	m_write_sets[2].dstArrayElement = 0;

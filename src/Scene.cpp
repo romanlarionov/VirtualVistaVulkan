@@ -390,6 +390,7 @@ namespace vv
 		    write_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		    write_sets[0].descriptorCount = 1; // how many elements to update
 		    write_sets[0].pBufferInfo = &scene_buffer_info;
+            write_sets[0].pNext = NULL;
 
             VkDescriptorBufferInfo lights_buffer_info = {};
 		    lights_buffer_info.buffer = m_lights_uniform_buffer->buffer;
@@ -403,6 +404,7 @@ namespace vv
 		    write_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		    write_sets[1].descriptorCount = 1;
 		    write_sets[1].pBufferInfo = &lights_buffer_info;
+            write_sets[1].pNext = NULL;
 
             VkDescriptorBufferInfo model_buffer_info = {};
 		    model_buffer_info.buffer = m_models[i].m_model_uniform_buffer->buffer;
@@ -416,6 +418,7 @@ namespace vv
 		    write_sets[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		    write_sets[2].descriptorCount = 1;
 		    write_sets[2].pBufferInfo = &model_buffer_info;
+            write_sets[2].pNext = NULL;
 		
             vkUpdateDescriptorSets(m_device->logical_device, 3, write_sets.data(), 0, nullptr);
         }

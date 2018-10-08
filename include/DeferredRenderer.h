@@ -5,19 +5,6 @@
 #include <vector>
 #include <array>
 
-//#include "GLFWWindow.h"
-//#include "VulkanSwapChain.h"
-//#include "VulkanImageView.h"
-//#include "VulkanPipeline.h"
-//#include "VulkanRenderPass.h"
-//#include "VulkanBuffer.h"
-//#include "VulkanDevice.h"
-//#include "Scene.h"
-//#include "Material.h"
-//#include "ModelManager.h"
-//#include "Mesh.h"
-//#include "Utils.h"
-
 #include "Scene.h"
 #include "GLFWWindow.h"
 #include "Utils.h"
@@ -81,21 +68,21 @@ namespace vv
 
         GLFWWindow *m_window						    = nullptr;
         VkInstance m_instance					    = VK_NULL_HANDLE;
-        VulkanDevice _physical_device;
+        VulkanDevice m_physical_device;
     
-        VulkanSwapChain _swap_chain;
-        std::vector<VkFramebuffer> _frame_buffers;
+        VulkanSwapChain m_swap_chain;
+        std::vector<VkFramebuffer> m_frame_buffers;
 
-        VkSemaphore _image_ready_semaphore          = VK_NULL_HANDLE;
-        VkSemaphore _rendering_complete_semaphore   = VK_NULL_HANDLE;
+        VkSemaphore m_image_ready_semaphore          = VK_NULL_HANDLE;
+        VkSemaphore m_rendering_complete_semaphore   = VK_NULL_HANDLE;
 
         VulkanRenderPass m_render_pass;
-        std::vector<VkCommandBuffer> _command_buffers;
+        std::vector<VkCommandBuffer> m_command_buffers;
 
         Scene m_scene;
 
-        std::vector<const char*> _used_validation_layers = { "VK_LAYER_LUNARG_standard_validation" };
-        const std::vector<const char*> _used_instance_extensions = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
+        std::vector<const char*> m_used_validation_layers = { "VK_LAYER_LUNARG_standard_validation" };
+        const std::vector<const char*> m_used_instance_extensions = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 
         /*
          * Creates the main Vulkan instance upon which the renderer rests.
